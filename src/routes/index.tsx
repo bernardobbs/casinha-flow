@@ -7,8 +7,8 @@ import { Wallet, Users, Shield, ArrowRight } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Finança Família — Finanças compartilhadas, simples" },
-      { name: "description", content: "Sistema financeiro com famílias compartilhadas. Cadastre-se, convide sua família e organize tudo em um só lugar." },
+      { title: "Casinha Flow — Controle e liberdade andando juntos" },
+      { name: "description", content: "Casinha Flow é o sistema financeiro familiar onde controle e liberdade andam juntos. Crie sua conta, monte sua família e organize tudo em um só lugar." },
     ],
   }),
   component: Landing,
@@ -29,7 +29,10 @@ function Landing() {
           <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <Wallet className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold tracking-tight">Finança Família</span>
+          <div className="flex flex-col leading-tight">
+            <span className="font-semibold tracking-tight">Casinha Flow</span>
+            <span className="text-[10px] text-muted-foreground hidden sm:block">controle e liberdade andando juntos</span>
+          </div>
         </div>
         <Link to="/auth">
           <Button variant="ghost" size="sm">Entrar</Button>
@@ -40,14 +43,14 @@ function Landing() {
         <section className="text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            Compartilhe finanças com quem importa
+            Casinha Flow
           </div>
           <h1 className="text-5xl md:text-6xl font-semibold tracking-tight leading-[1.05]">
-            Finanças da família,<br />
-            <span className="text-primary">simples e compartilhadas.</span>
+            Controle e liberdade<br />
+            <span className="text-primary">andando juntos.</span>
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto">
-            Crie uma conta, monte sua família e tenha todos os dados financeiros sincronizados entre todos os membros.
+            O sistema financeiro da sua família em um só lugar. Crie sua conta, monte sua casinha e mantenha todos sincronizados — com clareza e leveza.
           </p>
           <div className="mt-10 flex items-center justify-center gap-3">
             <Link to="/auth">
