@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -197,11 +197,15 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-dashed border-border/80 bg-transparent">
-          <CardContent className="py-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              Próximo passo: adicione transações, categorias e relatórios financeiros compartilhados.
-            </p>
+        <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+          <CardContent className="py-6 flex items-center justify-between gap-4">
+            <div>
+              <h3 className="font-semibold tracking-tight">Transações</h3>
+              <p className="text-sm text-muted-foreground">Registre receitas, despesas e acompanhe o saldo.</p>
+            </div>
+            <Link to="/transactions">
+              <Button>Abrir</Button>
+            </Link>
           </CardContent>
         </Card>
       </main>
