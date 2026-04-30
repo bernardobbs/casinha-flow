@@ -105,6 +105,48 @@ export type Database = {
           },
         ]
       }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          description: string
+          family_id: string
+          id: string
+          scope: Database["public"]["Enums"]["transaction_scope"]
+          source: Database["public"]["Enums"]["transaction_source"]
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          description: string
+          family_id: string
+          id?: string
+          scope?: Database["public"]["Enums"]["transaction_scope"]
+          source: Database["public"]["Enums"]["transaction_source"]
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          description?: string
+          family_id?: string
+          id?: string
+          scope?: Database["public"]["Enums"]["transaction_scope"]
+          source?: Database["public"]["Enums"]["transaction_source"]
+          type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -118,6 +160,9 @@ export type Database = {
     }
     Enums: {
       family_role: "admin" | "member"
+      transaction_scope: "family" | "personal"
+      transaction_source: "pix" | "cartao" | "boleto"
+      transaction_type: "income" | "expense"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -246,6 +291,9 @@ export const Constants = {
   public: {
     Enums: {
       family_role: ["admin", "member"],
+      transaction_scope: ["family", "personal"],
+      transaction_source: ["pix", "cartao", "boleto"],
+      transaction_type: ["income", "expense"],
     },
   },
 } as const
