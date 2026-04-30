@@ -26,7 +26,8 @@ interface Family {
 interface Member {
   user_id: string;
   role: "admin" | "member";
-  profiles: { full_name: string | null; email: string | null } | null;
+  full_name: string | null;
+  email: string | null;
 }
 
 function Dashboard() {
@@ -54,14 +55,32 @@ function Dashboard() {
         .maybeSingle();
 
       if (profile?.families) {
-        setFamily(profile.families as Family);
+        const fam = profile.families as Family;
+        setFamily(fam);
 
         const { data: memberRows } = await supabase
           .from("family_members")
-          .select("user_id, role, profiles(full_name, email)")
-          .eq("family_id", (profile.families as Family).id);
+          .select("user_id, role")
+          .eq("family_id", fam.id);
 
-        setMembers((memberRows as Member[]) ?? []);
+        const userIds = (memberRows ?? []).map((m) => m.user_id);
+        const { data: profileRows } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+
+        const profilesById = new Map(
+          (profileRows ?? []).map((p) => [p.id, p])
+        );
+
+        setMembers(
+          (memberRows ?? []).map((m) => ({
+            user_id: m.user_id,
+            role: m.role,
+            full_name: profilesById.get(m.user_id)?.full_name ?? null,
+            email: profilesById.get(m.user_id)?.email ?? null,
+          }))
+        );
       }
       setLoading(false);
     };
@@ -158,12 +177,12 @@ function Dashboard() {
                 <li key={m.user_id} className="py-3 flex items-center justify-between">
                   <div>
                     <p className="font-medium">
-                      {m.profiles?.full_name ?? "Sem nome"}
+                      {m.full_name ?? "Sem nome"}
                       {m.user_id === user.id && (
                         <span className="text-muted-foreground font-normal"> (você)</span>
                       )}
                     </p>
-                    <p className="text-sm text-muted-foreground">{m.profiles?.email}</p>
+                    <p className="text-sm text-muted-foreground">{m.email}</p>
                   </div>
                   <Badge variant={m.role === "admin" ? "default" : "secondary"} className="gap-1">
                     {m.role === "admin" && <Crown className="h-3 w-3" />}
