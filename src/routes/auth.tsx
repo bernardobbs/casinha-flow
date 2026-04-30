@@ -13,8 +13,8 @@ import { Wallet, Loader2 } from "lucide-react";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Entrar — Finança Família" },
-      { name: "description", content: "Acesse seu sistema financeiro familiar compartilhado." },
+      { title: "Entrar — Casinha Flow" },
+      { name: "description", content: "Casinha Flow — controle e liberdade andando juntos. Acesse seu sistema financeiro familiar compartilhado." },
     ],
   }),
   component: AuthPage,
@@ -112,7 +112,10 @@ function AuthPage() {
           <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
             <Wallet className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg tracking-tight">Finança Família</span>
+          <div className="flex flex-col items-start leading-tight">
+            <span className="font-semibold text-lg tracking-tight">Casinha Flow</span>
+            <span className="text-[11px] text-muted-foreground">controle e liberdade andando juntos</span>
+          </div>
         </Link>
 
         <Card className="border-border/60 shadow-[var(--shadow-elevated)]">

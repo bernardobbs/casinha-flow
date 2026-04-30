@@ -11,8 +11,8 @@ import { Wallet, LogOut, Users, Home, Loader2, Crown } from "lucide-react";
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Painel — Finança Família" },
-      { name: "description", content: "Painel financeiro compartilhado da sua família." },
+      { title: "Painel — Casinha Flow" },
+      { name: "description", content: "Casinha Flow — controle e liberdade andando juntos. Painel financeiro compartilhado da sua família." },
     ],
   }),
   component: Dashboard,
@@ -115,7 +115,10 @@ function Dashboard() {
             <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold tracking-tight">Finança Família</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-semibold tracking-tight">Casinha Flow</span>
+              <span className="text-[10px] text-muted-foreground hidden sm:block">controle e liberdade andando juntos</span>
+            </div>
           </div>
           <Button variant="ghost" size="sm" onClick={handleSignOut}>
             <LogOut className="h-4 w-4 mr-2" />
