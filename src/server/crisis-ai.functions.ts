@@ -3,6 +3,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const DAILY_LIMIT = 5;
 
+export interface CrisisAnalysis {
+  modo_crise: boolean;
+  estagio: 1 | 2 | 3 | null;
+  prazo_estimado_meses: number;
+  acoes_prioritarias: string[];
+  alertas: string[];
+  previsao_retorno_5030020: string;
+  distribuicao_recomendada: {
+    essenciais: number;
+    dividas: number;
+    reserva: number;
+    estilo_vida: number;
+  };
+}
+
 interface FinancialStateRow {
   mes: string;
   renda_mensal: number;
