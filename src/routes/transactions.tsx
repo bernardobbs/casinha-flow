@@ -1118,6 +1118,98 @@ function TransactionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* New category dialog */}
+      <Dialog open={newCatOpen} onOpenChange={(o) => { if (!creatingCat) setNewCatOpen(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova categoria</DialogTitle>
+            <DialogDescription>
+              Crie uma categoria personalizada para sua família.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="cat-nome">Nome</Label>
+              <Input
+                id="cat-nome"
+                value={newCatNome}
+                onChange={(e) => setNewCatNome(e.target.value)}
+                placeholder="Ex: Pet, Academia, Investimentos..."
+                maxLength={40}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select value={newCatTipo} onValueChange={(v) => setNewCatTipo(v as CategoryTipo)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="despesa">Despesa</SelectItem>
+                    <SelectItem value="receita">Receita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cat-icone">Ícone (emoji)</Label>
+                <Input
+                  id="cat-icone"
+                  value={newCatIcone}
+                  onChange={(e) => setNewCatIcone(e.target.value.slice(0, 4))}
+                  placeholder="📦"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cat-cor">Cor</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="cat-cor"
+                  type="color"
+                  value={newCatCor}
+                  onChange={(e) => setNewCatCor(e.target.value)}
+                  className="h-10 w-16 p-1 cursor-pointer"
+                />
+                <span
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-base"
+                  style={{
+                    background: `color-mix(in oklab, ${newCatCor} 14%, transparent)`,
+                    color: newCatCor,
+                  }}
+                >
+                  {newCatIcone || "📦"}
+                </span>
+                <span className="text-sm text-muted-foreground">{newCatCor}</span>
+              </div>
+            </div>
+
+            {newCatTipo === "despesa" && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="cat-essencial"
+                  checked={newCatEssencial}
+                  onCheckedChange={(c) => setNewCatEssencial(Boolean(c))}
+                />
+                <Label htmlFor="cat-essencial" className="cursor-pointer font-normal">
+                  Marcar como essencial (Módulo Crise)
+                </Label>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setNewCatOpen(false)} disabled={creatingCat}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateCategory} disabled={creatingCat || newCatNome.trim().length < 2}>
+              {creatingCat ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar categoria"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
