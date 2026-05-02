@@ -236,8 +236,9 @@ function TransactionsPage() {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<TxType>("expense");
-  const [source, setSource] = useState<Exclude<TxSource, "importado">>("pix");
+  const [source, setSource] = useState<Exclude<TxSource, "importado">>("manual");
   const [scope, setScope] = useState<TxScope>("family");
+  const [isEssencial, setIsEssencial] = useState(false);
 
   // import state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -245,6 +246,11 @@ function TransactionsPage() {
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [importScope, setImportScope] = useState<TxScope>("family");
   const [importing, setImporting] = useState(false);
+
+  // duplicate detection
+  const [dupOpen, setDupOpen] = useState(false);
+  const [dupCandidates, setDupCandidates] = useState<Transaction[]>([]);
+  const [pendingPayload, setPendingPayload] = useState<z.infer<typeof txSchema> | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
