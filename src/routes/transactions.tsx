@@ -38,6 +38,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
+import { AlertsBell } from "@/components/alerts-bell";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({
@@ -279,6 +280,11 @@ function TransactionsPage() {
   const [dupCandidates, setDupCandidates] = useState<Transaction[]>([]);
   const [pendingPayload, setPendingPayload] = useState<z.infer<typeof txSchema> | null>(null);
 
+  // crisis mode + non-essential confirmation
+  const [crisisActive, setCrisisActive] = useState(false);
+  const [crisisConfirmOpen, setCrisisConfirmOpen] = useState(false);
+  const [crisisPendingPayload, setCrisisPendingPayload] = useState<z.infer<typeof txSchema> | null>(null);
+
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
@@ -301,7 +307,7 @@ function TransactionsPage() {
       }
       setFamilyId(profile.family_id);
 
-      const [{ data: txs, error: txErr }, { data: cats, error: catErr }] = await Promise.all([
+      const [{ data: txs, error: txErr }, { data: cats, error: catErr }, { data: crisis }] = await Promise.all([
         supabase
           .from("transactions")
           .select("*")
@@ -313,6 +319,12 @@ function TransactionsPage() {
           .order("tipo", { ascending: true })
           .order("is_essencial", { ascending: false })
           .order("nome", { ascending: true }),
+        supabase
+          .from("crisis_events")
+          .select("id")
+          .eq("family_id", profile.family_id)
+          .eq("ativo", true)
+          .maybeSingle(),
       ]);
 
       if (txErr) {
@@ -327,6 +339,7 @@ function TransactionsPage() {
       } else {
         setCategories((cats ?? []) as Category[]);
       }
+      setCrisisActive(!!crisis);
       setLoading(false);
     };
 
@@ -378,7 +391,11 @@ function TransactionsPage() {
     setCategoryId("");
 
     // Auto-recalc monthly financial state for this transaction's month
-    void recalcMonth(payload.date);
+    await recalcMonth(payload.date);
+    // Trigger alert checks (budget thresholds, negative balance, microspending)
+    if (data?.id) {
+      await supabase.rpc("check_transaction_alerts", { _transaction_id: data.id });
+    }
   };
 
   const recalcMonth = async (txDate: string) => {
@@ -432,15 +449,36 @@ function TransactionsPage() {
       return;
     }
 
+    // Crisis mode: confirm non-essential expense before saving
+    if (
+      crisisActive &&
+      parsed.data.type === "expense" &&
+      !parsed.data.is_essencial
+    ) {
+      setCrisisPendingPayload(parsed.data);
+      setCrisisConfirmOpen(true);
+      return;
+    }
+
     await insertTransaction(parsed.data);
   };
 
   const handleConfirmDuplicate = async () => {
     if (!pendingPayload) return;
     setDupOpen(false);
-    await insertTransaction(pendingPayload);
+    const payload = pendingPayload;
     setPendingPayload(null);
     setDupCandidates([]);
+    if (
+      crisisActive &&
+      payload.type === "expense" &&
+      !payload.is_essencial
+    ) {
+      setCrisisPendingPayload(payload);
+      setCrisisConfirmOpen(true);
+      return;
+    }
+    await insertTransaction(payload);
   };
 
   const handleCancelDuplicate = () => {
@@ -628,6 +666,10 @@ function TransactionsPage() {
     // Recalc all months touched by the import
     const months = new Set(inserted.map((t) => t.date.slice(0, 7) + "-01"));
     for (const m of months) void recalcMonth(m);
+    // Trigger alert checks for each imported transaction
+    for (const t of inserted) {
+      void supabase.rpc("check_transaction_alerts", { _transaction_id: t.id });
+    }
   };
 
   if (authLoading || loading) {
@@ -652,12 +694,15 @@ function TransactionsPage() {
               <span className="text-[10px] text-muted-foreground hidden sm:block">controle e liberdade andando juntos</span>
             </div>
           </Link>
-          <Link to="/dashboard">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Painel
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <AlertsBell />
+            <Link to="/dashboard">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Painel
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -1227,6 +1272,49 @@ function TransactionsPage() {
             </Button>
             <Button onClick={handleCreateCategory} disabled={creatingCat || newCatNome.trim().length < 2}>
               {creatingCat ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar categoria"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Crisis-mode non-essential confirmation */}
+      <Dialog open={crisisConfirmOpen} onOpenChange={setCrisisConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>⚠️ Gasto não-essencial em modo crise</DialogTitle>
+            <DialogDescription>
+              Você está em modo crise. Confirme se realmente deseja registrar
+              este gasto não-essencial.
+            </DialogDescription>
+          </DialogHeader>
+          {crisisPendingPayload && (
+            <div className="text-sm space-y-1 py-2">
+              <p><span className="text-muted-foreground">Descrição:</span> {crisisPendingPayload.description}</p>
+              <p><span className="text-muted-foreground">Valor:</span> {formatCurrency(crisisPendingPayload.amount)}</p>
+              <p><span className="text-muted-foreground">Data:</span> {formatDate(crisisPendingPayload.date)}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setCrisisConfirmOpen(false);
+                setCrisisPendingPayload(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!crisisPendingPayload) return;
+                const p = crisisPendingPayload;
+                setCrisisConfirmOpen(false);
+                setCrisisPendingPayload(null);
+                await insertTransaction(p);
+              }}
+            >
+              Salvar mesmo assim
             </Button>
           </DialogFooter>
         </DialogContent>

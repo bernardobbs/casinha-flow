@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert } from "lucide-react";
+import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
+import { AlertsBell } from "@/components/alerts-bell";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -121,10 +122,13 @@ function Dashboard() {
               <span className="text-[10px] text-muted-foreground hidden sm:block">controle e liberdade andando juntos</span>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <AlertsBell />
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -221,6 +225,31 @@ function Dashboard() {
               </div>
               <Link to="/financial-state">
                 <Button>Abrir</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-10 w-10 rounded-lg flex items-center justify-center"
+                  style={{
+                    background: "color-mix(in oklab, var(--primary) 14%, transparent)",
+                    color: "var(--primary)",
+                  }}
+                >
+                  <Target className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold tracking-tight">Orçamentos</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Limites por categoria + alertas automáticos.
+                  </p>
+                </div>
+              </div>
+              <Link to="/budgets">
+                <Button variant="outline">Abrir</Button>
               </Link>
             </CardContent>
           </Card>
