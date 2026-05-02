@@ -106,13 +106,14 @@ function FinancialStatePage() {
     setLoading(true);
 
     // 1) call recalc to make sure totals are fresh
+    const args: { _family_id: string; _mes: string; _renda?: number } = {
+      _family_id: familyId,
+      _mes: mes,
+    };
+    if (typeof opts?.renda === "number") args._renda = opts.renda;
     const { data: rpc, error: rpcErr } = await supabase.rpc(
       "recalc_financial_state",
-      {
-        _family_id: familyId,
-        _mes: mes,
-        _renda: opts?.renda ?? null,
-      },
+      args,
     );
 
     if (rpcErr) {
