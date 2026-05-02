@@ -709,7 +709,18 @@ function TransactionsPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Tabs value={type} onValueChange={(v) => setType(v as TxType)}>
+              <Tabs
+                value={type}
+                onValueChange={(v) => {
+                  const next = v as TxType;
+                  setType(next);
+                  // clear category if it doesn't match new type
+                  const cat = categories.find((c) => c.id === categoryId);
+                  if (cat && ((next === "expense" && cat.tipo !== "despesa") || (next === "income" && cat.tipo !== "receita"))) {
+                    setCategoryId("");
+                  }
+                }}
+              >
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="expense">Despesa</TabsTrigger>
                   <TabsTrigger value="income">Receita</TabsTrigger>
@@ -717,6 +728,54 @@ function TransactionsPage() {
                 <TabsContent value="expense" />
                 <TabsContent value="income" />
               </Tabs>
+
+              {/* Category selector */}
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <div className="flex gap-2">
+                  <Select value={categoryId} onValueChange={handleCategoryChange}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories
+                        .filter((c) => (type === "expense" ? c.tipo === "despesa" : c.tipo === "receita"))
+                        .map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            <span className="flex items-center gap-2">
+                              <span
+                                className="inline-flex h-5 w-5 items-center justify-center rounded-full text-xs"
+                                style={{
+                                  background: `color-mix(in oklab, ${c.cor} 18%, transparent)`,
+                                  color: c.cor,
+                                }}
+                              >
+                                {c.icone}
+                              </span>
+                              <span>{c.nome}</span>
+                              {c.is_essencial && (
+                                <span className="text-[10px] text-muted-foreground">• essencial</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setNewCatTipo(type === "expense" ? "despesa" : "receita");
+                      setNewCatOpen(true);
+                    }}
+                    title="Nova categoria"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2 sm:col-span-2">
