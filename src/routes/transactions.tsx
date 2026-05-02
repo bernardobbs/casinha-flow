@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -10,6 +10,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Wallet,
@@ -23,6 +32,9 @@ import {
   QrCode,
   Users,
   User as UserIcon,
+  Upload,
+  FileDown,
+  Tag,
 } from "lucide-react";
 
 export const Route = createFileRoute("/transactions")({
@@ -36,7 +48,7 @@ export const Route = createFileRoute("/transactions")({
 });
 
 type TxType = "income" | "expense";
-type TxSource = "pix" | "cartao" | "boleto";
+type TxSource = "pix" | "cartao" | "boleto" | "importado";
 type TxScope = "family" | "personal";
 
 interface Transaction {
@@ -49,6 +61,8 @@ interface Transaction {
   type: TxType;
   source: TxSource;
   scope: TxScope;
+  category?: string | null;
+  external_id?: string | null;
 }
 
 const txSchema = z.object({
@@ -74,13 +88,139 @@ const sourceLabel: Record<TxSource, string> = {
   pix: "Pix",
   cartao: "Cartão",
   boleto: "Boleto",
+  importado: "Importado",
 };
 
 const SourceIcon = ({ source }: { source: TxSource }) => {
   if (source === "pix") return <QrCode className="h-3.5 w-3.5" />;
   if (source === "cartao") return <CreditCard className="h-3.5 w-3.5" />;
+  if (source === "importado") return <FileDown className="h-3.5 w-3.5" />;
   return <Receipt className="h-3.5 w-3.5" />;
 };
+
+// ---- CSV import helpers ----
+
+const CATEGORY_RULES: { keywords: string[]; category: string }[] = [
+  { keywords: ["mercado", "padaria"], category: "Alimentação" },
+  { keywords: ["posto", "uber"], category: "Transporte" },
+  { keywords: ["farmacia", "farmácia", "drogaria"], category: "Saúde" },
+  { keywords: ["aluguel", "energia", "internet"], category: "Moradia" },
+  { keywords: ["parcela", "financiamento", "emprestimo", "empréstimo"], category: "Dívidas" },
+  { keywords: ["netflix", "spotify", "amazon"], category: "Assinaturas" },
+];
+
+function classifyCategory(description: string): string {
+  const d = description.toLowerCase();
+  for (const rule of CATEGORY_RULES) {
+    if (rule.keywords.some((k) => d.includes(k))) return rule.category;
+  }
+  return "Outros";
+}
+
+function parseDate(raw: string): string | null {
+  const s = raw.trim();
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return null;
+}
+
+function parseAmount(raw: string): number | null {
+  let s = raw.trim().replace(/[R$\s]/gi, "");
+  if (!s) return null;
+  // If has comma, treat as decimal separator (BR format)
+  if (s.includes(",")) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function splitCsvLine(line: string): string[] {
+  // simple CSV with optional quoted fields
+  const out: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQuotes) {
+      if (c === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (c === '"') {
+        inQuotes = false;
+      } else {
+        cur += c;
+      }
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === "," || c === ";") {
+        out.push(cur);
+        cur = "";
+      } else {
+        cur += c;
+      }
+    }
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+
+interface ParsedRow {
+  date: string;
+  description: string;
+  amount: number; // signed
+  type: TxType;
+  category: string;
+  external_id: string;
+  selected: boolean;
+  error?: string;
+}
+
+function parseCsv(text: string): ParsedRow[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return [];
+  // Detect header (skip if first row contains 'data' keyword)
+  const startIdx =
+    /data/i.test(lines[0]) && /(descri|valor)/i.test(lines[0]) ? 1 : 0;
+
+  const rows: ParsedRow[] = [];
+  for (let i = startIdx; i < lines.length; i++) {
+    const cols = splitCsvLine(lines[i]);
+    if (cols.length < 3) continue;
+    const date = parseDate(cols[0]);
+    const description = cols[1];
+    const amount = parseAmount(cols[2]);
+
+    if (!date || !description || amount === null) {
+      rows.push({
+        date: cols[0] ?? "",
+        description: description ?? "",
+        amount: 0,
+        type: "expense",
+        category: "Outros",
+        external_id: "",
+        selected: false,
+        error: "Linha inválida",
+      });
+      continue;
+    }
+
+    const type: TxType = amount < 0 ? "expense" : "income";
+    rows.push({
+      date,
+      description,
+      amount,
+      type,
+      category: classifyCategory(description),
+      external_id: `${date}|${description.toLowerCase().trim()}|${amount.toFixed(2)}`,
+      selected: true,
+    });
+  }
+  return rows;
+}
 
 function TransactionsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -96,8 +236,15 @@ function TransactionsPage() {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<TxType>("expense");
-  const [source, setSource] = useState<TxSource>("pix");
+  const [source, setSource] = useState<Exclude<TxSource, "importado">>("pix");
   const [scope, setScope] = useState<TxScope>("family");
+
+  // import state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  const [importScope, setImportScope] = useState<TxScope>("family");
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -207,6 +354,118 @@ function TransactionsPage() {
     toast.success("Transação removida");
   };
 
+  // ---- Import handlers ----
+
+  const handleFilePick = () => fileInputRef.current?.click();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx 2MB)");
+      return;
+    }
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length === 0) {
+        toast.error("Nenhuma linha encontrada no CSV");
+        return;
+      }
+      setParsedRows(rows);
+      setImportOpen(true);
+    } catch {
+      toast.error("Não foi possível ler o arquivo");
+    }
+  };
+
+  const toggleRow = (idx: number) => {
+    setParsedRows((rows) =>
+      rows.map((r, i) => (i === idx ? { ...r, selected: !r.selected } : r))
+    );
+  };
+
+  const toggleAll = (checked: boolean) => {
+    setParsedRows((rows) =>
+      rows.map((r) => (r.error ? r : { ...r, selected: checked }))
+    );
+  };
+
+  const validRows = parsedRows.filter((r) => !r.error);
+  const selectedCount = parsedRows.filter((r) => r.selected && !r.error).length;
+
+  const handleConfirmImport = async () => {
+    if (!user || !familyId) return;
+    const toImport = parsedRows.filter((r) => r.selected && !r.error);
+    if (toImport.length === 0) {
+      toast.error("Selecione ao menos uma linha");
+      return;
+    }
+
+    setImporting(true);
+
+    // Pre-check existing external_ids in this family
+    const externalIds = toImport.map((r) => r.external_id);
+    const { data: existing } = await supabase
+      .from("transactions")
+      .select("external_id")
+      .eq("family_id", familyId)
+      .in("external_id", externalIds);
+
+    const existingSet = new Set((existing ?? []).map((e) => e.external_id));
+    const newRows = toImport.filter((r) => !existingSet.has(r.external_id));
+    const duplicates = toImport.length - newRows.length;
+
+    if (newRows.length === 0) {
+      setImporting(false);
+      toast.info(`0 importados, ${duplicates} ignorados (duplicados)`);
+      setImportOpen(false);
+      setParsedRows([]);
+      return;
+    }
+
+    const payload = newRows.map((r) => ({
+      family_id: familyId,
+      user_id: user.id,
+      date: r.date,
+      description: r.description,
+      amount: Math.abs(r.amount),
+      type: r.type,
+      source: "importado" as const,
+      scope: importScope,
+      category: r.category,
+      external_id: r.external_id,
+    }));
+
+    const { data, error } = await supabase
+      .from("transactions")
+      .insert(payload)
+      .select();
+
+    setImporting(false);
+
+    if (error) {
+      toast.error(`Erro na importação: ${error.message}`);
+      return;
+    }
+
+    const inserted = (data ?? []).map((t) => ({
+      ...(t as Transaction),
+      amount: Number(t.amount),
+    }));
+
+    setTransactions((prev) =>
+      [...inserted, ...prev].sort((a, b) => (a.date < b.date ? 1 : -1))
+    );
+
+    toast.success(
+      `${inserted.length} importados, ${duplicates} ignorados (duplicados)`
+    );
+    setImportOpen(false);
+    setParsedRows([]);
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -239,9 +498,24 @@ function TransactionsPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Transações</h1>
-          <p className="text-muted-foreground mt-1">Receitas, despesas e tudo que entra e sai.</p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Transações</h1>
+            <p className="text-muted-foreground mt-1">Receitas, despesas e tudo que entra e sai.</p>
+          </div>
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <Button variant="outline" className="gap-2" onClick={handleFilePick}>
+              <Upload className="h-4 w-4" />
+              Importar Extrato
+            </Button>
+          </div>
         </div>
 
         {/* Totals */}
@@ -340,7 +614,7 @@ function TransactionsPage() {
 
                 <div className="space-y-2">
                   <Label>Forma</Label>
-                  <Select value={source} onValueChange={(v) => setSource(v as TxSource)}>
+                  <Select value={source} onValueChange={(v) => setSource(v as Exclude<TxSource, "importado">)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pix">Pix</SelectItem>
@@ -419,6 +693,12 @@ function TransactionsPage() {
                             {t.scope === "family" ? <Users className="h-3 w-3" /> : <UserIcon className="h-3 w-3" />}
                             {t.scope === "family" ? "Família" : "Pessoal"}
                           </Badge>
+                          {t.category && (
+                            <Badge variant="outline" className="gap-1 font-normal">
+                              <Tag className="h-3 w-3" />
+                              {t.category}
+                            </Badge>
+                          )}
                         </div>
                       </div>
 
@@ -450,6 +730,100 @@ function TransactionsPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Import preview dialog */}
+      <Dialog open={importOpen} onOpenChange={(o) => { if (!importing) setImportOpen(o); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Pré-visualizar importação</DialogTitle>
+            <DialogDescription>
+              {parsedRows.length} linha(s) lida(s). Selecione as que deseja importar.
+              Categorias foram sugeridas automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between gap-4 pb-2 border-b">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={selectedCount === validRows.length && validRows.length > 0}
+                onCheckedChange={(c) => toggleAll(Boolean(c))}
+              />
+              <span className="text-sm text-muted-foreground">
+                {selectedCount} de {validRows.length} selecionada(s)
+              </span>
+            </div>
+            <div className="w-48">
+              <Select value={importScope} onValueChange={(v) => setImportScope(v as TxScope)}>
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="family">Escopo: Família</SelectItem>
+                  <SelectItem value="personal">Escopo: Pessoal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="max-h-[400px] overflow-auto -mx-6 px-6">
+            <ul className="divide-y divide-border text-sm">
+              {parsedRows.map((r, idx) => (
+                <li key={idx} className="py-2 flex items-center gap-3">
+                  <Checkbox
+                    checked={r.selected}
+                    disabled={!!r.error}
+                    onCheckedChange={() => toggleRow(idx)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{r.description || "—"}</span>
+                      {!r.error && (
+                        <Badge variant="outline" className="font-normal gap-1">
+                          <Tag className="h-3 w-3" />
+                          {r.category}
+                        </Badge>
+                      )}
+                      {r.error && (
+                        <Badge variant="destructive" className="font-normal">{r.error}</Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {r.date || "data inválida"}
+                    </span>
+                  </div>
+                  <div
+                    className="font-semibold shrink-0"
+                    style={{
+                      color: r.error
+                        ? "var(--muted-foreground)"
+                        : r.type === "income"
+                        ? "var(--success)"
+                        : "var(--destructive)",
+                    }}
+                  >
+                    {r.error
+                      ? "—"
+                      : `${r.type === "income" ? "+" : "−"} ${formatCurrency(Math.abs(r.amount))}`}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setImportOpen(false)} disabled={importing}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmImport} disabled={importing || selectedCount === 0}>
+              {importing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                `Importar ${selectedCount} transação(ões)`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
