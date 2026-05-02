@@ -35,6 +35,8 @@ import {
   Upload,
   FileDown,
   Tag,
+  Plus,
+  Sparkles,
 } from "lucide-react";
 
 export const Route = createFileRoute("/transactions")({
