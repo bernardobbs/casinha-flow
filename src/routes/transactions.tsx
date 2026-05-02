@@ -666,6 +666,10 @@ function TransactionsPage() {
     // Recalc all months touched by the import
     const months = new Set(inserted.map((t) => t.date.slice(0, 7) + "-01"));
     for (const m of months) void recalcMonth(m);
+    // Trigger alert checks for each imported transaction
+    for (const t of inserted) {
+      void supabase.rpc("check_transaction_alerts", { _transaction_id: t.id });
+    }
   };
 
   if (authLoading || loading) {
