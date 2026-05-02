@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      alerts: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          lido: boolean
+          mensagem: string
+          referencia_id: string | null
+          referencia_tipo: string | null
+          severidade: Database["public"]["Enums"]["alert_severity"]
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          lido?: boolean
+          mensagem: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          severidade?: Database["public"]["Enums"]["alert_severity"]
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          lido?: boolean
+          mensagem?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          severidade?: Database["public"]["Enums"]["alert_severity"]
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      budgets: {
+        Row: {
+          category_id: string
+          created_at: string
+          family_id: string
+          id: string
+          mes: string
+          updated_at: string
+          valor_planejado: number
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          mes: string
+          updated_at?: string
+          valor_planejado?: number
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          mes?: string
+          updated_at?: string
+          valor_planejado?: number
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           cor: string
@@ -458,7 +527,37 @@ export type Database = {
           should_activate: boolean
         }[]
       }
+      check_transaction_alerts: {
+        Args: { _transaction_id: string }
+        Returns: undefined
+      }
       count_ai_runs_today: { Args: { _family_id: string }; Returns: number }
+      create_alert: {
+        Args: {
+          _family_id: string
+          _mensagem: string
+          _ref_id: string
+          _ref_tipo: string
+          _severidade: Database["public"]["Enums"]["alert_severity"]
+          _tipo: string
+        }
+        Returns: string
+      }
+      get_budget_status: {
+        Args: { _family_id: string; _mes: string }
+        Returns: {
+          budget_id: string
+          category_cor: string
+          category_icone: string
+          category_id: string
+          category_nome: string
+          is_essencial: boolean
+          pct_atingido: number
+          status_cor: string
+          valor_gasto: number
+          valor_planejado: number
+        }[]
+      }
       get_user_family_id: { Args: { _user_id: string }; Returns: string }
       is_family_admin: {
         Args: { _family_id: string; _user_id: string }
@@ -518,6 +617,7 @@ export type Database = {
       }
     }
     Enums: {
+      alert_severity: "info" | "warning" | "critical"
       category_type: "despesa" | "receita"
       family_role: "admin" | "member"
       transaction_scope: "family" | "personal"
@@ -650,6 +750,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      alert_severity: ["info", "warning", "critical"],
       category_type: ["despesa", "receita"],
       family_role: ["admin", "member"],
       transaction_scope: ["family", "personal"],
