@@ -306,7 +306,7 @@ function TransactionsPage() {
       }
       setFamilyId(profile.family_id);
 
-      const [{ data: txs, error: txErr }, { data: cats, error: catErr }] = await Promise.all([
+      const [{ data: txs, error: txErr }, { data: cats, error: catErr }, { data: crisis }] = await Promise.all([
         supabase
           .from("transactions")
           .select("*")
@@ -318,6 +318,12 @@ function TransactionsPage() {
           .order("tipo", { ascending: true })
           .order("is_essencial", { ascending: false })
           .order("nome", { ascending: true }),
+        supabase
+          .from("crisis_events")
+          .select("id")
+          .eq("family_id", profile.family_id)
+          .eq("ativo", true)
+          .maybeSingle(),
       ]);
 
       if (txErr) {
@@ -332,6 +338,7 @@ function TransactionsPage() {
       } else {
         setCategories((cats ?? []) as Category[]);
       }
+      setCrisisActive(!!crisis);
       setLoading(false);
     };
 
