@@ -1272,6 +1272,49 @@ function TransactionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Crisis-mode non-essential confirmation */}
+      <Dialog open={crisisConfirmOpen} onOpenChange={setCrisisConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>⚠️ Gasto não-essencial em modo crise</DialogTitle>
+            <DialogDescription>
+              Você está em modo crise. Confirme se realmente deseja registrar
+              este gasto não-essencial.
+            </DialogDescription>
+          </DialogHeader>
+          {crisisPendingPayload && (
+            <div className="text-sm space-y-1 py-2">
+              <p><span className="text-muted-foreground">Descrição:</span> {crisisPendingPayload.description}</p>
+              <p><span className="text-muted-foreground">Valor:</span> {formatCurrency(crisisPendingPayload.amount)}</p>
+              <p><span className="text-muted-foreground">Data:</span> {formatDate(crisisPendingPayload.date)}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setCrisisConfirmOpen(false);
+                setCrisisPendingPayload(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!crisisPendingPayload) return;
+                const p = crisisPendingPayload;
+                setCrisisConfirmOpen(false);
+                setCrisisPendingPayload(null);
+                await insertTransaction(p);
+              }}
+            >
+              Salvar mesmo assim
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
