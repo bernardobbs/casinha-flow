@@ -54,21 +54,22 @@ export function AlertsBell() {
         .eq("id", user.id)
         .maybeSingle();
       if (!profile?.family_id || cancelled) return;
-      setFamilyId(profile.family_id);
-      await load(profile.family_id);
+      const fid = profile.family_id;
+      setFamilyId(fid);
+      await load(fid);
 
       // Realtime subscription
       const channel = supabase
-        .channel(`alerts-${profile.family_id}`)
+        .channel(`alerts-${fid}`)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
             table: "alerts",
-            filter: `family_id=eq.${profile.family_id}`,
+            filter: `family_id=eq.${fid}`,
           },
-          () => void load(profile.family_id),
+          () => void load(fid),
         )
         .subscribe();
 
