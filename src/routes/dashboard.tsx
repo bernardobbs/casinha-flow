@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert } from "lucide-react";
+import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
+import { AlertsBell } from "@/components/alerts-bell";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -121,10 +122,13 @@ function Dashboard() {
               <span className="text-[10px] text-muted-foreground hidden sm:block">controle e liberdade andando juntos</span>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <AlertsBell />
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
