@@ -624,6 +624,10 @@ function TransactionsPage() {
     );
     setImportOpen(false);
     setParsedRows([]);
+
+    // Recalc all months touched by the import
+    const months = new Set(inserted.map((t) => t.date.slice(0, 7) + "-01"));
+    for (const m of months) void recalcMonth(m);
   };
 
   if (authLoading || loading) {
