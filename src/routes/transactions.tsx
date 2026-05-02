@@ -48,7 +48,7 @@ export const Route = createFileRoute("/transactions")({
 });
 
 type TxType = "income" | "expense";
-type TxSource = "pix" | "cartao" | "boleto" | "importado";
+type TxSource = "manual" | "importado" | "cartao";
 type TxScope = "family" | "personal";
 
 interface Transaction {
@@ -63,6 +63,7 @@ interface Transaction {
   scope: TxScope;
   category?: string | null;
   external_id?: string | null;
+  is_essencial?: boolean;
 }
 
 const txSchema = z.object({
@@ -70,8 +71,9 @@ const txSchema = z.object({
   amount: z.number().positive("Valor deve ser maior que zero").max(99_999_999),
   date: z.string().min(1, "Data obrigatória"),
   type: z.enum(["income", "expense"]),
-  source: z.enum(["pix", "cartao", "boleto"]),
+  source: z.enum(["manual", "cartao"]),
   scope: z.enum(["family", "personal"]),
+  is_essencial: z.boolean(),
 });
 
 const formatCurrency = (n: number) =>
@@ -85,14 +87,12 @@ const formatDate = (iso: string) =>
   });
 
 const sourceLabel: Record<TxSource, string> = {
-  pix: "Pix",
+  manual: "Manual",
   cartao: "Cartão",
-  boleto: "Boleto",
   importado: "Importado",
 };
 
 const SourceIcon = ({ source }: { source: TxSource }) => {
-  if (source === "pix") return <QrCode className="h-3.5 w-3.5" />;
   if (source === "cartao") return <CreditCard className="h-3.5 w-3.5" />;
   if (source === "importado") return <FileDown className="h-3.5 w-3.5" />;
   return <Receipt className="h-3.5 w-3.5" />;
