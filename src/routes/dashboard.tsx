@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Wallet, LogOut, Users, Home, Loader2, Crown } from "lucide-react";
+import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert } from "lucide-react";
+import { CrisisBanner } from "@/components/crisis-banner";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -127,6 +128,8 @@ function Dashboard() {
         </div>
       </header>
 
+      <CrisisBanner />
+
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
         {/* Welcome */}
         <div>
@@ -218,6 +221,32 @@ function Dashboard() {
               </div>
               <Link to="/financial-state">
                 <Button>Abrir</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-10 w-10 rounded-lg flex items-center justify-center"
+                  style={{
+                    background:
+                      "color-mix(in oklab, var(--destructive) 14%, transparent)",
+                    color: "var(--destructive)",
+                  }}
+                >
+                  <ShieldAlert className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold tracking-tight">Módulo Crise</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Detecção automática + plano de saída em 3 estágios.
+                  </p>
+                </div>
+              </div>
+              <Link to="/crisis">
+                <Button variant="outline">Abrir</Button>
               </Link>
             </CardContent>
           </Card>
