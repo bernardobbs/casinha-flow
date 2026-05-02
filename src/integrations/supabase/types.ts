@@ -151,6 +151,42 @@ export type Database = {
           },
         ]
       }
+      daily_ai_runs: {
+        Row: {
+          created_at: string
+          custo_credito: number
+          data: string
+          family_id: string
+          id: string
+          modulo: string
+          prompt_usado: string
+          resposta_ia: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custo_credito?: number
+          data?: string
+          family_id: string
+          id?: string
+          modulo: string
+          prompt_usado: string
+          resposta_ia?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custo_credito?: number
+          data?: string
+          family_id?: string
+          id?: string
+          modulo?: string
+          prompt_usado?: string
+          resposta_ia?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       families: {
         Row: {
           created_at: string
@@ -422,6 +458,7 @@ export type Database = {
           should_activate: boolean
         }[]
       }
+      count_ai_runs_today: { Args: { _family_id: string }; Returns: number }
       get_user_family_id: { Args: { _user_id: string }; Returns: string }
       is_family_admin: {
         Args: { _family_id: string; _user_id: string }
