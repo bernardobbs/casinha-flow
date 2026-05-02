@@ -38,6 +38,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
+import { AlertsBell } from "@/components/alerts-bell";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({
