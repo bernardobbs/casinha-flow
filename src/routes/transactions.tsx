@@ -689,12 +689,15 @@ function TransactionsPage() {
               <span className="text-[10px] text-muted-foreground hidden sm:block">controle e liberdade andando juntos</span>
             </div>
           </Link>
-          <Link to="/dashboard">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Painel
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <AlertsBell />
+            <Link to="/dashboard">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Painel
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
