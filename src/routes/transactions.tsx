@@ -345,6 +345,9 @@ function TransactionsPage() {
 
   const insertTransaction = async (payload: z.infer<typeof txSchema>) => {
     if (!user || !familyId) return;
+    const cat = payload.category_id
+      ? categories.find((c) => c.id === payload.category_id)
+      : null;
     setSubmitting(true);
     const { data, error } = await supabase
       .from("transactions")
@@ -352,6 +355,7 @@ function TransactionsPage() {
         family_id: familyId,
         user_id: user.id,
         ...payload,
+        category: cat?.nome ?? null,
       })
       .select()
       .single();
@@ -371,6 +375,7 @@ function TransactionsPage() {
     setAmount("");
     setDate(today);
     setIsEssencial(false);
+    setCategoryId("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -385,6 +390,7 @@ function TransactionsPage() {
       source,
       scope,
       is_essencial: isEssencial,
+      category_id: categoryId || null,
     });
 
     if (!parsed.success) {
