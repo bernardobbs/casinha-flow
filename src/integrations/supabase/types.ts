@@ -71,6 +71,86 @@ export type Database = {
           },
         ]
       }
+      crisis_events: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          criterio_disparado: string | null
+          data_fim: string | null
+          data_inicio: string
+          estagio_atual: number
+          family_id: string
+          id: string
+          motivo_ativacao: string
+          plano_saida: Json | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          criterio_disparado?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          estagio_atual?: number
+          family_id: string
+          id?: string
+          motivo_ativacao: string
+          plano_saida?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          criterio_disparado?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          estagio_atual?: number
+          family_id?: string
+          id?: string
+          motivo_ativacao?: string
+          plano_saida?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crisis_stage_history: {
+        Row: {
+          created_at: string
+          crisis_id: string
+          criterio_avanco: string | null
+          data_entrada: string
+          data_saida: string | null
+          estagio: number
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          crisis_id: string
+          criterio_avanco?: string | null
+          data_entrada?: string
+          data_saida?: string | null
+          estagio: number
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          crisis_id?: string
+          criterio_avanco?: string | null
+          data_entrada?: string
+          data_saida?: string | null
+          estagio?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crisis_stage_history_crisis_id_fkey"
+            columns: ["crisis_id"]
+            isOneToOne: false
+            referencedRelation: "crisis_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           created_at: string
@@ -291,6 +371,57 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_crisis: {
+        Args: { _criterio: string; _family_id: string; _motivo: string }
+        Returns: {
+          ativo: boolean
+          created_at: string
+          criterio_disparado: string | null
+          data_fim: string | null
+          data_inicio: string
+          estagio_atual: number
+          family_id: string
+          id: string
+          motivo_ativacao: string
+          plano_saida: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crisis_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      advance_crisis_stage: {
+        Args: { _crisis_id: string }
+        Returns: {
+          ativo: boolean
+          created_at: string
+          criterio_disparado: string | null
+          data_fim: string | null
+          data_inicio: string
+          estagio_atual: number
+          family_id: string
+          id: string
+          motivo_ativacao: string
+          plano_saida: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crisis_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      check_crisis_activation: {
+        Args: { _family_id: string; _mes: string }
+        Returns: {
+          criterio: string
+          should_activate: boolean
+        }[]
+      }
       get_user_family_id: { Args: { _user_id: string }; Returns: string }
       is_family_admin: {
         Args: { _family_id: string; _user_id: string }
@@ -318,6 +449,28 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "financial_state"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resolve_crisis: {
+        Args: { _crisis_id: string }
+        Returns: {
+          ativo: boolean
+          created_at: string
+          criterio_disparado: string | null
+          data_fim: string | null
+          data_inicio: string
+          estagio_atual: number
+          family_id: string
+          id: string
+          motivo_ativacao: string
+          plano_saida: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crisis_events"
           isOneToOne: true
           isSetofReturn: false
         }
