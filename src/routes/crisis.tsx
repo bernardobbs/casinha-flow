@@ -535,6 +535,8 @@ function CrisisPage() {
               </Button>
             </div>
 
+            <CrisisAiAnalysis hasCrisis={true} />
+
             {/* Histórico de estágios da crise atual */}
             {stages.length > 0 && (
               <Card className="border-border/60 shadow-[var(--shadow-soft)]">
