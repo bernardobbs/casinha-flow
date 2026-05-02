@@ -390,7 +390,11 @@ function TransactionsPage() {
     setCategoryId("");
 
     // Auto-recalc monthly financial state for this transaction's month
-    void recalcMonth(payload.date);
+    await recalcMonth(payload.date);
+    // Trigger alert checks (budget thresholds, negative balance, microspending)
+    if (data?.id) {
+      await supabase.rpc("check_transaction_alerts", { _transaction_id: data.id });
+    }
   };
 
   const recalcMonth = async (txDate: string) => {
