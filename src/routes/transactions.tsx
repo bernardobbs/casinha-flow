@@ -29,7 +29,7 @@ import {
   Trash2,
   CreditCard,
   Receipt,
-  QrCode,
+  
   Users,
   User as UserIcon,
   Upload,
