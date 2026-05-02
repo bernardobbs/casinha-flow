@@ -664,9 +664,8 @@ function TransactionsPage() {
                   <Select value={source} onValueChange={(v) => setSource(v as Exclude<TxSource, "importado">)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pix">Pix</SelectItem>
+                      <SelectItem value="manual">Manual</SelectItem>
                       <SelectItem value="cartao">Cartão</SelectItem>
-                      <SelectItem value="boleto">Boleto</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -680,6 +679,17 @@ function TransactionsPage() {
                       <SelectItem value="personal">Pessoal (só você)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="flex items-center gap-2 sm:col-span-2 pt-1">
+                  <Checkbox
+                    id="essencial"
+                    checked={isEssencial}
+                    onCheckedChange={(c) => setIsEssencial(Boolean(c))}
+                  />
+                  <Label htmlFor="essencial" className="cursor-pointer font-normal">
+                    Despesa essencial
+                  </Label>
                 </div>
               </div>
 
