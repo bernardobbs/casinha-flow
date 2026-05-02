@@ -243,6 +243,7 @@ function TransactionsPage() {
   const navigate = useNavigate();
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -255,6 +256,16 @@ function TransactionsPage() {
   const [source, setSource] = useState<Exclude<TxSource, "importado">>("manual");
   const [scope, setScope] = useState<TxScope>("family");
   const [isEssencial, setIsEssencial] = useState(false);
+  const [categoryId, setCategoryId] = useState<string>("");
+
+  // new-category dialog
+  const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newCatNome, setNewCatNome] = useState("");
+  const [newCatTipo, setNewCatTipo] = useState<CategoryTipo>("despesa");
+  const [newCatIcone, setNewCatIcone] = useState("📦");
+  const [newCatCor, setNewCatCor] = useState("#9ca3af");
+  const [newCatEssencial, setNewCatEssencial] = useState(false);
+  const [creatingCat, setCreatingCat] = useState(false);
 
   // import state
   const fileInputRef = useRef<HTMLInputElement>(null);
