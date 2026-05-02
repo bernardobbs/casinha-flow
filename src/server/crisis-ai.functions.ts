@@ -245,9 +245,9 @@ export const runCrisisAnalysis = createServerFn({ method: "POST" })
       return { error: "Resposta da IA sem dados estruturados." as const };
     }
 
-    let parsed: Record<string, unknown>;
+    let parsed: CrisisAnalysis;
     try {
-      parsed = JSON.parse(argsStr);
+      parsed = JSON.parse(argsStr) as CrisisAnalysis;
     } catch {
       return { error: "Resposta da IA inválida." as const };
     }
@@ -268,7 +268,7 @@ export const runCrisisAnalysis = createServerFn({ method: "POST" })
     }
 
     return {
-      analysis: parsed as Record<string, unknown>,
+      analysis: parsed,
       used: used + 1,
       limit: DAILY_LIMIT,
     };
