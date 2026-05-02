@@ -301,18 +301,31 @@ function TransactionsPage() {
       }
       setFamilyId(profile.family_id);
 
-      const { data: txs, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false });
+      const [{ data: txs, error: txErr }, { data: cats, error: catErr }] = await Promise.all([
+        supabase
+          .from("transactions")
+          .select("*")
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("categories")
+          .select("*")
+          .order("tipo", { ascending: true })
+          .order("is_essencial", { ascending: false })
+          .order("nome", { ascending: true }),
+      ]);
 
-      if (error) {
+      if (txErr) {
         toast.error("Erro ao carregar transações");
       } else {
         setTransactions(
           (txs ?? []).map((t) => ({ ...t, amount: Number(t.amount) })) as Transaction[]
         );
+      }
+      if (catErr) {
+        toast.error("Erro ao carregar categorias");
+      } else {
+        setCategories((cats ?? []) as Category[]);
       }
       setLoading(false);
     };
