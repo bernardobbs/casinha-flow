@@ -235,6 +235,31 @@ function Dashboard() {
                 <div
                   className="h-10 w-10 rounded-lg flex items-center justify-center"
                   style={{
+                    background: "color-mix(in oklab, var(--primary) 14%, transparent)",
+                    color: "var(--primary)",
+                  }}
+                >
+                  <Target className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold tracking-tight">Orçamentos</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Limites por categoria + alertas automáticos.
+                  </p>
+                </div>
+              </div>
+              <Link to="/budgets">
+                <Button variant="outline">Abrir</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-10 w-10 rounded-lg flex items-center justify-center"
+                  style={{
                     background:
                       "color-mix(in oklab, var(--destructive) 14%, transparent)",
                     color: "var(--destructive)",
