@@ -303,31 +303,15 @@ function TransactionsPage() {
     return { income, expense, balance: income - expense };
   }, [transactions]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const insertTransaction = async (payload: z.infer<typeof txSchema>) => {
     if (!user || !familyId) return;
-
-    const parsed = txSchema.safeParse({
-      description,
-      amount: Number(amount.replace(",", ".")),
-      date,
-      type,
-      source,
-      scope,
-    });
-
-    if (!parsed.success) {
-      toast.error(parsed.error.issues[0].message);
-      return;
-    }
-
     setSubmitting(true);
     const { data, error } = await supabase
       .from("transactions")
       .insert({
         family_id: familyId,
         user_id: user.id,
-        ...parsed.data,
+        ...payload,
       })
       .select()
       .single();
@@ -346,7 +330,64 @@ function TransactionsPage() {
     setDescription("");
     setAmount("");
     setDate(today);
+    setIsEssencial(false);
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !familyId) return;
+
+    const parsed = txSchema.safeParse({
+      description,
+      amount: Number(amount.replace(",", ".")),
+      date,
+      type,
+      source,
+      scope,
+      is_essencial: isEssencial,
+    });
+
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      return;
+    }
+
+    // Duplicate detection: same family + same date + same amount + similar description
+    const { data: candidates } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("family_id", familyId)
+      .eq("date", parsed.data.date)
+      .eq("amount", parsed.data.amount)
+      .ilike("description", `%${parsed.data.description}%`)
+      .limit(5);
+
+    if (candidates && candidates.length > 0) {
+      setDupCandidates(
+        candidates.map((c) => ({ ...(c as Transaction), amount: Number(c.amount) }))
+      );
+      setPendingPayload(parsed.data);
+      setDupOpen(true);
+      return;
+    }
+
+    await insertTransaction(parsed.data);
+  };
+
+  const handleConfirmDuplicate = async () => {
+    if (!pendingPayload) return;
+    setDupOpen(false);
+    await insertTransaction(pendingPayload);
+    setPendingPayload(null);
+    setDupCandidates([]);
+  };
+
+  const handleCancelDuplicate = () => {
+    setDupOpen(false);
+    setPendingPayload(null);
+    setDupCandidates([]);
+  };
+
 
   const handleDelete = async (id: string) => {
     const prev = transactions;
