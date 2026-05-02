@@ -127,6 +127,68 @@ export type Database = {
           },
         ]
       }
+      financial_state: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          mes: string
+          meta_essenciais: number
+          meta_estilo_vida: number
+          meta_reserva: number
+          modo_crise: boolean
+          renda_mensal: number
+          saldo_atual: number
+          total_dividas: number
+          total_essenciais: number
+          total_estilo_vida: number
+          total_reserva: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          mes: string
+          meta_essenciais?: number
+          meta_estilo_vida?: number
+          meta_reserva?: number
+          modo_crise?: boolean
+          renda_mensal?: number
+          saldo_atual?: number
+          total_dividas?: number
+          total_essenciais?: number
+          total_estilo_vida?: number
+          total_reserva?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          mes?: string
+          meta_essenciais?: number
+          meta_estilo_vida?: number
+          meta_reserva?: number
+          modo_crise?: boolean
+          renda_mensal?: number
+          saldo_atual?: number
+          total_dividas?: number
+          total_essenciais?: number
+          total_estilo_vida?: number
+          total_reserva?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_state_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -233,6 +295,32 @@ export type Database = {
       is_family_admin: {
         Args: { _family_id: string; _user_id: string }
         Returns: boolean
+      }
+      recalc_financial_state: {
+        Args: { _family_id: string; _mes: string; _renda?: number }
+        Returns: {
+          created_at: string
+          family_id: string
+          id: string
+          mes: string
+          meta_essenciais: number
+          meta_estilo_vida: number
+          meta_reserva: number
+          modo_crise: boolean
+          renda_mensal: number
+          saldo_atual: number
+          total_dividas: number
+          total_essenciais: number
+          total_estilo_vida: number
+          total_reserva: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "financial_state"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       seed_default_categories: {
         Args: { _family_id: string }

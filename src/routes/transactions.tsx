@@ -376,6 +376,21 @@ function TransactionsPage() {
     setDate(today);
     setIsEssencial(false);
     setCategoryId("");
+
+    // Auto-recalc monthly financial state for this transaction's month
+    void recalcMonth(payload.date);
+  };
+
+  const recalcMonth = async (txDate: string) => {
+    if (!familyId || !txDate) return;
+    const d = new Date(txDate + "T00:00:00");
+    const firstDay = new Date(d.getFullYear(), d.getMonth(), 1)
+      .toISOString()
+      .slice(0, 10);
+    await supabase.rpc("recalc_financial_state", {
+      _family_id: familyId,
+      _mes: firstDay,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -437,6 +452,7 @@ function TransactionsPage() {
 
   const handleDelete = async (id: string) => {
     const prev = transactions;
+    const removed = prev.find((x) => x.id === id);
     setTransactions((t) => t.filter((x) => x.id !== id));
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (error) {
@@ -445,6 +461,7 @@ function TransactionsPage() {
       return;
     }
     toast.success("Transação removida");
+    if (removed) void recalcMonth(removed.date);
   };
 
   // When category changes, sync is_essencial automatically
@@ -607,6 +624,10 @@ function TransactionsPage() {
     );
     setImportOpen(false);
     setParsedRows([]);
+
+    // Recalc all months touched by the import
+    const months = new Set(inserted.map((t) => t.date.slice(0, 7) + "-01"));
+    for (const m of months) void recalcMonth(m);
   };
 
   if (authLoading || loading) {

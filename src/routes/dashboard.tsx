@@ -197,17 +197,31 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-          <CardContent className="py-6 flex items-center justify-between gap-4">
-            <div>
-              <h3 className="font-semibold tracking-tight">Transações</h3>
-              <p className="text-sm text-muted-foreground">Registre receitas, despesas e acompanhe o saldo.</p>
-            </div>
-            <Link to="/transactions">
-              <Button>Abrir</Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div>
+                <h3 className="font-semibold tracking-tight">Transações</h3>
+                <p className="text-sm text-muted-foreground">Registre receitas, despesas e acompanhe o saldo.</p>
+              </div>
+              <Link to="/transactions">
+                <Button>Abrir</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div>
+                <h3 className="font-semibold tracking-tight">Estado financeiro</h3>
+                <p className="text-sm text-muted-foreground">Painel mensal 50/30/20 e renda do mês.</p>
+              </div>
+              <Link to="/financial-state">
+                <Button>Abrir</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );
