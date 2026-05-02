@@ -150,6 +150,34 @@ function FinancialStatePage() {
     } else {
       setState(null);
     }
+
+    // Auto-ativação de crise: verifica critérios após recalc
+    try {
+      const { data: check } = await supabase.rpc("check_crisis_activation", {
+        _family_id: familyId,
+        _mes: mes,
+      });
+      const result = Array.isArray(check) ? check[0] : check;
+      if (result?.should_activate && result?.criterio) {
+        const { data: existing } = await supabase
+          .from("crisis_events")
+          .select("id")
+          .eq("family_id", familyId)
+          .eq("ativo", true)
+          .maybeSingle();
+        if (!existing) {
+          await supabase.rpc("activate_crisis", {
+            _family_id: familyId,
+            _motivo: "automatico",
+            _criterio: result.criterio,
+          });
+          toast.warning(`Modo Crise ativado: ${result.criterio}`);
+        }
+      }
+    } catch {
+      // silencioso — não bloqueia a tela
+    }
+
     setLoading(false);
   };
 
