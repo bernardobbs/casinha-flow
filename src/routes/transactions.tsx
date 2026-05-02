@@ -279,6 +279,11 @@ function TransactionsPage() {
   const [dupCandidates, setDupCandidates] = useState<Transaction[]>([]);
   const [pendingPayload, setPendingPayload] = useState<z.infer<typeof txSchema> | null>(null);
 
+  // crisis mode + non-essential confirmation
+  const [crisisActive, setCrisisActive] = useState(false);
+  const [crisisConfirmOpen, setCrisisConfirmOpen] = useState(false);
+  const [crisisPendingPayload, setCrisisPendingPayload] = useState<z.infer<typeof txSchema> | null>(null);
+
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
