@@ -881,6 +881,54 @@ function TransactionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Duplicate detection dialog */}
+      <Dialog open={dupOpen} onOpenChange={(o) => { if (!o) handleCancelDuplicate(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Possível duplicidade detectada</DialogTitle>
+            <DialogDescription>
+              Encontramos {dupCandidates.length} transação(ões) parecida(s) já registrada(s) na sua família.
+              Deseja salvar mesmo assim?
+            </DialogDescription>
+          </DialogHeader>
+
+          <ul className="divide-y divide-border text-sm max-h-64 overflow-auto">
+            {dupCandidates.map((c) => (
+              <li key={c.id} className="py-2 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{c.description}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-muted-foreground">{formatDate(c.date)}</span>
+                    <Badge variant="secondary" className="gap-1 font-normal">
+                      <SourceIcon source={c.source} />
+                      {sourceLabel[c.source]}
+                    </Badge>
+                  </div>
+                </div>
+                <div
+                  className="font-semibold shrink-0"
+                  style={{
+                    color: c.type === "income" ? "var(--success)" : "var(--destructive)",
+                  }}
+                >
+                  {c.type === "income" ? "+" : "−"} {formatCurrency(c.amount)}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleCancelDuplicate} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmDuplicate} disabled={submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar mesmo assim"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
