@@ -599,6 +599,8 @@ function CrisisPage() {
           </Card>
         )}
 
+        {!active && <CrisisAiAnalysis hasCrisis={false} />}
+
         {/* Histórico de crises */}
         {history.length > 0 && (
           <Card className="border-border/60 shadow-[var(--shadow-soft)]">
