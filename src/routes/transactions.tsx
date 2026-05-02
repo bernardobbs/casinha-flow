@@ -447,6 +447,56 @@ function TransactionsPage() {
     toast.success("Transação removida");
   };
 
+  // When category changes, sync is_essencial automatically
+  const handleCategoryChange = (id: string) => {
+    setCategoryId(id);
+    const cat = categories.find((c) => c.id === id);
+    if (cat) {
+      setIsEssencial(cat.is_essencial);
+      // expense category selected → ensure expense tab; receita → income
+      if (cat.tipo === "despesa" && type !== "expense") setType("expense");
+      if (cat.tipo === "receita" && type !== "income") setType("income");
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!user || !familyId) return;
+    const nome = newCatNome.trim();
+    if (nome.length < 2) {
+      toast.error("Nome muito curto");
+      return;
+    }
+    setCreatingCat(true);
+    const { data, error } = await supabase
+      .from("categories")
+      .insert({
+        family_id: familyId,
+        nome,
+        tipo: newCatTipo,
+        cor: newCatCor,
+        icone: newCatIcone || "📦",
+        is_essencial: newCatTipo === "despesa" ? newCatEssencial : false,
+        is_default: false,
+      })
+      .select()
+      .single();
+    setCreatingCat(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const created = data as Category;
+    setCategories((prev) => [...prev, created]);
+    setCategoryId(created.id);
+    if (created.tipo === "despesa") setIsEssencial(created.is_essencial);
+    toast.success("Categoria criada");
+    setNewCatOpen(false);
+    setNewCatNome("");
+    setNewCatIcone("📦");
+    setNewCatCor("#9ca3af");
+    setNewCatEssencial(false);
+  };
+
   // ---- Import handlers ----
 
   const handleFilePick = () => fileInputRef.current?.click();
