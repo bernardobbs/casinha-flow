@@ -52,6 +52,18 @@ export const Route = createFileRoute("/transactions")({
 type TxType = "income" | "expense";
 type TxSource = "manual" | "importado" | "cartao";
 type TxScope = "family" | "personal";
+type CategoryTipo = "despesa" | "receita";
+
+interface Category {
+  id: string;
+  family_id: string;
+  nome: string;
+  tipo: CategoryTipo;
+  cor: string;
+  icone: string;
+  is_essencial: boolean;
+  parent_id: string | null;
+}
 
 interface Transaction {
   id: string;
@@ -64,6 +76,7 @@ interface Transaction {
   source: TxSource;
   scope: TxScope;
   category?: string | null;
+  category_id?: string | null;
   external_id?: string | null;
   is_essencial?: boolean;
 }
@@ -76,6 +89,7 @@ const txSchema = z.object({
   source: z.enum(["manual", "cartao"]),
   scope: z.enum(["family", "personal"]),
   is_essencial: z.boolean(),
+  category_id: z.string().uuid().nullable(),
 });
 
 const formatCurrency = (n: number) =>
