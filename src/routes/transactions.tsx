@@ -874,19 +874,30 @@ function TransactionsPage() {
               <ul className="divide-y divide-border">
                 {transactions.map((t) => {
                   const mine = t.user_id === user.id;
+                  const cat =
+                    (t.category_id && categories.find((c) => c.id === t.category_id)) ||
+                    (t.category && categories.find((c) => c.nome === t.category)) ||
+                    null;
                   return (
                     <li key={t.id} className="py-3 flex items-center gap-3">
                       <div
-                        className="h-9 w-9 rounded-full flex items-center justify-center shrink-0"
+                        className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-base"
                         style={{
-                          background:
-                            t.type === "income"
-                              ? "color-mix(in oklab, var(--success) 12%, transparent)"
-                              : "color-mix(in oklab, var(--destructive) 12%, transparent)",
-                          color: t.type === "income" ? "var(--success)" : "var(--destructive)",
+                          background: cat
+                            ? `color-mix(in oklab, ${cat.cor} 14%, transparent)`
+                            : t.type === "income"
+                            ? "color-mix(in oklab, var(--success) 12%, transparent)"
+                            : "color-mix(in oklab, var(--destructive) 12%, transparent)",
+                          color: cat
+                            ? cat.cor
+                            : t.type === "income"
+                            ? "var(--success)"
+                            : "var(--destructive)",
                         }}
                       >
-                        {t.type === "income" ? (
+                        {cat ? (
+                          <span>{cat.icone}</span>
+                        ) : t.type === "income" ? (
                           <TrendingUp className="h-4 w-4" />
                         ) : (
                           <TrendingDown className="h-4 w-4" />
@@ -905,10 +916,34 @@ function TransactionsPage() {
                             {t.scope === "family" ? <Users className="h-3 w-3" /> : <UserIcon className="h-3 w-3" />}
                             {t.scope === "family" ? "Família" : "Pessoal"}
                           </Badge>
-                          {t.category && (
-                            <Badge variant="outline" className="gap-1 font-normal">
+                          {(cat?.nome || t.category) && (
+                            <Badge
+                              variant="outline"
+                              className="gap-1 font-normal"
+                              style={
+                                cat
+                                  ? {
+                                      borderColor: `color-mix(in oklab, ${cat.cor} 40%, transparent)`,
+                                      color: cat.cor,
+                                    }
+                                  : undefined
+                              }
+                            >
                               <Tag className="h-3 w-3" />
-                              {t.category}
+                              {cat?.nome ?? t.category}
+                            </Badge>
+                          )}
+                          {(cat?.is_essencial || t.is_essencial) && (
+                            <Badge
+                              className="gap-1 font-normal"
+                              style={{
+                                background: "color-mix(in oklab, var(--primary) 14%, transparent)",
+                                color: "var(--primary)",
+                                borderColor: "transparent",
+                              }}
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              Essencial
                             </Badge>
                           )}
                         </div>
