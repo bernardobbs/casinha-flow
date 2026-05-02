@@ -238,20 +238,22 @@ export const runCrisisAnalysis = createServerFn({ method: "POST" })
     }
 
     // 5) persist run
-    const { error: insErr } = await supabase.from("daily_ai_runs").insert({
-      family_id: familyId,
-      user_id: userId,
-      modulo: "crisis",
-      prompt_usado: prompt,
-      resposta_ia: parsed,
-      custo_credito: 1,
-    });
+    const { error: insErr } = await supabase.from("daily_ai_runs").insert([
+      {
+        family_id: familyId,
+        user_id: userId,
+        modulo: "crisis",
+        prompt_usado: prompt,
+        resposta_ia: parsed as never,
+        custo_credito: 1,
+      },
+    ]);
     if (insErr) {
       console.error("daily_ai_runs insert error:", insErr.message);
     }
 
     return {
-      analysis: parsed,
+      analysis: parsed as Record<string, unknown>,
       used: used + 1,
       limit: DAILY_LIMIT,
     };
