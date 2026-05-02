@@ -448,15 +448,36 @@ function TransactionsPage() {
       return;
     }
 
+    // Crisis mode: confirm non-essential expense before saving
+    if (
+      crisisActive &&
+      parsed.data.type === "expense" &&
+      !parsed.data.is_essencial
+    ) {
+      setCrisisPendingPayload(parsed.data);
+      setCrisisConfirmOpen(true);
+      return;
+    }
+
     await insertTransaction(parsed.data);
   };
 
   const handleConfirmDuplicate = async () => {
     if (!pendingPayload) return;
     setDupOpen(false);
-    await insertTransaction(pendingPayload);
+    const payload = pendingPayload;
     setPendingPayload(null);
     setDupCandidates([]);
+    if (
+      crisisActive &&
+      payload.type === "expense" &&
+      !payload.is_essencial
+    ) {
+      setCrisisPendingPayload(payload);
+      setCrisisConfirmOpen(true);
+      return;
+    }
+    await insertTransaction(payload);
   };
 
   const handleCancelDuplicate = () => {
