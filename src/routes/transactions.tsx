@@ -376,6 +376,21 @@ function TransactionsPage() {
     setDate(today);
     setIsEssencial(false);
     setCategoryId("");
+
+    // Auto-recalc monthly financial state for this transaction's month
+    void recalcMonth(payload.date);
+  };
+
+  const recalcMonth = async (txDate: string) => {
+    if (!familyId || !txDate) return;
+    const d = new Date(txDate + "T00:00:00");
+    const firstDay = new Date(d.getFullYear(), d.getMonth(), 1)
+      .toISOString()
+      .slice(0, 10);
+    await supabase.rpc("recalc_financial_state", {
+      _family_id: familyId,
+      _mes: firstDay,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
