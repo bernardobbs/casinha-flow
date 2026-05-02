@@ -32,6 +32,7 @@ import {
   History,
   TrendingUp,
 } from "lucide-react";
+import { CrisisAiAnalysis } from "@/components/crisis-ai-analysis";
 
 export const Route = createFileRoute("/crisis")({
   head: () => ({
