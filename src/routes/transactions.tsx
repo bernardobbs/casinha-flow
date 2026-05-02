@@ -29,7 +29,7 @@ import {
   Trash2,
   CreditCard,
   Receipt,
-  QrCode,
+  
   Users,
   User as UserIcon,
   Upload,
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/transactions")({
 });
 
 type TxType = "income" | "expense";
-type TxSource = "pix" | "cartao" | "boleto" | "importado";
+type TxSource = "manual" | "importado" | "cartao";
 type TxScope = "family" | "personal";
 
 interface Transaction {
@@ -63,6 +63,7 @@ interface Transaction {
   scope: TxScope;
   category?: string | null;
   external_id?: string | null;
+  is_essencial?: boolean;
 }
 
 const txSchema = z.object({
@@ -70,8 +71,9 @@ const txSchema = z.object({
   amount: z.number().positive("Valor deve ser maior que zero").max(99_999_999),
   date: z.string().min(1, "Data obrigatória"),
   type: z.enum(["income", "expense"]),
-  source: z.enum(["pix", "cartao", "boleto"]),
+  source: z.enum(["manual", "cartao"]),
   scope: z.enum(["family", "personal"]),
+  is_essencial: z.boolean(),
 });
 
 const formatCurrency = (n: number) =>
@@ -85,14 +87,12 @@ const formatDate = (iso: string) =>
   });
 
 const sourceLabel: Record<TxSource, string> = {
-  pix: "Pix",
+  manual: "Manual",
   cartao: "Cartão",
-  boleto: "Boleto",
   importado: "Importado",
 };
 
 const SourceIcon = ({ source }: { source: TxSource }) => {
-  if (source === "pix") return <QrCode className="h-3.5 w-3.5" />;
   if (source === "cartao") return <CreditCard className="h-3.5 w-3.5" />;
   if (source === "importado") return <FileDown className="h-3.5 w-3.5" />;
   return <Receipt className="h-3.5 w-3.5" />;
@@ -236,8 +236,9 @@ function TransactionsPage() {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<TxType>("expense");
-  const [source, setSource] = useState<Exclude<TxSource, "importado">>("pix");
+  const [source, setSource] = useState<Exclude<TxSource, "importado">>("manual");
   const [scope, setScope] = useState<TxScope>("family");
+  const [isEssencial, setIsEssencial] = useState(false);
 
   // import state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -245,6 +246,11 @@ function TransactionsPage() {
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [importScope, setImportScope] = useState<TxScope>("family");
   const [importing, setImporting] = useState(false);
+
+  // duplicate detection
+  const [dupOpen, setDupOpen] = useState(false);
+  const [dupCandidates, setDupCandidates] = useState<Transaction[]>([]);
+  const [pendingPayload, setPendingPayload] = useState<z.infer<typeof txSchema> | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -297,31 +303,15 @@ function TransactionsPage() {
     return { income, expense, balance: income - expense };
   }, [transactions]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const insertTransaction = async (payload: z.infer<typeof txSchema>) => {
     if (!user || !familyId) return;
-
-    const parsed = txSchema.safeParse({
-      description,
-      amount: Number(amount.replace(",", ".")),
-      date,
-      type,
-      source,
-      scope,
-    });
-
-    if (!parsed.success) {
-      toast.error(parsed.error.issues[0].message);
-      return;
-    }
-
     setSubmitting(true);
     const { data, error } = await supabase
       .from("transactions")
       .insert({
         family_id: familyId,
         user_id: user.id,
-        ...parsed.data,
+        ...payload,
       })
       .select()
       .single();
@@ -340,7 +330,64 @@ function TransactionsPage() {
     setDescription("");
     setAmount("");
     setDate(today);
+    setIsEssencial(false);
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !familyId) return;
+
+    const parsed = txSchema.safeParse({
+      description,
+      amount: Number(amount.replace(",", ".")),
+      date,
+      type,
+      source,
+      scope,
+      is_essencial: isEssencial,
+    });
+
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      return;
+    }
+
+    // Duplicate detection: same family + same date + same amount + similar description
+    const { data: candidates } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("family_id", familyId)
+      .eq("date", parsed.data.date)
+      .eq("amount", parsed.data.amount)
+      .ilike("description", `%${parsed.data.description}%`)
+      .limit(5);
+
+    if (candidates && candidates.length > 0) {
+      setDupCandidates(
+        candidates.map((c) => ({ ...(c as Transaction), amount: Number(c.amount) }))
+      );
+      setPendingPayload(parsed.data);
+      setDupOpen(true);
+      return;
+    }
+
+    await insertTransaction(parsed.data);
+  };
+
+  const handleConfirmDuplicate = async () => {
+    if (!pendingPayload) return;
+    setDupOpen(false);
+    await insertTransaction(pendingPayload);
+    setPendingPayload(null);
+    setDupCandidates([]);
+  };
+
+  const handleCancelDuplicate = () => {
+    setDupOpen(false);
+    setPendingPayload(null);
+    setDupCandidates([]);
+  };
+
 
   const handleDelete = async (id: string) => {
     const prev = transactions;
@@ -617,9 +664,8 @@ function TransactionsPage() {
                   <Select value={source} onValueChange={(v) => setSource(v as Exclude<TxSource, "importado">)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pix">Pix</SelectItem>
+                      <SelectItem value="manual">Manual</SelectItem>
                       <SelectItem value="cartao">Cartão</SelectItem>
-                      <SelectItem value="boleto">Boleto</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -633,6 +679,17 @@ function TransactionsPage() {
                       <SelectItem value="personal">Pessoal (só você)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="flex items-center gap-2 sm:col-span-2 pt-1">
+                  <Checkbox
+                    id="essencial"
+                    checked={isEssencial}
+                    onCheckedChange={(c) => setIsEssencial(Boolean(c))}
+                  />
+                  <Label htmlFor="essencial" className="cursor-pointer font-normal">
+                    Despesa essencial
+                  </Label>
                 </div>
               </div>
 
@@ -824,6 +881,54 @@ function TransactionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Duplicate detection dialog */}
+      <Dialog open={dupOpen} onOpenChange={(o) => { if (!o) handleCancelDuplicate(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Possível duplicidade detectada</DialogTitle>
+            <DialogDescription>
+              Encontramos {dupCandidates.length} transação(ões) parecida(s) já registrada(s) na sua família.
+              Deseja salvar mesmo assim?
+            </DialogDescription>
+          </DialogHeader>
+
+          <ul className="divide-y divide-border text-sm max-h-64 overflow-auto">
+            {dupCandidates.map((c) => (
+              <li key={c.id} className="py-2 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{c.description}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-muted-foreground">{formatDate(c.date)}</span>
+                    <Badge variant="secondary" className="gap-1 font-normal">
+                      <SourceIcon source={c.source} />
+                      {sourceLabel[c.source]}
+                    </Badge>
+                  </div>
+                </div>
+                <div
+                  className="font-semibold shrink-0"
+                  style={{
+                    color: c.type === "income" ? "var(--success)" : "var(--destructive)",
+                  }}
+                >
+                  {c.type === "income" ? "+" : "−"} {formatCurrency(c.amount)}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={handleCancelDuplicate} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmDuplicate} disabled={submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar mesmo assim"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

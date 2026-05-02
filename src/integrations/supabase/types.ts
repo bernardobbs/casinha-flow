@@ -115,6 +115,7 @@ export type Database = {
           external_id: string | null
           family_id: string
           id: string
+          is_essencial: boolean
           scope: Database["public"]["Enums"]["transaction_scope"]
           source: Database["public"]["Enums"]["transaction_source"]
           type: Database["public"]["Enums"]["transaction_type"]
@@ -130,8 +131,9 @@ export type Database = {
           external_id?: string | null
           family_id: string
           id?: string
+          is_essencial?: boolean
           scope?: Database["public"]["Enums"]["transaction_scope"]
-          source: Database["public"]["Enums"]["transaction_source"]
+          source?: Database["public"]["Enums"]["transaction_source"]
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id: string
@@ -145,6 +147,7 @@ export type Database = {
           external_id?: string | null
           family_id?: string
           id?: string
+          is_essencial?: boolean
           scope?: Database["public"]["Enums"]["transaction_scope"]
           source?: Database["public"]["Enums"]["transaction_source"]
           type?: Database["public"]["Enums"]["transaction_type"]
@@ -167,7 +170,7 @@ export type Database = {
     Enums: {
       family_role: "admin" | "member"
       transaction_scope: "family" | "personal"
-      transaction_source: "pix" | "cartao" | "boleto" | "importado"
+      transaction_source: "manual" | "importado" | "cartao"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -298,7 +301,7 @@ export const Constants = {
     Enums: {
       family_role: ["admin", "member"],
       transaction_scope: ["family", "personal"],
-      transaction_source: ["pix", "cartao", "boleto", "importado"],
+      transaction_source: ["manual", "importado", "cartao"],
       transaction_type: ["income", "expense"],
     },
   },
