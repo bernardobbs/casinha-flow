@@ -35,6 +35,8 @@ import {
   Upload,
   FileDown,
   Tag,
+  Plus,
+  Sparkles,
 } from "lucide-react";
 
 export const Route = createFileRoute("/transactions")({
@@ -50,6 +52,18 @@ export const Route = createFileRoute("/transactions")({
 type TxType = "income" | "expense";
 type TxSource = "manual" | "importado" | "cartao";
 type TxScope = "family" | "personal";
+type CategoryTipo = "despesa" | "receita";
+
+interface Category {
+  id: string;
+  family_id: string;
+  nome: string;
+  tipo: CategoryTipo;
+  cor: string;
+  icone: string;
+  is_essencial: boolean;
+  parent_id: string | null;
+}
 
 interface Transaction {
   id: string;
@@ -62,6 +76,7 @@ interface Transaction {
   source: TxSource;
   scope: TxScope;
   category?: string | null;
+  category_id?: string | null;
   external_id?: string | null;
   is_essencial?: boolean;
 }
@@ -74,6 +89,7 @@ const txSchema = z.object({
   source: z.enum(["manual", "cartao"]),
   scope: z.enum(["family", "personal"]),
   is_essencial: z.boolean(),
+  category_id: z.string().uuid().nullable(),
 });
 
 const formatCurrency = (n: number) =>
@@ -227,6 +243,7 @@ function TransactionsPage() {
   const navigate = useNavigate();
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -239,6 +256,16 @@ function TransactionsPage() {
   const [source, setSource] = useState<Exclude<TxSource, "importado">>("manual");
   const [scope, setScope] = useState<TxScope>("family");
   const [isEssencial, setIsEssencial] = useState(false);
+  const [categoryId, setCategoryId] = useState<string>("");
+
+  // new-category dialog
+  const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newCatNome, setNewCatNome] = useState("");
+  const [newCatTipo, setNewCatTipo] = useState<CategoryTipo>("despesa");
+  const [newCatIcone, setNewCatIcone] = useState("📦");
+  const [newCatCor, setNewCatCor] = useState("#9ca3af");
+  const [newCatEssencial, setNewCatEssencial] = useState(false);
+  const [creatingCat, setCreatingCat] = useState(false);
 
   // import state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -274,18 +301,31 @@ function TransactionsPage() {
       }
       setFamilyId(profile.family_id);
 
-      const { data: txs, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false });
+      const [{ data: txs, error: txErr }, { data: cats, error: catErr }] = await Promise.all([
+        supabase
+          .from("transactions")
+          .select("*")
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("categories")
+          .select("*")
+          .order("tipo", { ascending: true })
+          .order("is_essencial", { ascending: false })
+          .order("nome", { ascending: true }),
+      ]);
 
-      if (error) {
+      if (txErr) {
         toast.error("Erro ao carregar transações");
       } else {
         setTransactions(
           (txs ?? []).map((t) => ({ ...t, amount: Number(t.amount) })) as Transaction[]
         );
+      }
+      if (catErr) {
+        toast.error("Erro ao carregar categorias");
+      } else {
+        setCategories((cats ?? []) as Category[]);
       }
       setLoading(false);
     };
@@ -305,6 +345,9 @@ function TransactionsPage() {
 
   const insertTransaction = async (payload: z.infer<typeof txSchema>) => {
     if (!user || !familyId) return;
+    const cat = payload.category_id
+      ? categories.find((c) => c.id === payload.category_id)
+      : null;
     setSubmitting(true);
     const { data, error } = await supabase
       .from("transactions")
@@ -312,6 +355,7 @@ function TransactionsPage() {
         family_id: familyId,
         user_id: user.id,
         ...payload,
+        category: cat?.nome ?? null,
       })
       .select()
       .single();
@@ -331,6 +375,7 @@ function TransactionsPage() {
     setAmount("");
     setDate(today);
     setIsEssencial(false);
+    setCategoryId("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -345,6 +390,7 @@ function TransactionsPage() {
       source,
       scope,
       is_essencial: isEssencial,
+      category_id: categoryId || null,
     });
 
     if (!parsed.success) {
@@ -399,6 +445,56 @@ function TransactionsPage() {
       return;
     }
     toast.success("Transação removida");
+  };
+
+  // When category changes, sync is_essencial automatically
+  const handleCategoryChange = (id: string) => {
+    setCategoryId(id);
+    const cat = categories.find((c) => c.id === id);
+    if (cat) {
+      setIsEssencial(cat.is_essencial);
+      // expense category selected → ensure expense tab; receita → income
+      if (cat.tipo === "despesa" && type !== "expense") setType("expense");
+      if (cat.tipo === "receita" && type !== "income") setType("income");
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!user || !familyId) return;
+    const nome = newCatNome.trim();
+    if (nome.length < 2) {
+      toast.error("Nome muito curto");
+      return;
+    }
+    setCreatingCat(true);
+    const { data, error } = await supabase
+      .from("categories")
+      .insert({
+        family_id: familyId,
+        nome,
+        tipo: newCatTipo,
+        cor: newCatCor,
+        icone: newCatIcone || "📦",
+        is_essencial: newCatTipo === "despesa" ? newCatEssencial : false,
+        is_default: false,
+      })
+      .select()
+      .single();
+    setCreatingCat(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const created = data as Category;
+    setCategories((prev) => [...prev, created]);
+    setCategoryId(created.id);
+    if (created.tipo === "despesa") setIsEssencial(created.is_essencial);
+    toast.success("Categoria criada");
+    setNewCatOpen(false);
+    setNewCatNome("");
+    setNewCatIcone("📦");
+    setNewCatCor("#9ca3af");
+    setNewCatEssencial(false);
   };
 
   // ---- Import handlers ----
@@ -613,7 +709,18 @@ function TransactionsPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Tabs value={type} onValueChange={(v) => setType(v as TxType)}>
+              <Tabs
+                value={type}
+                onValueChange={(v) => {
+                  const next = v as TxType;
+                  setType(next);
+                  // clear category if it doesn't match new type
+                  const cat = categories.find((c) => c.id === categoryId);
+                  if (cat && ((next === "expense" && cat.tipo !== "despesa") || (next === "income" && cat.tipo !== "receita"))) {
+                    setCategoryId("");
+                  }
+                }}
+              >
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="expense">Despesa</TabsTrigger>
                   <TabsTrigger value="income">Receita</TabsTrigger>
@@ -621,6 +728,54 @@ function TransactionsPage() {
                 <TabsContent value="expense" />
                 <TabsContent value="income" />
               </Tabs>
+
+              {/* Category selector */}
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <div className="flex gap-2">
+                  <Select value={categoryId} onValueChange={handleCategoryChange}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories
+                        .filter((c) => (type === "expense" ? c.tipo === "despesa" : c.tipo === "receita"))
+                        .map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            <span className="flex items-center gap-2">
+                              <span
+                                className="inline-flex h-5 w-5 items-center justify-center rounded-full text-xs"
+                                style={{
+                                  background: `color-mix(in oklab, ${c.cor} 18%, transparent)`,
+                                  color: c.cor,
+                                }}
+                              >
+                                {c.icone}
+                              </span>
+                              <span>{c.nome}</span>
+                              {c.is_essencial && (
+                                <span className="text-[10px] text-muted-foreground">• essencial</span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setNewCatTipo(type === "expense" ? "despesa" : "receita");
+                      setNewCatOpen(true);
+                    }}
+                    title="Nova categoria"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2 sm:col-span-2">
@@ -719,19 +874,30 @@ function TransactionsPage() {
               <ul className="divide-y divide-border">
                 {transactions.map((t) => {
                   const mine = t.user_id === user.id;
+                  const cat =
+                    (t.category_id && categories.find((c) => c.id === t.category_id)) ||
+                    (t.category && categories.find((c) => c.nome === t.category)) ||
+                    null;
                   return (
                     <li key={t.id} className="py-3 flex items-center gap-3">
                       <div
-                        className="h-9 w-9 rounded-full flex items-center justify-center shrink-0"
+                        className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-base"
                         style={{
-                          background:
-                            t.type === "income"
-                              ? "color-mix(in oklab, var(--success) 12%, transparent)"
-                              : "color-mix(in oklab, var(--destructive) 12%, transparent)",
-                          color: t.type === "income" ? "var(--success)" : "var(--destructive)",
+                          background: cat
+                            ? `color-mix(in oklab, ${cat.cor} 14%, transparent)`
+                            : t.type === "income"
+                            ? "color-mix(in oklab, var(--success) 12%, transparent)"
+                            : "color-mix(in oklab, var(--destructive) 12%, transparent)",
+                          color: cat
+                            ? cat.cor
+                            : t.type === "income"
+                            ? "var(--success)"
+                            : "var(--destructive)",
                         }}
                       >
-                        {t.type === "income" ? (
+                        {cat ? (
+                          <span>{cat.icone}</span>
+                        ) : t.type === "income" ? (
                           <TrendingUp className="h-4 w-4" />
                         ) : (
                           <TrendingDown className="h-4 w-4" />
@@ -750,10 +916,34 @@ function TransactionsPage() {
                             {t.scope === "family" ? <Users className="h-3 w-3" /> : <UserIcon className="h-3 w-3" />}
                             {t.scope === "family" ? "Família" : "Pessoal"}
                           </Badge>
-                          {t.category && (
-                            <Badge variant="outline" className="gap-1 font-normal">
+                          {(cat?.nome || t.category) && (
+                            <Badge
+                              variant="outline"
+                              className="gap-1 font-normal"
+                              style={
+                                cat
+                                  ? {
+                                      borderColor: `color-mix(in oklab, ${cat.cor} 40%, transparent)`,
+                                      color: cat.cor,
+                                    }
+                                  : undefined
+                              }
+                            >
                               <Tag className="h-3 w-3" />
-                              {t.category}
+                              {cat?.nome ?? t.category}
+                            </Badge>
+                          )}
+                          {(cat?.is_essencial || t.is_essencial) && (
+                            <Badge
+                              className="gap-1 font-normal"
+                              style={{
+                                background: "color-mix(in oklab, var(--primary) 14%, transparent)",
+                                color: "var(--primary)",
+                                borderColor: "transparent",
+                              }}
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              Essencial
                             </Badge>
                           )}
                         </div>
@@ -924,6 +1114,98 @@ function TransactionsPage() {
             </Button>
             <Button onClick={handleConfirmDuplicate} disabled={submitting}>
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar mesmo assim"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New category dialog */}
+      <Dialog open={newCatOpen} onOpenChange={(o) => { if (!creatingCat) setNewCatOpen(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova categoria</DialogTitle>
+            <DialogDescription>
+              Crie uma categoria personalizada para sua família.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="cat-nome">Nome</Label>
+              <Input
+                id="cat-nome"
+                value={newCatNome}
+                onChange={(e) => setNewCatNome(e.target.value)}
+                placeholder="Ex: Pet, Academia, Investimentos..."
+                maxLength={40}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select value={newCatTipo} onValueChange={(v) => setNewCatTipo(v as CategoryTipo)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="despesa">Despesa</SelectItem>
+                    <SelectItem value="receita">Receita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cat-icone">Ícone (emoji)</Label>
+                <Input
+                  id="cat-icone"
+                  value={newCatIcone}
+                  onChange={(e) => setNewCatIcone(e.target.value.slice(0, 4))}
+                  placeholder="📦"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cat-cor">Cor</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="cat-cor"
+                  type="color"
+                  value={newCatCor}
+                  onChange={(e) => setNewCatCor(e.target.value)}
+                  className="h-10 w-16 p-1 cursor-pointer"
+                />
+                <span
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-base"
+                  style={{
+                    background: `color-mix(in oklab, ${newCatCor} 14%, transparent)`,
+                    color: newCatCor,
+                  }}
+                >
+                  {newCatIcone || "📦"}
+                </span>
+                <span className="text-sm text-muted-foreground">{newCatCor}</span>
+              </div>
+            </div>
+
+            {newCatTipo === "despesa" && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="cat-essencial"
+                  checked={newCatEssencial}
+                  onCheckedChange={(c) => setNewCatEssencial(Boolean(c))}
+                />
+                <Label htmlFor="cat-essencial" className="cursor-pointer font-normal">
+                  Marcar como essencial (Módulo Crise)
+                </Label>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setNewCatOpen(false)} disabled={creatingCat}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateCategory} disabled={creatingCat || newCatNome.trim().length < 2}>
+              {creatingCat ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar categoria"}
             </Button>
           </DialogFooter>
         </DialogContent>
