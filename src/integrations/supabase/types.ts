@@ -108,9 +108,11 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          category: string | null
           created_at: string
           date: string
           description: string
+          external_id: string | null
           family_id: string
           id: string
           scope: Database["public"]["Enums"]["transaction_scope"]
@@ -121,9 +123,11 @@ export type Database = {
         }
         Insert: {
           amount: number
+          category?: string | null
           created_at?: string
           date?: string
           description: string
+          external_id?: string | null
           family_id: string
           id?: string
           scope?: Database["public"]["Enums"]["transaction_scope"]
@@ -134,9 +138,11 @@ export type Database = {
         }
         Update: {
           amount?: number
+          category?: string | null
           created_at?: string
           date?: string
           description?: string
+          external_id?: string | null
           family_id?: string
           id?: string
           scope?: Database["public"]["Enums"]["transaction_scope"]
@@ -161,7 +167,7 @@ export type Database = {
     Enums: {
       family_role: "admin" | "member"
       transaction_scope: "family" | "personal"
-      transaction_source: "pix" | "cartao" | "boleto"
+      transaction_source: "pix" | "cartao" | "boleto" | "importado"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -292,7 +298,7 @@ export const Constants = {
     Enums: {
       family_role: ["admin", "member"],
       transaction_scope: ["family", "personal"],
-      transaction_source: ["pix", "cartao", "boleto"],
+      transaction_source: ["pix", "cartao", "boleto", "importado"],
       transaction_type: ["income", "expense"],
     },
   },
