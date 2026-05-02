@@ -452,6 +452,7 @@ function TransactionsPage() {
 
   const handleDelete = async (id: string) => {
     const prev = transactions;
+    const removed = prev.find((x) => x.id === id);
     setTransactions((t) => t.filter((x) => x.id !== id));
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (error) {
@@ -460,6 +461,7 @@ function TransactionsPage() {
       return;
     }
     toast.success("Transação removida");
+    if (removed) void recalcMonth(removed.date);
   };
 
   // When category changes, sync is_essencial automatically
