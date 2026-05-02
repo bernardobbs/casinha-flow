@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          cor: string
+          created_at: string
+          family_id: string
+          icone: string
+          id: string
+          is_default: boolean
+          is_essencial: boolean
+          nome: string
+          parent_id: string | null
+          tipo: Database["public"]["Enums"]["category_type"]
+          updated_at: string
+        }
+        Insert: {
+          cor?: string
+          created_at?: string
+          family_id: string
+          icone?: string
+          id?: string
+          is_default?: boolean
+          is_essencial?: boolean
+          nome: string
+          parent_id?: string | null
+          tipo: Database["public"]["Enums"]["category_type"]
+          updated_at?: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          family_id?: string
+          icone?: string
+          id?: string
+          is_default?: boolean
+          is_essencial?: boolean
+          nome?: string
+          parent_id?: string | null
+          tipo?: Database["public"]["Enums"]["category_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           created_at: string
@@ -109,6 +166,7 @@ export type Database = {
         Row: {
           amount: number
           category: string | null
+          category_id: string | null
           created_at: string
           date: string
           description: string
@@ -125,6 +183,7 @@ export type Database = {
         Insert: {
           amount: number
           category?: string | null
+          category_id?: string | null
           created_at?: string
           date?: string
           description: string
@@ -141,6 +200,7 @@ export type Database = {
         Update: {
           amount?: number
           category?: string | null
+          category_id?: string | null
           created_at?: string
           date?: string
           description?: string
@@ -154,7 +214,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -166,8 +234,13 @@ export type Database = {
         Args: { _family_id: string; _user_id: string }
         Returns: boolean
       }
+      seed_default_categories: {
+        Args: { _family_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
+      category_type: "despesa" | "receita"
       family_role: "admin" | "member"
       transaction_scope: "family" | "personal"
       transaction_source: "manual" | "importado" | "cartao"
@@ -299,6 +372,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      category_type: ["despesa", "receita"],
       family_role: ["admin", "member"],
       transaction_scope: ["family", "personal"],
       transaction_source: ["manual", "importado", "cartao"],
