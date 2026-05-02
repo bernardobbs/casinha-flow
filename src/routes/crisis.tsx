@@ -32,6 +32,7 @@ import {
   History,
   TrendingUp,
 } from "lucide-react";
+import { CrisisAiAnalysis } from "@/components/crisis-ai-analysis";
 
 export const Route = createFileRoute("/crisis")({
   head: () => ({
@@ -534,6 +535,8 @@ function CrisisPage() {
               </Button>
             </div>
 
+            <CrisisAiAnalysis hasCrisis={true} />
+
             {/* Histórico de estágios da crise atual */}
             {stages.length > 0 && (
               <Card className="border-border/60 shadow-[var(--shadow-soft)]">
@@ -595,6 +598,8 @@ function CrisisPage() {
             </CardContent>
           </Card>
         )}
+
+        {!active && <CrisisAiAnalysis hasCrisis={false} />}
 
         {/* Histórico de crises */}
         {history.length > 0 && (
