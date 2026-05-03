@@ -80,6 +80,16 @@ interface Transaction {
   category_id?: string | null;
   external_id?: string | null;
   is_essencial?: boolean;
+  account_id?: string | null;
+  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura";
+}
+
+interface AccountLite {
+  id: string;
+  nome: string;
+  tipo: "corrente" | "poupanca" | "carteira" | "cartao" | "investimento";
+  icone: string;
+  ativo: boolean;
 }
 
 const txSchema = z.object({
@@ -91,6 +101,7 @@ const txSchema = z.object({
   scope: z.enum(["family", "personal"]),
   is_essencial: z.boolean(),
   category_id: z.string().uuid().nullable(),
+  account_id: z.string().uuid().nullable(),
 });
 
 const formatCurrency = (n: number) =>
