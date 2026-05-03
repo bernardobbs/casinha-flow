@@ -325,7 +325,7 @@ function TransactionsPage() {
       }
       setFamilyId(profile.family_id);
 
-      const [{ data: txs, error: txErr }, { data: cats, error: catErr }, { data: crisis }] = await Promise.all([
+      const [{ data: txs, error: txErr }, { data: cats, error: catErr }, { data: crisis }, { data: accs }] = await Promise.all([
         supabase
           .from("transactions")
           .select("*")
@@ -343,7 +343,14 @@ function TransactionsPage() {
           .eq("family_id", profile.family_id)
           .eq("ativo", true)
           .maybeSingle(),
+        supabase
+          .from("accounts")
+          .select("id, nome, tipo, icone, ativo")
+          .eq("family_id", profile.family_id)
+          .eq("ativo", true)
+          .order("created_at", { ascending: true }),
       ]);
+      setAccounts((accs ?? []) as AccountLite[]);
 
       if (txErr) {
         toast.error("Erro ao carregar transações");
