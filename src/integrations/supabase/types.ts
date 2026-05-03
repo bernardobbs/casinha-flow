@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          dia_fechamento: number | null
+          dia_vencimento: number | null
+          family_id: string
+          icone: string
+          id: string
+          limite_credito: number | null
+          nome: string
+          saldo_atual: number
+          saldo_inicial: number
+          tipo: Database["public"]["Enums"]["account_type"]
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          dia_fechamento?: number | null
+          dia_vencimento?: number | null
+          family_id: string
+          icone?: string
+          id?: string
+          limite_credito?: number | null
+          nome: string
+          saldo_atual?: number
+          saldo_inicial?: number
+          tipo?: Database["public"]["Enums"]["account_type"]
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          dia_fechamento?: number | null
+          dia_vencimento?: number | null
+          family_id?: string
+          icone?: string
+          id?: string
+          limite_credito?: number | null
+          nome?: string
+          saldo_atual?: number
+          saldo_inicial?: number
+          tipo?: Database["public"]["Enums"]["account_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       alerts: {
         Row: {
           created_at: string
@@ -136,6 +187,100 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categorization_rules: {
+        Row: {
+          category_id: string
+          confianca: number
+          created_at: string
+          family_id: string
+          id: string
+          origem: Database["public"]["Enums"]["categorization_origin"]
+          termo: string
+          termo_normalizado: string
+          updated_at: string
+          usos: number
+        }
+        Insert: {
+          category_id: string
+          confianca?: number
+          created_at?: string
+          family_id: string
+          id?: string
+          origem?: Database["public"]["Enums"]["categorization_origin"]
+          termo: string
+          termo_normalizado: string
+          updated_at?: string
+          usos?: number
+        }
+        Update: {
+          category_id?: string
+          confianca?: number
+          created_at?: string
+          family_id?: string
+          id?: string
+          origem?: Database["public"]["Enums"]["categorization_origin"]
+          termo?: string
+          termo_normalizado?: string
+          updated_at?: string
+          usos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorization_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_card_bills: {
+        Row: {
+          account_id: string
+          created_at: string
+          data_vencimento: string | null
+          family_id: string
+          id: string
+          mes_referencia: string
+          status: Database["public"]["Enums"]["credit_card_bill_status"]
+          updated_at: string
+          valor_pago: number
+          valor_total: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          data_vencimento?: string | null
+          family_id: string
+          id?: string
+          mes_referencia: string
+          status?: Database["public"]["Enums"]["credit_card_bill_status"]
+          updated_at?: string
+          valor_pago?: number
+          valor_total?: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          data_vencimento?: string | null
+          family_id?: string
+          id?: string
+          mes_referencia?: string
+          status?: Database["public"]["Enums"]["credit_card_bill_status"]
+          updated_at?: string
+          valor_pago?: number
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_bills_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -312,6 +457,33 @@ export type Database = {
           },
         ]
       }
+      family_settings: {
+        Row: {
+          chave: string
+          created_at: string
+          family_id: string
+          id: string
+          updated_at: string
+          valor: string | null
+        }
+        Insert: {
+          chave: string
+          created_at?: string
+          family_id: string
+          id?: string
+          updated_at?: string
+          valor?: string | null
+        }
+        Update: {
+          chave?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          updated_at?: string
+          valor?: string | null
+        }
+        Relationships: []
+      }
       financial_state: {
         Row: {
           created_at: string
@@ -411,6 +583,7 @@ export type Database = {
       }
       transactions: {
         Row: {
+          account_id: string | null
           amount: number
           category: string | null
           category_id: string | null
@@ -423,11 +596,13 @@ export type Database = {
           is_essencial: boolean
           scope: Database["public"]["Enums"]["transaction_scope"]
           source: Database["public"]["Enums"]["transaction_source"]
+          tipo_especial: Database["public"]["Enums"]["transaction_special_type"]
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           amount: number
           category?: string | null
           category_id?: string | null
@@ -440,11 +615,13 @@ export type Database = {
           is_essencial?: boolean
           scope?: Database["public"]["Enums"]["transaction_scope"]
           source?: Database["public"]["Enums"]["transaction_source"]
+          tipo_especial?: Database["public"]["Enums"]["transaction_special_type"]
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_id?: string | null
           amount?: number
           category?: string | null
           category_id?: string | null
@@ -457,11 +634,19 @@ export type Database = {
           is_essencial?: boolean
           scope?: Database["public"]["Enums"]["transaction_scope"]
           source?: Database["public"]["Enums"]["transaction_source"]
+          tipo_especial?: Database["public"]["Enums"]["transaction_special_type"]
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_category_id_fkey"
             columns: ["category_id"]
@@ -520,6 +705,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      categorize_transaction: {
+        Args: { _description: string; _family_id: string }
+        Returns: {
+          auto_apply: boolean
+          category_id: string
+          confianca: number
+          nivel: number
+          origem: Database["public"]["Enums"]["categorization_origin"]
+        }[]
+      }
       check_crisis_activation: {
         Args: { _family_id: string; _mes: string }
         Returns: {
@@ -563,6 +758,34 @@ export type Database = {
         Args: { _family_id: string; _user_id: string }
         Returns: boolean
       }
+      learn_categorization_rule: {
+        Args: {
+          _category_id: string
+          _family_id: string
+          _origem?: Database["public"]["Enums"]["categorization_origin"]
+          _termo: string
+        }
+        Returns: {
+          category_id: string
+          confianca: number
+          created_at: string
+          family_id: string
+          id: string
+          origem: Database["public"]["Enums"]["categorization_origin"]
+          termo: string
+          termo_normalizado: string
+          updated_at: string
+          usos: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "categorization_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      normalize_text: { Args: { _t: string }; Returns: string }
+      recalc_account_balance: { Args: { _account_id: string }; Returns: number }
       recalc_financial_state: {
         Args: { _family_id: string; _mes: string; _renda?: number }
         Returns: {
@@ -615,13 +838,26 @@ export type Database = {
         Args: { _family_id: string }
         Returns: undefined
       }
+      seed_default_categorization_keywords: {
+        Args: { _family_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
+      account_type:
+        | "corrente"
+        | "poupanca"
+        | "carteira"
+        | "cartao"
+        | "investimento"
       alert_severity: "info" | "warning" | "critical"
+      categorization_origin: "manual" | "ia" | "keyword"
       category_type: "despesa" | "receita"
+      credit_card_bill_status: "aberta" | "fechada" | "paga"
       family_role: "admin" | "member"
       transaction_scope: "family" | "personal"
       transaction_source: "manual" | "importado" | "cartao"
+      transaction_special_type: "normal" | "transferencia" | "pagamento_fatura"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -750,11 +986,21 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: [
+        "corrente",
+        "poupanca",
+        "carteira",
+        "cartao",
+        "investimento",
+      ],
       alert_severity: ["info", "warning", "critical"],
+      categorization_origin: ["manual", "ia", "keyword"],
       category_type: ["despesa", "receita"],
+      credit_card_bill_status: ["aberta", "fechada", "paga"],
       family_role: ["admin", "member"],
       transaction_scope: ["family", "personal"],
       transaction_source: ["manual", "importado", "cartao"],
+      transaction_special_type: ["normal", "transferencia", "pagamento_fatura"],
       transaction_type: ["income", "expense"],
     },
   },

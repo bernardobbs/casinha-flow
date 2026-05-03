@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target } from "lucide-react";
+import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target, Settings, Banknote } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 
@@ -277,6 +277,32 @@ function Dashboard() {
               <Link to="/crisis">
                 <Button variant="outline">Abrir</Button>
               </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Banknote className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold tracking-tight">Contas</h3>
+                  <p className="text-sm text-muted-foreground">Bancos, carteiras e cartões.</p>
+                </div>
+              </div>
+              <Link to="/contas"><Button variant="outline">Abrir</Button></Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Settings className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold tracking-tight">Configurações</h3>
+                  <p className="text-sm text-muted-foreground">Família, IA, notificações e regras.</p>
+                </div>
+              </div>
+              <Link to="/configuracoes"><Button variant="outline">Abrir</Button></Link>
             </CardContent>
           </Card>
         </div>

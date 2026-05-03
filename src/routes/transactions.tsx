@@ -80,6 +80,16 @@ interface Transaction {
   category_id?: string | null;
   external_id?: string | null;
   is_essencial?: boolean;
+  account_id?: string | null;
+  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura";
+}
+
+interface AccountLite {
+  id: string;
+  nome: string;
+  tipo: "corrente" | "poupanca" | "carteira" | "cartao" | "investimento";
+  icone: string;
+  ativo: boolean;
 }
 
 const txSchema = z.object({
@@ -91,6 +101,7 @@ const txSchema = z.object({
   scope: z.enum(["family", "personal"]),
   is_essencial: z.boolean(),
   category_id: z.string().uuid().nullable(),
+  account_id: z.string().uuid().nullable(),
 });
 
 const formatCurrency = (n: number) =>
@@ -258,6 +269,13 @@ function TransactionsPage() {
   const [scope, setScope] = useState<TxScope>("family");
   const [isEssencial, setIsEssencial] = useState(false);
   const [categoryId, setCategoryId] = useState<string>("");
+  const [accountId, setAccountId] = useState<string>("");
+  const [accounts, setAccounts] = useState<AccountLite[]>([]);
+  const [suggestion, setSuggestion] = useState<{
+    category_id: string;
+    nivel: number;
+    origem: "manual" | "ia" | "keyword";
+  } | null>(null);
 
   // new-category dialog
   const [newCatOpen, setNewCatOpen] = useState(false);
@@ -307,7 +325,7 @@ function TransactionsPage() {
       }
       setFamilyId(profile.family_id);
 
-      const [{ data: txs, error: txErr }, { data: cats, error: catErr }, { data: crisis }] = await Promise.all([
+      const [{ data: txs, error: txErr }, { data: cats, error: catErr }, { data: crisis }, { data: accs }] = await Promise.all([
         supabase
           .from("transactions")
           .select("*")
@@ -325,7 +343,14 @@ function TransactionsPage() {
           .eq("family_id", profile.family_id)
           .eq("ativo", true)
           .maybeSingle(),
+        supabase
+          .from("accounts")
+          .select("id, nome, tipo, icone, ativo")
+          .eq("family_id", profile.family_id)
+          .eq("ativo", true)
+          .order("created_at", { ascending: true }),
       ]);
+      setAccounts((accs ?? []) as AccountLite[]);
 
       if (txErr) {
         toast.error("Erro ao carregar transações");
