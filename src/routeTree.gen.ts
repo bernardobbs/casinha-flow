@@ -16,6 +16,8 @@ import { Route as CrisisRouteImport } from './routes/crisis'
 import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ContasRouteImport } from './routes/contas'
 
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
