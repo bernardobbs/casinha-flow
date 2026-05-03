@@ -269,6 +269,13 @@ function TransactionsPage() {
   const [scope, setScope] = useState<TxScope>("family");
   const [isEssencial, setIsEssencial] = useState(false);
   const [categoryId, setCategoryId] = useState<string>("");
+  const [accountId, setAccountId] = useState<string>("");
+  const [accounts, setAccounts] = useState<AccountLite[]>([]);
+  const [suggestion, setSuggestion] = useState<{
+    category_id: string;
+    nivel: number;
+    origem: "manual" | "ia" | "keyword";
+  } | null>(null);
 
   // new-category dialog
   const [newCatOpen, setNewCatOpen] = useState(false);
