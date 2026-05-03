@@ -54,11 +54,23 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContasRoute = ContasRouteImport.update({
+  id: '/contas',
+  path: '/contas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/contas': typeof ContasRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
@@ -68,6 +80,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/contas': typeof ContasRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
@@ -78,6 +92,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/contas': typeof ContasRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
@@ -89,6 +105,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/budgets'
+    | '/configuracoes'
+    | '/contas'
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
@@ -98,6 +116,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/budgets'
+    | '/configuracoes'
+    | '/contas'
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
@@ -107,6 +127,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/budgets'
+    | '/configuracoes'
+    | '/contas'
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
@@ -117,6 +139,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   BudgetsRoute: typeof BudgetsRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
+  ContasRoute: typeof ContasRoute
   CrisisRoute: typeof CrisisRoute
   DashboardRoute: typeof DashboardRoute
   FinancialStateRoute: typeof FinancialStateRoute
@@ -167,6 +191,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contas': {
+      id: '/contas'
+      path: '/contas'
+      fullPath: '/contas'
+      preLoaderRoute: typeof ContasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -181,6 +219,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   BudgetsRoute: BudgetsRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
+  ContasRoute: ContasRoute,
   CrisisRoute: CrisisRoute,
   DashboardRoute: DashboardRoute,
   FinancialStateRoute: FinancialStateRoute,

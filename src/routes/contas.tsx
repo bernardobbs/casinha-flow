@@ -164,7 +164,8 @@ function ContasPage() {
     }
     setCreating(true);
     const saldo = Number.isFinite(parseNum(form.saldo_inicial)) ? parseNum(form.saldo_inicial) : 0;
-    const payload: Record<string, unknown> = {
+    const isCard = form.tipo === "cartao";
+    const { error } = await supabase.from("accounts").insert({
       family_id: familyId,
       nome: form.nome.trim(),
       tipo: form.tipo,
@@ -172,13 +173,10 @@ function ContasPage() {
       saldo_atual: saldo,
       cor: form.cor,
       icone: TYPE_ICON[form.tipo],
-    };
-    if (form.tipo === "cartao") {
-      payload.limite_credito = parseNum(form.limite_credito) || 0;
-      payload.dia_fechamento = parseInt(form.dia_fechamento, 10) || null;
-      payload.dia_vencimento = parseInt(form.dia_vencimento, 10) || null;
-    }
-    const { error } = await supabase.from("accounts").insert(payload);
+      limite_credito: isCard ? parseNum(form.limite_credito) || 0 : null,
+      dia_fechamento: isCard ? parseInt(form.dia_fechamento, 10) || null : null,
+      dia_vencimento: isCard ? parseInt(form.dia_vencimento, 10) || null : null,
+    });
     setCreating(false);
     if (error) {
       toast.error(error.message);
