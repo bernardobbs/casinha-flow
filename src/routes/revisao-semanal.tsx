@@ -315,7 +315,7 @@ function RevisaoSemanalPage() {
               <p className="text-sm">{payOpen.descricao} · <strong>{fmtBRL(Number(payOpen.valor))}</strong></p>
               <div>
                 <Label>Conta</Label>
-                <Select value={payAccount} onValueChange={setPayAccount}>
+                <Select value={payAccount || undefined} onValueChange={setPayAccount}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{accounts.map((a) => (<SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>))}</SelectContent>
                 </Select>
