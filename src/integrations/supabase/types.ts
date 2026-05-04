@@ -1109,6 +1109,7 @@ export type Database = {
           family_id: string
           id: string
           is_essencial: boolean
+          recorrente_id: string | null
           scope: Database["public"]["Enums"]["transaction_scope"]
           source: Database["public"]["Enums"]["transaction_source"]
           tipo_especial: Database["public"]["Enums"]["transaction_special_type"]
@@ -1128,6 +1129,7 @@ export type Database = {
           family_id: string
           id?: string
           is_essencial?: boolean
+          recorrente_id?: string | null
           scope?: Database["public"]["Enums"]["transaction_scope"]
           source?: Database["public"]["Enums"]["transaction_source"]
           tipo_especial?: Database["public"]["Enums"]["transaction_special_type"]
@@ -1147,6 +1149,7 @@ export type Database = {
           family_id?: string
           id?: string
           is_essencial?: boolean
+          recorrente_id?: string | null
           scope?: Database["public"]["Enums"]["transaction_scope"]
           source?: Database["public"]["Enums"]["transaction_source"]
           tipo_especial?: Database["public"]["Enums"]["transaction_special_type"]
@@ -1167,6 +1170,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recorrente_id_fkey"
+            columns: ["recorrente_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -1621,6 +1631,15 @@ export type Database = {
           ultimo_hodometro: number
         }[]
       }
+      get_monthly_summary: {
+        Args: { p_family_id: string }
+        Returns: {
+          mes: string
+          qtd: number
+          total_despesa: number
+          total_receita: number
+        }[]
+      }
       get_projecao_categorias: {
         Args: { p_family_id: string }
         Returns: {
@@ -1643,6 +1662,35 @@ export type Database = {
           saldo_contas: number
           saldo_total: number
         }[]
+      }
+      get_transactions_by_month: {
+        Args: { p_family_id: string; p_mes: string }
+        Returns: {
+          account_id: string | null
+          amount: number
+          category: string | null
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string
+          external_id: string | null
+          family_id: string
+          id: string
+          is_essencial: boolean
+          recorrente_id: string | null
+          scope: Database["public"]["Enums"]["transaction_scope"]
+          source: Database["public"]["Enums"]["transaction_source"]
+          tipo_especial: Database["public"]["Enums"]["transaction_special_type"]
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "transactions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_user_family_id: { Args: { _user_id: string }; Returns: string }
       is_family_admin: {
