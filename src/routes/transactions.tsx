@@ -1329,10 +1329,23 @@ function TransactionsPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{r.description || "—"}</span>
                       {!r.error && (
-                        <Badge variant="outline" className="font-normal gap-1">
-                          <Tag className="h-3 w-3" />
-                          {r.category}
-                        </Badge>
+                        <>
+                          <Badge variant="outline" className="font-normal gap-1">
+                            <Tag className="h-3 w-3" />
+                            {r.category}
+                          </Badge>
+                          {r.suggested_nivel === 1 && (
+                            <Badge className="font-normal" style={{ background: "color-mix(in oklab, var(--success) 18%, transparent)", color: "var(--success)" }}>
+                              ✅ Aprendido
+                            </Badge>
+                          )}
+                          {(r.suggested_nivel === 2 || r.suggested_nivel === 3) && (
+                            <Badge variant="secondary" className="font-normal">💡 Sugerido</Badge>
+                          )}
+                          {!r.suggested_category_id && (
+                            <Badge variant="outline" className="font-normal text-muted-foreground">❓ Novo</Badge>
+                          )}
+                        </>
                       )}
                       {r.error && (
                         <Badge variant="destructive" className="font-normal">{r.error}</Badge>
