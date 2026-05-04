@@ -591,6 +591,117 @@ export type Database = {
           },
         ]
       }
+      fuel_fills: {
+        Row: {
+          combustivel: Database["public"]["Enums"]["fuel_type"]
+          created_at: string
+          data: string
+          family_id: string
+          hodometro: number
+          id: string
+          litros: number
+          posto: string | null
+          preco_litro: number
+          tanque_cheio: boolean
+          transaction_id: string | null
+          user_id: string
+          valor_pago: number
+          vehicle_id: string
+        }
+        Insert: {
+          combustivel: Database["public"]["Enums"]["fuel_type"]
+          created_at?: string
+          data?: string
+          family_id: string
+          hodometro: number
+          id?: string
+          litros: number
+          posto?: string | null
+          preco_litro: number
+          tanque_cheio?: boolean
+          transaction_id?: string | null
+          user_id: string
+          valor_pago: number
+          vehicle_id: string
+        }
+        Update: {
+          combustivel?: Database["public"]["Enums"]["fuel_type"]
+          created_at?: string
+          data?: string
+          family_id?: string
+          hodometro?: number
+          id?: string
+          litros?: number
+          posto?: string | null
+          preco_litro?: number
+          tanque_cheio?: boolean
+          transaction_id?: string | null
+          user_id?: string
+          valor_pago?: number
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_vehicle_status"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fuel_monthly_goals: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          mes: string
+          updated_at: string
+          valor_meta: number
+          vehicle_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          mes: string
+          updated_at?: string
+          valor_meta?: number
+          vehicle_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          mes?: string
+          updated_at?: string
+          valor_meta?: number
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_monthly_goals_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_vehicle_status"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "fuel_monthly_goals_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       installment_plans: {
         Row: {
           account_id: string
@@ -841,6 +952,181 @@ export type Database = {
           },
         ]
       }
+      vehicle_maintenance_log: {
+        Row: {
+          created_at: string
+          data: string
+          family_id: string
+          hodometro: number
+          id: string
+          local: string | null
+          maintenance_type_id: string | null
+          nome: string
+          observacao: string | null
+          tipo_oleo: string | null
+          transaction_id: string | null
+          user_id: string
+          valor: number
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          family_id: string
+          hodometro: number
+          id?: string
+          local?: string | null
+          maintenance_type_id?: string | null
+          nome: string
+          observacao?: string | null
+          tipo_oleo?: string | null
+          transaction_id?: string | null
+          user_id: string
+          valor?: number
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          family_id?: string
+          hodometro?: number
+          id?: string
+          local?: string | null
+          maintenance_type_id?: string | null
+          nome?: string
+          observacao?: string | null
+          tipo_oleo?: string | null
+          transaction_id?: string | null
+          user_id?: string
+          valor?: number
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_log_maintenance_type_id_fkey"
+            columns: ["maintenance_type_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_maintenance_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_log_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_vehicle_status"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_log_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_maintenance_types: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          family_id: string
+          icone: string
+          id: string
+          intervalo_km: number | null
+          intervalo_meses: number | null
+          nome: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          family_id: string
+          icone?: string
+          id?: string
+          intervalo_km?: number | null
+          intervalo_meses?: number | null
+          nome: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          family_id?: string
+          icone?: string
+          id?: string
+          intervalo_km?: number | null
+          intervalo_meses?: number | null
+          nome?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_types_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_vehicle_status"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_types_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          ativo: boolean
+          capacidade_tanque: number
+          combustivel_principal: Database["public"]["Enums"]["fuel_type"]
+          consumo_medio_kml: number
+          cor: string
+          created_at: string
+          family_id: string
+          flex: boolean
+          id: string
+          nome: string
+          odometro_atual: number
+          tipo: Database["public"]["Enums"]["vehicle_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          capacidade_tanque?: number
+          combustivel_principal?: Database["public"]["Enums"]["fuel_type"]
+          consumo_medio_kml?: number
+          cor?: string
+          created_at?: string
+          family_id: string
+          flex?: boolean
+          id?: string
+          nome: string
+          odometro_atual?: number
+          tipo?: Database["public"]["Enums"]["vehicle_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          capacidade_tanque?: number
+          combustivel_principal?: Database["public"]["Enums"]["fuel_type"]
+          consumo_medio_kml?: number
+          cor?: string
+          created_at?: string
+          family_id?: string
+          flex?: boolean
+          id?: string
+          nome?: string
+          odometro_atual?: number
+          tipo?: Database["public"]["Enums"]["vehicle_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       weekly_reviews: {
         Row: {
           checklist: Json
@@ -870,7 +1156,32 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_vehicle_status: {
+        Row: {
+          ativo: boolean | null
+          capacidade_tanque: number | null
+          consumo_medio_kml: number | null
+          cor: string | null
+          family_id: string | null
+          flex: boolean | null
+          gasto_mes: number | null
+          km_restantes: number | null
+          nome: string | null
+          odometro_atual: number | null
+          tanque_pct: number | null
+          tipo: Database["public"]["Enums"]["vehicle_type"] | null
+          ultimo_abastec_combustivel:
+            | Database["public"]["Enums"]["fuel_type"]
+            | null
+          ultimo_abastec_data: string | null
+          ultimo_abastec_hodometro: number | null
+          ultimo_abastec_litros: number | null
+          ultimo_abastec_preco_litro: number | null
+          ultimo_abastec_tanque_cheio: boolean | null
+          vehicle_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       activate_crisis: {
@@ -1038,6 +1349,35 @@ export type Database = {
           total_estilo_vida: number
         }[]
       }
+      get_fuel_history: {
+        Args: { p_vehicle_id: string }
+        Returns: {
+          combustivel: Database["public"]["Enums"]["fuel_type"]
+          data: string
+          hodometro: number
+          id: string
+          kml: number
+          litros: number
+          posto: string
+          preco_litro: number
+          tanque_cheio: boolean
+          valor_pago: number
+        }[]
+      }
+      get_maintenance_status: {
+        Args: { p_vehicle_id: string }
+        Returns: {
+          icone: string
+          intervalo_km: number
+          intervalo_meses: number
+          motivo: string
+          nome: string
+          status: string
+          type_id: string
+          ultima_data: string
+          ultimo_hodometro: number
+        }[]
+      }
       get_projecao_categorias: {
         Args: { p_family_id: string }
         Returns: {
@@ -1172,11 +1512,13 @@ export type Database = {
       category_type: "despesa" | "receita"
       credit_card_bill_status: "aberta" | "fechada" | "paga"
       family_role: "admin" | "member"
+      fuel_type: "gasolina" | "aditivada" | "etanol" | "diesel" | "gnv"
       recurring_frequency: "mensal" | "semanal" | "quinzenal" | "anual"
       transaction_scope: "family" | "personal"
       transaction_source: "manual" | "importado" | "cartao"
       transaction_special_type: "normal" | "transferencia" | "pagamento_fatura"
       transaction_type: "income" | "expense"
+      vehicle_type: "carro" | "moto" | "caminhao" | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1316,11 +1658,13 @@ export const Constants = {
       category_type: ["despesa", "receita"],
       credit_card_bill_status: ["aberta", "fechada", "paga"],
       family_role: ["admin", "member"],
+      fuel_type: ["gasolina", "aditivada", "etanol", "diesel", "gnv"],
       recurring_frequency: ["mensal", "semanal", "quinzenal", "anual"],
       transaction_scope: ["family", "personal"],
       transaction_source: ["manual", "importado", "cartao"],
       transaction_special_type: ["normal", "transferencia", "pagamento_fatura"],
       transaction_type: ["income", "expense"],
+      vehicle_type: ["carro", "moto", "caminhao", "outro"],
     },
   },
 } as const
