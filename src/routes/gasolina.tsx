@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Fuel, Plus, Wrench, Loader2 } from "lucide-react";
+import { ArrowLeft, Fuel, Plus, Wrench, Loader2, Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/gasolina")({
   head: () => ({
@@ -61,8 +61,16 @@ function GasolinaPage() {
   const [loading, setLoading] = useState(true);
 
   const [openFill, setOpenFill] = useState(false);
-  const [openVehicle, setOpenVehicle] = useState(false);
+  const [openVehicle, setOpenVehicle] = useState<{ open: boolean; editing?: VehicleStatus | null }>({ open: false });
   const [openMaint, setOpenMaint] = useState<{ open: boolean; vehicleId?: string }>({ open: false });
+
+  const deactivateVehicle = async (id: string, nome: string) => {
+    if (!confirm(`Desativar veículo "${nome}"? Ele ficará oculto mas o histórico será preservado.`)) return;
+    const { error } = await supabase.from("vehicles" as any).update({ ativo: false }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Veículo desativado");
+    reload();
+  };
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -100,7 +108,7 @@ function GasolinaPage() {
             <h1 className="text-lg sm:text-xl font-semibold flex items-center gap-2 truncate"><Fuel className="h-5 w-5" /> Gasolina</h1>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setOpenVehicle(true)}>+ Veículo</Button>
+            <Button variant="outline" size="sm" onClick={() => setOpenVehicle({ open: true, editing: null })}>+ Veículo</Button>
             <Button size="sm" onClick={() => setOpenFill(true)} disabled={vehicles.length === 0}>
               <Plus className="h-4 w-4 mr-1" /> Abastecer
             </Button>
@@ -112,11 +120,19 @@ function GasolinaPage() {
         {vehicles.length === 0 ? (
           <Card><CardContent className="py-10 text-center space-y-3">
             <p className="text-muted-foreground">Nenhum veículo cadastrado ainda.</p>
-            <Button onClick={() => setOpenVehicle(true)}>Cadastrar primeiro veículo</Button>
+            <Button onClick={() => setOpenVehicle({ open: true, editing: null })}>Cadastrar primeiro veículo</Button>
           </CardContent></Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {vehicles.map((v) => <VehicleCard key={v.vehicle_id} v={v} onMaint={() => setOpenMaint({ open: true, vehicleId: v.vehicle_id })} />)}
+            {vehicles.map((v) => (
+              <VehicleCard
+                key={v.vehicle_id}
+                v={v}
+                onMaint={() => setOpenMaint({ open: true, vehicleId: v.vehicle_id })}
+                onEdit={() => setOpenVehicle({ open: true, editing: v })}
+                onDeactivate={() => deactivateVehicle(v.vehicle_id, v.nome)}
+              />
+            ))}
           </div>
         )}
 
@@ -138,7 +154,14 @@ function GasolinaPage() {
       </main>
 
       <FillDialog open={openFill} onOpenChange={setOpenFill} familyId={familyId} userId={user?.id ?? ""} vehicles={vehicles} onSaved={reload} />
-      <VehicleDialog open={openVehicle} onOpenChange={setOpenVehicle} familyId={familyId} userId={user?.id ?? ""} onSaved={reload} />
+      <VehicleDialog
+        open={openVehicle.open}
+        onOpenChange={(o: boolean) => setOpenVehicle({ open: o, editing: o ? openVehicle.editing : null })}
+        familyId={familyId}
+        userId={user?.id ?? ""}
+        editing={openVehicle.editing}
+        onSaved={reload}
+      />
       <MaintDialog
         open={openMaint.open}
         onOpenChange={(o: boolean) => setOpenMaint({ open: o, vehicleId: o ? openMaint.vehicleId : undefined })}
@@ -151,15 +174,19 @@ function GasolinaPage() {
   );
 }
 
-function VehicleCard({ v, onMaint }: { v: VehicleStatus; onMaint: () => void }) {
+function VehicleCard({ v, onMaint, onEdit, onDeactivate }: { v: VehicleStatus; onMaint: () => void; onEdit: () => void; onDeactivate: () => void }) {
   const pct = v.tanque_pct ?? 0;
   const tankColor = pct > 50 ? "bg-green-500" : pct > 20 ? "bg-yellow-500" : "bg-red-500";
   return (
     <Card className="border-border/60">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">{TIPO_ICON[v.tipo]} {v.nome}</span>
-          {v.flex && <Badge variant="outline">Flex</Badge>}
+        <CardTitle className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2 min-w-0 truncate">{TIPO_ICON[v.tipo]} {v.nome}</span>
+          <div className="flex items-center gap-1 shrink-0">
+            {v.flex && <Badge variant="outline">Flex</Badge>}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={onDeactivate} title="Desativar"><Trash2 className="h-3.5 w-3.5" /></Button>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -435,7 +462,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
   );
 }
 
-function VehicleDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
+function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved }: any) {
   const [nome, setNome] = useState("");
   const [tipo, setTipo] = useState<"carro" | "moto" | "caminhao" | "outro">("carro");
   const [combustivel, setCombustivel] = useState<string>("gasolina");
@@ -444,29 +471,43 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
   const [consumo, setConsumo] = useState("10");
   const [odometro, setOdometro] = useState("0");
   const [saving, setSaving] = useState(false);
+  const isEdit = !!editing;
 
-  useEffect(() => { if (!open) { setNome(""); setTanque("50"); setConsumo("10"); setOdometro("0"); } }, [open]);
+  useEffect(() => {
+    if (!open) { setNome(""); setTanque("50"); setConsumo("10"); setOdometro("0"); setFlex(true); setTipo("carro"); setCombustivel("gasolina"); return; }
+    if (editing) {
+      setNome(editing.nome ?? "");
+      setTipo(editing.tipo ?? "carro");
+      setCombustivel(editing.ultimo_abastec_combustivel ?? "gasolina");
+      setFlex(!!editing.flex);
+      setTanque(String(editing.capacidade_tanque ?? "50"));
+      setConsumo(String(editing.consumo_medio_kml ?? "10"));
+      setOdometro(String(editing.odometro_atual ?? "0"));
+    }
+  }, [open, editing]);
 
   const submit = async () => {
     if (!familyId || !userId || !nome) { toast.error("Informe o nome"); return; }
     setSaving(true);
-    const { error } = await supabase.from("vehicles" as any).insert({
-      family_id: familyId, user_id: userId, nome, tipo,
-      combustivel_principal: combustivel, flex,
+    const payload = {
+      nome, tipo, combustivel_principal: combustivel, flex,
       capacidade_tanque: parseFloat(tanque.replace(",", ".")) || 50,
       consumo_medio_kml: parseFloat(consumo.replace(",", ".")) || 10,
       odometro_atual: parseFloat(odometro.replace(",", ".")) || 0,
-    });
+    };
+    const { error } = isEdit
+      ? await supabase.from("vehicles" as any).update(payload).eq("id", editing.vehicle_id)
+      : await supabase.from("vehicles" as any).insert({ ...payload, family_id: familyId, user_id: userId });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("✅ Veículo cadastrado");
+    toast.success(isEdit ? "✅ Veículo atualizado" : "✅ Veículo cadastrado");
     onOpenChange(false); onSaved();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>+ Novo veículo</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{isEdit ? "✏️ Editar veículo" : "+ Novo veículo"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><Label>Nome</Label><Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Civic, CG 160..." /></div>
           <div className="grid grid-cols-2 gap-2">

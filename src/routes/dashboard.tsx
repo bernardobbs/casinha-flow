@@ -3,10 +3,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target, Settings, Banknote, TrendingUp, Repeat, CalendarClock, ClipboardList, Fuel, Package } from "lucide-react";
+import {
+  Wallet, LogOut, Loader2, AlertTriangle, TrendingUp, Plus, Upload, BarChart3,
+  CalendarClock, CreditCard, Target, Repeat, ClipboardList, Fuel, Package, Settings, Banknote,
+} from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 
@@ -14,100 +18,83 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Painel — Casinha Flow" },
-      { name: "description", content: "Casinha Flow — controle e liberdade andando juntos. Painel financeiro compartilhado da sua família." },
+      { name: "description", content: "Resumo do mês: saldo, score de saúde, orçamentos e alertas." },
     ],
   }),
   component: Dashboard,
 });
 
-interface Family {
-  id: string;
-  name: string;
-}
+type DashSummary = {
+  mes: string; dia_atual: number; dias_mes: number;
+  renda_mensal: number; total_essenciais: number; total_dividas: number;
+  total_estilo_vida: number; saldo_atual: number; saldo_projetado: number;
+  meta_essenciais: number; meta_estilo_vida: number; meta_reserva: number;
+  modo_crise: boolean; estagio_crise: number | null; score: number; score_label: string;
+};
+type Saldo = { saldo_total: number; saldo_contas: number; divida_cartoes: number };
+type CatProj = {
+  category_id: string; nome: string; cor: string; icone: string; is_essencial: boolean;
+  valor_planejado: number; valor_gasto: number; valor_projetado: number;
+  pct_atingido: number; status_proj: string;
+};
+type AlertRow = { id: string; mensagem: string; severidade: string; created_at: string };
 
-interface Member {
-  user_id: string;
-  role: "admin" | "member";
-  full_name: string | null;
-  email: string | null;
+const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function MiniGauge({ score }: { score: number }) {
+  const pct = Math.max(0, Math.min(100, score));
+  const r = 38, c = 2 * Math.PI * r, off = c - (pct / 100) * c;
+  const color = pct >= 71 ? "hsl(142 71% 45%)" : pct >= 41 ? "hsl(38 92% 50%)" : "hsl(0 84% 60%)";
+  return (
+    <svg width="100" height="100" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+      <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="8"
+        strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off}
+        transform="rotate(-90 50 50)" />
+      <text x="50" y="56" textAnchor="middle" fontSize="22" fontWeight="700" fill="currentColor">{pct}</text>
+    </svg>
+  );
 }
 
 function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [family, setFamily] = useState<Family | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [familyName, setFamilyName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [reviewStatus, setReviewStatus] = useState<{ label: string; tone: "ok" | "warn" | "danger" }>({ label: "Pendente", tone: "warn" });
+  const [summary, setSummary] = useState<DashSummary | null>(null);
+  const [saldo, setSaldo] = useState<Saldo | null>(null);
+  const [cats, setCats] = useState<CatProj[]>([]);
+  const [alerts, setAlerts] = useState<AlertRow[]>([]);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate({ to: "/auth" });
-    }
-  }, [user, authLoading, navigate]);
+  useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
   useEffect(() => {
     if (!user) return;
-
-    const loadData = async () => {
+    (async () => {
       setLoading(true);
       const { data: profile } = await supabase
-        .from("profiles")
-        .select("family_id, families(id, name)")
-        .eq("id", user.id)
-        .maybeSingle();
+        .from("profiles").select("family_id, families(name)")
+        .eq("id", user.id).maybeSingle();
+      const fid = profile?.family_id ?? null;
+      setFamilyId(fid);
+      setFamilyName((profile as any)?.families?.name ?? "");
+      if (!fid) { setLoading(false); return; }
 
-      if (profile?.families) {
-        const fam = profile.families as Family;
-        setFamily(fam);
-
-        const { data: memberRows } = await supabase
-          .from("family_members")
-          .select("user_id, role")
-          .eq("family_id", fam.id);
-
-        const userIds = (memberRows ?? []).map((m) => m.user_id);
-        const { data: profileRows } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", userIds);
-
-        const profilesById = new Map(
-          (profileRows ?? []).map((p) => [p.id, p])
-        );
-
-        setMembers(
-          (memberRows ?? []).map((m) => ({
-            user_id: m.user_id,
-            role: m.role,
-            full_name: profilesById.get(m.user_id)?.full_name ?? null,
-            email: profilesById.get(m.user_id)?.email ?? null,
-          }))
-        );
-      }
-
-      // Status da última revisão semanal
-      if (profile?.family_id) {
-        const { data: lastRev } = await supabase
-          .from("weekly_reviews")
-          .select("fechado_em")
-          .eq("family_id", profile.family_id)
-          .order("fechado_em", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (lastRev?.fechado_em) {
-          const dias = Math.floor((Date.now() - new Date(lastRev.fechado_em).getTime()) / 86400000);
-          if (dias <= 6) setReviewStatus({ label: "Revisão em dia ✅", tone: "ok" });
-          else if (dias <= 7) setReviewStatus({ label: "Revisão pendente", tone: "warn" });
-          else setReviewStatus({ label: `${dias}d sem revisar`, tone: "danger" });
-        } else {
-          setReviewStatus({ label: "Faça sua primeira revisão", tone: "warn" });
-        }
-      }
+      const [s, sa, c, al] = await Promise.all([
+        supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
+        supabase.rpc("get_saldo_total", { p_family_id: fid }),
+        supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
+        supabase.from("alerts").select("id,mensagem,severidade,created_at")
+          .eq("family_id", fid).eq("lido", false).eq("severidade", "critical")
+          .order("created_at", { ascending: false }).limit(3),
+      ]);
+      if (s.data && Array.isArray(s.data) && s.data[0]) setSummary(s.data[0] as DashSummary);
+      if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
+      if (c.data) setCats((c.data as CatProj[]).slice(0, 5));
+      if (al.data) setAlerts(al.data as AlertRow[]);
       setLoading(false);
-    };
-
-    loadData();
+    })();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -117,302 +104,193 @@ function Dashboard() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
-
   if (!user) return null;
 
-  const myMember = members.find((m) => m.user_id === user.id);
+  const firstName = user.user_metadata?.full_name?.split(" ")[0] ?? "olá";
+  const mesLabel = summary
+    ? new Date(summary.mes + "T12:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+    : "";
+  const gastoTotal = (summary?.total_essenciais ?? 0) + (summary?.total_dividas ?? 0) + (summary?.total_estilo_vida ?? 0);
+  const reservaAtual = (summary?.renda_mensal ?? 0) - gastoTotal;
+
+  const catBadge = (s: string) =>
+    s === "vai_estourar" ? "🔴" : s === "atencao" ? "⚠️" : s === "ok" ? "✅" : "—";
 
   return (
     <div className="min-h-screen" style={{ background: "var(--gradient-subtle)" }}>
-      {/* Header */}
       <header className="border-b border-border/60 bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "var(--gradient-primary)" }}>
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-semibold tracking-tight">Casinha Flow</span>
-              <span className="text-[10px] text-muted-foreground hidden sm:block">controle e liberdade andando juntos</span>
+            <div className="flex flex-col leading-tight min-w-0">
+              <span className="font-semibold tracking-tight truncate">Olá, {firstName}! 👋</span>
+              <span className="text-[11px] text-muted-foreground capitalize">{mesLabel} {familyName && `• ${familyName}`}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 shrink-0">
             <AlertsBell />
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}><LogOut className="h-4 w-4" /></Button>
           </div>
         </div>
       </header>
 
       <CrisisBanner />
 
-      <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-        {/* Welcome */}
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Olá, {user.user_metadata?.full_name?.split(" ")[0] ?? "bem-vindo"}.
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Bem-vindo ao painel financeiro compartilhado.
-          </p>
-        </div>
-
-        {/* Cards */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Família</CardTitle>
-              <Home className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">{family?.name ?? "—"}</div>
-              {myMember?.role === "admin" && (
-                <Badge variant="secondary" className="mt-2 gap-1">
-                  <Crown className="h-3 w-3" />
-                  Admin
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Membros</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">{members.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">pessoa(s) compartilhando dados</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Members list */}
+      <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+        {/* Saldo total destaque */}
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-          <CardHeader>
-            <CardTitle>Membros da família</CardTitle>
-            <CardDescription>Todos os dados financeiros são compartilhados entre estes membros.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-border">
-              {members.map((m) => (
-                <li key={m.user_id} className="py-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">
-                      {m.full_name ?? "Sem nome"}
-                      {m.user_id === user.id && (
-                        <span className="text-muted-foreground font-normal"> (você)</span>
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{m.email}</p>
-                  </div>
-                  <Badge variant={m.role === "admin" ? "default" : "secondary"} className="gap-1">
-                    {m.role === "admin" && <Crown className="h-3 w-3" />}
-                    {m.role === "admin" ? "Admin" : "Membro"}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
+          <CardContent className="py-5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Saldo total</p>
+              <p className={`text-3xl font-semibold tracking-tight ${(saldo?.saldo_total ?? 0) < 0 ? "text-destructive" : ""}`}>
+                {fmtBRL(saldo?.saldo_total ?? 0)}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Contas {fmtBRL(saldo?.saldo_contas ?? 0)} • Cartões {fmtBRL(saldo?.divida_cartoes ?? 0)}
+              </p>
+            </div>
+            {summary && (
+              <div className="flex flex-col items-center">
+                <MiniGauge score={summary.score} />
+                <span className="text-xs font-medium -mt-1">{summary.score_label}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center"
-                  style={{ background: "color-mix(in oklab, var(--primary) 14%, transparent)", color: "var(--primary)" }}>
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold tracking-tight">📈 Situação atual</h3>
-                  <p className="text-sm text-muted-foreground">Score de saúde, projeções, alertas e contas a pagar.</p>
-                </div>
-              </div>
-              <Link to="/situacao"><Button>Abrir</Button></Link>
-            </CardContent>
-          </Card>
+        {/* Resumo do mês */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Stat label="Receita" value={fmtBRL(summary?.renda_mensal ?? 0)} tone="success" />
+          <Stat label="Gasto" value={fmtBRL(gastoTotal)} tone="destructive" />
+          <Stat label="Saldo mês" value={fmtBRL((summary?.renda_mensal ?? 0) - gastoTotal)} />
+          <Stat label="Projeção" value={fmtBRL(summary?.saldo_projetado ?? 0)} tone={(summary?.saldo_projetado ?? 0) < 0 ? "destructive" : "default"} />
+        </div>
 
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div>
-                <h3 className="font-semibold tracking-tight">Transações</h3>
-                <p className="text-sm text-muted-foreground">Registre receitas, despesas e acompanhe o saldo.</p>
-              </div>
-              <Link to="/transactions">
-                <Button>Abrir</Button>
-              </Link>
-            </CardContent>
-          </Card>
+        {/* 50/30/20 */}
+        <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+          <CardHeader className="pb-3"><CardTitle className="text-base">Regra 50/30/20</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <Bar50 label="Essenciais (50%)" hoje={summary?.total_essenciais ?? 0} meta={summary?.meta_essenciais ?? 0} />
+            <Bar50 label="Estilo de vida (30%)" hoje={summary?.total_estilo_vida ?? 0} meta={summary?.meta_estilo_vida ?? 0} />
+            <Bar50 label="Reserva (20%)" hoje={reservaAtual} meta={summary?.meta_reserva ?? 0} />
+          </CardContent>
+        </Card>
 
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div>
-                <h3 className="font-semibold tracking-tight">Estado financeiro</h3>
-                <p className="text-sm text-muted-foreground">Painel mensal 50/30/20 e renda do mês.</p>
-              </div>
-              <Link to="/financial-state">
-                <Button>Abrir</Button>
-              </Link>
-            </CardContent>
-          </Card>
+        {/* Categorias top 5 */}
+        <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+          <CardHeader className="pb-3 flex-row items-center justify-between">
+            <CardTitle className="text-base">Por categoria</CardTitle>
+            <Link to="/situacao" className="text-xs text-primary hover:underline">Ver todas →</Link>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {cats.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sem categorias com gastos este mês.</p>
+            ) : cats.map((c) => {
+              const pct = c.valor_planejado > 0 ? Math.min(100, (c.valor_gasto / c.valor_planejado) * 100) : 0;
+              return (
+                <div key={c.category_id} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium truncate">{catBadge(c.status_proj)} {c.icone} {c.nome}</span>
+                    <span className="text-muted-foreground tabular-nums text-xs">
+                      {fmtBRL(c.valor_gasto)}{c.valor_planejado > 0 ? ` / ${fmtBRL(c.valor_planejado)}` : ""}
+                    </span>
+                  </div>
+                  <Progress value={pct} />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
 
-          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div
-                  className="h-10 w-10 rounded-lg flex items-center justify-center"
-                  style={{
-                    background: "color-mix(in oklab, var(--primary) 14%, transparent)",
-                    color: "var(--primary)",
-                  }}
-                >
-                  <Target className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold tracking-tight">Orçamentos</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Limites por categoria + alertas automáticos.
-                  </p>
-                </div>
-              </div>
-              <Link to="/budgets">
-                <Button variant="outline">Abrir</Button>
-              </Link>
+        {/* Alertas urgentes */}
+        {alerts.length > 0 && (
+          <Card className="border-destructive/40 bg-destructive/5">
+            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-destructive" /> Alertas urgentes</CardTitle></CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {alerts.map(a => (
+                  <li key={a.id} className="text-sm flex items-start gap-2">
+                    <span>🔴</span><span>{a.mensagem}</span>
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
+        )}
 
-          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div
-                  className="h-10 w-10 rounded-lg flex items-center justify-center"
-                  style={{
-                    background:
-                      "color-mix(in oklab, var(--destructive) 14%, transparent)",
-                    color: "var(--destructive)",
-                  }}
-                >
-                  <ShieldAlert className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold tracking-tight">Módulo Crise</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Detecção automática + plano de saída em 3 estágios.
-                  </p>
-                </div>
-              </div>
-              <Link to="/crisis">
-                <Button variant="outline">Abrir</Button>
-              </Link>
-            </CardContent>
-          </Card>
+        {/* Ações rápidas 2x2 */}
+        <div className="grid grid-cols-2 gap-3">
+          <QuickAction to="/transactions" icon={<Plus className="h-4 w-4" />} label="Lançar" />
+          <QuickAction to="/transactions" icon={<Upload className="h-4 w-4" />} label="Importar" />
+          <QuickAction to="/situacao" icon={<BarChart3 className="h-4 w-4" />} label="Situação" />
+          <QuickAction to="/contas-a-pagar" icon={<CalendarClock className="h-4 w-4" />} label="Contas" />
+        </div>
 
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Banknote className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold tracking-tight">Contas</h3>
-                  <p className="text-sm text-muted-foreground">Bancos, carteiras e cartões.</p>
-                </div>
-              </div>
-              <Link to="/contas"><Button variant="outline">Abrir</Button></Link>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Repeat className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold tracking-tight">🔄 Recorrentes</h3>
-                  <p className="text-sm text-muted-foreground">Despesas e receitas que se repetem.</p>
-                </div>
-              </div>
-              <Link to="/recorrentes"><Button variant="outline">Abrir</Button></Link>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <CalendarClock className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold tracking-tight">📅 Contas a pagar</h3>
-                  <p className="text-sm text-muted-foreground">Lembretes agrupados por urgência.</p>
-                </div>
-              </div>
-              <Link to="/contas-a-pagar"><Button variant="outline">Abrir</Button></Link>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <ClipboardList className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold tracking-tight">📋 Revisão semanal</h3>
-                  <p className="text-sm text-muted-foreground">Fechamento da semana com checklist.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={reviewStatus.tone === "ok" ? "secondary" : reviewStatus.tone === "danger" ? "destructive" : "outline"}>
-                  {reviewStatus.label}
-                </Badge>
-                <Link to="/revisao-semanal"><Button variant="outline">Abrir</Button></Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Fuel className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold tracking-tight">⛽ Gasolina</h3>
-                  <p className="text-sm text-muted-foreground">Veículos, abastecimentos e manutenção.</p>
-                </div>
-              </div>
-              <Link to="/gasolina"><Button variant="outline">Abrir</Button></Link>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold tracking-tight">📦 Estoque</h3>
-                  <p className="text-sm text-muted-foreground">Geladeira, freezer, despensa e armário.</p>
-                </div>
-              </div>
-              <Link to="/estoque"><Button variant="outline">Abrir</Button></Link>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardContent className="py-6 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Settings className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold tracking-tight">Configurações</h3>
-                  <p className="text-sm text-muted-foreground">Família, IA, notificações e regras.</p>
-                </div>
-              </div>
-              <Link to="/configuracoes"><Button variant="outline">Abrir</Button></Link>
-            </CardContent>
-          </Card>
+        {/* Cards de acesso */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <AccessCard to="/transactions" icon={<CreditCard />} label="Transações" />
+          <AccessCard to="/contas" icon={<Banknote />} label="Contas" />
+          <AccessCard to="/budgets" icon={<Target />} label="Orçamento" />
+          <AccessCard to="/recorrentes" icon={<Repeat />} label="Recorrentes" />
+          <AccessCard to="/revisao-semanal" icon={<ClipboardList />} label="Revisão" />
+          <AccessCard to="/gasolina" icon={<Fuel />} label="Gasolina" />
+          <AccessCard to="/estoque" icon={<Package />} label="Estoque" />
+          <AccessCard to="/financial-state" icon={<TrendingUp />} label="Estado fin." />
+          <AccessCard to="/configuracoes" icon={<Settings />} label="Config." />
         </div>
       </main>
     </div>
+  );
+}
+
+function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "success" | "destructive" }) {
+  const color = tone === "success" ? "var(--success)" : tone === "destructive" ? "var(--destructive)" : undefined;
+  return (
+    <Card className="border-border/60">
+      <CardContent className="py-3">
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        <p className="font-semibold tabular-nums text-sm sm:text-base" style={color ? { color } : undefined}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Bar50({ label, hoje, meta }: { label: string; hoje: number; meta: number }) {
+  const pct = meta > 0 ? Math.min(100, (Math.max(0, hoje) / meta) * 100) : 0;
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span>{label}</span>
+        <span className="text-muted-foreground tabular-nums text-xs">{fmtBRL(hoje)} / {fmtBRL(meta)}</span>
+      </div>
+      <Progress value={pct} />
+    </div>
+  );
+}
+
+function QuickAction({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Link to={to}>
+      <Button variant="outline" className="w-full justify-start gap-2 h-12">
+        {icon}<span>{label}</span>
+      </Button>
+    </Link>
+  );
+}
+
+function AccessCard({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Link to={to}>
+      <Card className="border-border/60 hover:border-primary/40 transition-colors">
+        <CardContent className="py-4 flex flex-col items-center gap-1.5 text-center">
+          <span className="text-muted-foreground">{icon}</span>
+          <span className="text-xs font-medium">{label}</span>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

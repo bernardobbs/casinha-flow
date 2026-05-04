@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Settings as SettingsIcon, Trash2, Wallet } from "lucide-react";
+import { ArrowLeft, Loader2, Settings as SettingsIcon, Trash2, Wallet, Crown, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -61,6 +61,13 @@ interface Rule {
   category_nome?: string;
 }
 
+interface MemberRow {
+  user_id: string;
+  role: "admin" | "member";
+  full_name: string | null;
+  email: string | null;
+}
+
 function ConfigPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -69,6 +76,8 @@ function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [aiToday, setAiToday] = useState(0);
   const [rules, setRules] = useState<Rule[]>([]);
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
 
   const [values, setValues] = useState<Record<SettingKey, string>>({
     family_name: "",
@@ -131,10 +140,35 @@ function ConfigPage() {
       setAiToday(Number(count ?? 0));
 
       await loadRules(fid);
+      await loadMembers(fid);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const loadMembers = async (fid: string) => {
+    const { data: rows } = await supabase.from("family_members")
+      .select("user_id, role").eq("family_id", fid);
+    const ids = (rows ?? []).map(r => r.user_id);
+    if (ids.length === 0) { setMembers([]); return; }
+    const { data: profs } = await supabase.from("profiles")
+      .select("id, full_name, email").in("id", ids);
+    const map = new Map((profs ?? []).map(p => [p.id, p]));
+    setMembers((rows ?? []).map(r => ({
+      user_id: r.user_id, role: r.role,
+      full_name: map.get(r.user_id)?.full_name ?? null,
+      email: map.get(r.user_id)?.email ?? null,
+    })));
+  };
+
+  const handleInviteMember = async () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !email.includes("@")) { toast.error("E-mail inválido"); return; }
+    const link = `${window.location.origin}/auth?invite=${encodeURIComponent(email)}`;
+    try { await navigator.clipboard.writeText(link); } catch { /* noop */ }
+    toast.success("Link de convite copiado! Envie ao novo membro.");
+    setInviteEmail("");
+  };
 
   const loadRules = async (fid: string) => {
     const { data } = await supabase
@@ -247,13 +281,87 @@ function ConfigPage() {
           <h1 className="text-3xl font-semibold tracking-tight">Configurações</h1>
         </div>
 
-        <Tabs defaultValue="geral">
-          <TabsList>
+        <Tabs defaultValue="familia">
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="familia">Família</TabsTrigger>
             <TabsTrigger value="geral">Geral</TabsTrigger>
             <TabsTrigger value="ia">IA</TabsTrigger>
             <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
             <TabsTrigger value="categorias">Categorias</TabsTrigger>
           </TabsList>
+
+          {/* FAMÍLIA */}
+          <TabsContent value="familia" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Família</CardTitle>
+                <CardDescription>Nome, renda esperada e composição.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nome da família</Label>
+                    <Input value={values.family_name} onChange={(e) => setVal("family_name", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Renda mensal esperada (R$)</Label>
+                    <Input inputMode="decimal" value={values.renda_padrao}
+                      onChange={(e) => setVal("renda_padrao", e.target.value.replace(/[^0-9.,]/g, ""))} placeholder="0,00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Adultos</Label>
+                    <Input type="number" min={0} value={values.num_adultos}
+                      onChange={(e) => setVal("num_adultos", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Crianças</Label>
+                    <Input type="number" min={0} value={values.num_criancas}
+                      onChange={(e) => setVal("num_criancas", e.target.value)} />
+                  </div>
+                </div>
+                <Button disabled={saving} onClick={() => handleSave(["family_name", "renda_padrao", "num_adultos", "num_criancas"])}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Membros</CardTitle>
+                <CardDescription>{members.length} pessoa(s) compartilhando esta família.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="divide-y divide-border">
+                  {members.map((m) => (
+                    <li key={m.user_id} className="py-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {m.full_name ?? "Sem nome"}
+                          {m.user_id === user.id && <span className="text-muted-foreground font-normal"> (você)</span>}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                      </div>
+                      <Badge variant={m.role === "admin" ? "default" : "secondary"} className="gap-1 shrink-0">
+                        {m.role === "admin" && <Crown className="h-3 w-3" />}
+                        {m.role === "admin" ? "Admin" : "Membro"}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+                <div className="border-t pt-4 space-y-2">
+                  <Label>Convidar novo membro</Label>
+                  <div className="flex gap-2">
+                    <Input type="email" placeholder="email@exemplo.com" value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)} />
+                    <Button onClick={handleInviteMember}><UserPlus className="h-4 w-4 mr-1" />Convidar</Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Será gerado um link de cadastro. Envie ao convidado para ele se juntar à família.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* GERAL */}
           <TabsContent value="geral" className="mt-6">

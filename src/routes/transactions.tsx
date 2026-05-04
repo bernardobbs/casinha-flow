@@ -212,6 +212,9 @@ interface ParsedRow {
   suggested_origem?: "manual" | "ia" | "keyword" | null;
   suggested_nivel?: number | null;
   suggested_confianca?: number | null;
+  // Dedup status
+  dup_status?: "novo" | "possivel" | "existe";
+  dup_match?: { id: string; description: string; date: string; amount: number } | null;
 }
 
 function parseCsv(text: string): ParsedRow[] {
@@ -300,6 +303,7 @@ function TransactionsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [importScope, setImportScope] = useState<TxScope>("family");
+  const [importAccountId, setImportAccountId] = useState<string>("");
   const [importing, setImporting] = useState(false);
 
   // duplicate detection
@@ -698,10 +702,33 @@ function TransactionsPage() {
             }
           })
         );
-        setParsedRows(enriched);
+        // Detect duplicates: query existing transactions for each row
+        const withDup: ParsedRow[] = await Promise.all(
+          enriched.map(async (r) => {
+            if (r.error) return r;
+            const { data: matches } = await supabase
+              .from("transactions")
+              .select("id, description, date, amount, external_id")
+              .eq("family_id", familyId)
+              .eq("date", r.date)
+              .gte("amount", Math.abs(r.amount) - 0.01)
+              .lte("amount", Math.abs(r.amount) + 0.01)
+              .limit(3);
+            const list = matches ?? [];
+            if (list.some((m: any) => m.external_id === r.external_id)) {
+              return { ...r, dup_status: "existe", selected: false, dup_match: list[0] as any };
+            }
+            const word = r.description.split(/\s+/).find((w) => w.length >= 4)?.toLowerCase();
+            const partial = word ? list.find((m: any) => (m.description ?? "").toLowerCase().includes(word)) : null;
+            if (partial) return { ...r, dup_status: "possivel", dup_match: { ...(partial as any), amount: Number((partial as any).amount) } };
+            return { ...r, dup_status: "novo" };
+          })
+        );
+        setParsedRows(withDup);
       } else {
         setParsedRows(rows);
       }
+      setImportAccountId("");
       setImportOpen(true);
     } catch {
       toast.error("Não foi possível ler o arquivo");
@@ -725,6 +752,10 @@ function TransactionsPage() {
 
   const handleConfirmImport = async () => {
     if (!user || !familyId) return;
+    if (!importAccountId) {
+      toast.error("Selecione a conta bancária antes de importar");
+      return;
+    }
     const toImport = parsedRows.filter((r) => r.selected && !r.error);
     if (toImport.length === 0) {
       toast.error("Selecione ao menos uma linha");
@@ -766,6 +797,7 @@ function TransactionsPage() {
         type: r.type,
         source: "importado" as const,
         scope: importScope,
+        account_id: importAccountId,
         category: cat?.nome ?? r.category,
         category_id: r.suggested_category_id ?? null,
         is_essencial: cat?.is_essencial ?? false,
@@ -794,9 +826,11 @@ function TransactionsPage() {
       [...inserted, ...prev].sort((a, b) => (a.date < b.date ? 1 : -1))
     );
 
+    const accName = accounts.find((a) => a.id === importAccountId)?.nome ?? "";
     toast.success(
-      `${inserted.length} importados, ${duplicates} ignorados (duplicados)`
+      `${inserted.length} importadas para: ${accName} (${duplicates} ignoradas)`
     );
+    await supabase.rpc("recalc_account_balance", { _account_id: importAccountId });
     setImportOpen(false);
     setParsedRows([]);
 
@@ -1293,26 +1327,37 @@ function TransactionsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center justify-between gap-4 pb-2 border-b">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={selectedCount === validRows.length && validRows.length > 0}
-                onCheckedChange={(c) => toggleAll(Boolean(c))}
-              />
-              <span className="text-sm text-muted-foreground">
-                {selectedCount} de {validRows.length} selecionada(s)
-              </span>
-            </div>
-            <div className="w-48">
-              <Select value={importScope} onValueChange={(v) => setImportScope(v as TxScope)}>
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
+          <div className="space-y-3 pb-3 border-b">
+            <div className="space-y-1">
+              <Label className="text-xs">Em qual conta estão essas transações? *</Label>
+              <Select value={importAccountId || undefined} onValueChange={setImportAccountId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a conta bancária" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="family">Escopo: Família</SelectItem>
-                  <SelectItem value="personal">Escopo: Pessoal</SelectItem>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.icone} {a.nome}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedCount === validRows.length && validRows.length > 0}
+                  onCheckedChange={(c) => toggleAll(Boolean(c))}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedCount} de {validRows.length} selecionada(s)
+                </span>
+              </div>
+              <div className="w-40">
+                <Select value={importScope} onValueChange={(v) => setImportScope(v as TxScope)}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="family">Família</SelectItem>
+                    <SelectItem value="personal">Pessoal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -1342,9 +1387,12 @@ function TransactionsPage() {
                           {(r.suggested_nivel === 2 || r.suggested_nivel === 3) && (
                             <Badge variant="secondary" className="font-normal">💡 Sugerido</Badge>
                           )}
-                          {!r.suggested_category_id && (
-                            <Badge variant="outline" className="font-normal text-muted-foreground">❓ Novo</Badge>
+                          {!r.suggested_category_id && r.dup_status !== "existe" && r.dup_status !== "possivel" && (
+                            <Badge variant="outline" className="font-normal text-muted-foreground">❓ Sem categoria</Badge>
                           )}
+                          {r.dup_status === "novo" && <Badge className="font-normal bg-green-500/15 text-green-700">✅ Novo</Badge>}
+                          {r.dup_status === "possivel" && <Badge className="font-normal bg-yellow-500/15 text-yellow-700">⚠️ Possível duplicata</Badge>}
+                          {r.dup_status === "existe" && <Badge variant="secondary" className="font-normal">🔄 Já existe</Badge>}
                         </>
                       )}
                       {r.error && (
