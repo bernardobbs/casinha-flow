@@ -61,6 +61,13 @@ interface Rule {
   category_nome?: string;
 }
 
+interface MemberRow {
+  user_id: string;
+  role: "admin" | "member";
+  full_name: string | null;
+  email: string | null;
+}
+
 function ConfigPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -133,10 +140,35 @@ function ConfigPage() {
       setAiToday(Number(count ?? 0));
 
       await loadRules(fid);
+      await loadMembers(fid);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  const loadMembers = async (fid: string) => {
+    const { data: rows } = await supabase.from("family_members")
+      .select("user_id, role").eq("family_id", fid);
+    const ids = (rows ?? []).map(r => r.user_id);
+    if (ids.length === 0) { setMembers([]); return; }
+    const { data: profs } = await supabase.from("profiles")
+      .select("id, full_name, email").in("id", ids);
+    const map = new Map((profs ?? []).map(p => [p.id, p]));
+    setMembers((rows ?? []).map(r => ({
+      user_id: r.user_id, role: r.role,
+      full_name: map.get(r.user_id)?.full_name ?? null,
+      email: map.get(r.user_id)?.email ?? null,
+    })));
+  };
+
+  const handleInviteMember = async () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !email.includes("@")) { toast.error("E-mail inválido"); return; }
+    const link = `${window.location.origin}/auth?invite=${encodeURIComponent(email)}`;
+    try { await navigator.clipboard.writeText(link); } catch { /* noop */ }
+    toast.success("Link de convite copiado! Envie ao novo membro.");
+    setInviteEmail("");
+  };
 
   const loadRules = async (fid: string) => {
     const { data } = await supabase
