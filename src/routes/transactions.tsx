@@ -212,6 +212,9 @@ interface ParsedRow {
   suggested_origem?: "manual" | "ia" | "keyword" | null;
   suggested_nivel?: number | null;
   suggested_confianca?: number | null;
+  // Dedup status
+  dup_status?: "novo" | "possivel" | "existe";
+  dup_match?: { id: string; description: string; date: string; amount: number } | null;
 }
 
 function parseCsv(text: string): ParsedRow[] {
@@ -300,6 +303,7 @@ function TransactionsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [importScope, setImportScope] = useState<TxScope>("family");
+  const [importAccountId, setImportAccountId] = useState<string>("");
   const [importing, setImporting] = useState(false);
 
   // duplicate detection
