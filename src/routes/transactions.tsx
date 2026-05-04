@@ -1328,7 +1328,16 @@ function TransactionsPage() {
                 familyId={familyId}
                 categories={categories}
                 accounts={accounts}
-                onChanged={() => void reloadTransactions()}
+                onChanged={() => {
+                  void supabase
+                    .from("transactions")
+                    .select("*")
+                    .order("date", { ascending: false })
+                    .order("created_at", { ascending: false })
+                    .then(({ data }) => {
+                      if (data) setTransactions(data.map((t) => ({ ...t, amount: Number(t.amount) })) as Transaction[]);
+                    });
+                }}
               />
             )}
           </TabsContent>
