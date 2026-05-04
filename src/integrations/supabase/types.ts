@@ -283,6 +283,48 @@ export type Database = {
           },
         ]
       }
+      consumption_history: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          mes: string
+          product_id: string
+          quantidade_consumida: number
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          mes: string
+          product_id: string
+          quantidade_consumida?: number
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          mes?: string
+          product_id?: string
+          quantidade_consumida?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumption_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumption_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_status"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
       credit_card_bills: {
         Row: {
           account_id: string
@@ -409,6 +451,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cycle_config: {
+        Row: {
+          created_at: string
+          family_id: string
+          frequencia_dias: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          frequencia_dias?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          frequencia_dias?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       daily_ai_runs: {
         Row: {
@@ -785,6 +851,105 @@ export type Database = {
           },
         ]
       }
+      price_history: {
+        Row: {
+          created_at: string
+          data: string
+          family_id: string
+          id: string
+          preco: number
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          family_id: string
+          id?: string
+          preco: number
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          family_id?: string
+          id?: string
+          preco?: number
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_status"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          ativo: boolean
+          categoria: string | null
+          codigo_barras: string | null
+          created_at: string
+          data_validade: string | null
+          family_id: string
+          id: string
+          localizacao: Database["public"]["Enums"]["stock_location"]
+          marca: string | null
+          nome: string
+          preco_atual: number | null
+          quantidade_atual: number
+          quantidade_minima: number
+          unidade: Database["public"]["Enums"]["stock_unit"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string | null
+          codigo_barras?: string | null
+          created_at?: string
+          data_validade?: string | null
+          family_id: string
+          id?: string
+          localizacao?: Database["public"]["Enums"]["stock_location"]
+          marca?: string | null
+          nome: string
+          preco_atual?: number | null
+          quantidade_atual?: number
+          quantidade_minima?: number
+          unidade?: Database["public"]["Enums"]["stock_unit"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string | null
+          codigo_barras?: string | null
+          created_at?: string
+          data_validade?: string | null
+          family_id?: string
+          id?: string
+          localizacao?: Database["public"]["Enums"]["stock_location"]
+          marca?: string | null
+          nome?: string
+          preco_atual?: number | null
+          quantidade_atual?: number
+          quantidade_minima?: number
+          unidade?: Database["public"]["Enums"]["stock_unit"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -876,6 +1041,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          data: string
+          family_id: string
+          id: string
+          motivo: string | null
+          preco_unitario: number | null
+          product_id: string
+          quantidade: number
+          tipo: Database["public"]["Enums"]["stock_movement_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          family_id: string
+          id?: string
+          motivo?: string | null
+          preco_unitario?: number | null
+          product_id: string
+          quantidade: number
+          tipo: Database["public"]["Enums"]["stock_movement_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          family_id?: string
+          id?: string
+          motivo?: string | null
+          preco_unitario?: number | null
+          product_id?: string
+          quantidade?: number
+          tipo?: Database["public"]["Enums"]["stock_movement_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_status"
+            referencedColumns: ["product_id"]
+          },
+        ]
       }
       transactions: {
         Row: {
@@ -1156,6 +1375,30 @@ export type Database = {
       }
     }
     Views: {
+      v_stock_status: {
+        Row: {
+          ativo: boolean | null
+          categoria: string | null
+          consumo_diario: number | null
+          data_validade: string | null
+          dias_para_vencer: number | null
+          dias_restantes: number | null
+          family_id: string | null
+          localizacao: Database["public"]["Enums"]["stock_location"] | null
+          marca: string | null
+          nome: string | null
+          preco_anterior: number | null
+          preco_atual: number | null
+          product_id: string | null
+          quantidade_atual: number | null
+          quantidade_minima: number | null
+          risco_ruptura: boolean | null
+          status: string | null
+          unidade: Database["public"]["Enums"]["stock_unit"] | null
+          variacao_preco_pct: number | null
+        }
+        Relationships: []
+      }
       v_vehicle_status: {
         Row: {
           ativo: boolean | null
@@ -1514,6 +1757,9 @@ export type Database = {
       family_role: "admin" | "member"
       fuel_type: "gasolina" | "aditivada" | "etanol" | "diesel" | "gnv"
       recurring_frequency: "mensal" | "semanal" | "quinzenal" | "anual"
+      stock_location: "geladeira" | "freezer" | "despensa" | "armario" | "outro"
+      stock_movement_type: "entrada" | "saida" | "ajuste" | "perda"
+      stock_unit: "un" | "kg" | "g" | "L" | "ml" | "pct"
       transaction_scope: "family" | "personal"
       transaction_source: "manual" | "importado" | "cartao"
       transaction_special_type: "normal" | "transferencia" | "pagamento_fatura"
@@ -1660,6 +1906,9 @@ export const Constants = {
       family_role: ["admin", "member"],
       fuel_type: ["gasolina", "aditivada", "etanol", "diesel", "gnv"],
       recurring_frequency: ["mensal", "semanal", "quinzenal", "anual"],
+      stock_location: ["geladeira", "freezer", "despensa", "armario", "outro"],
+      stock_movement_type: ["entrada", "saida", "ajuste", "perda"],
+      stock_unit: ["un", "kg", "g", "L", "ml", "pct"],
       transaction_scope: ["family", "personal"],
       transaction_source: ["manual", "importado", "cartao"],
       transaction_special_type: ["normal", "transferencia", "pagamento_fatura"],
