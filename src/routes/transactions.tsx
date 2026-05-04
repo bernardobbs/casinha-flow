@@ -448,6 +448,7 @@ function TransactionsPage() {
       scope,
       is_essencial: isEssencial,
       category_id: categoryId || null,
+      account_id: accountId || null,
     });
 
     if (!parsed.success) {
