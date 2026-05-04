@@ -994,7 +994,106 @@ function TransactionsPage() {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2 sm:col-span-2 pt-1">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Conta</Label>
+                  <Select value={accountId || "none"} onValueChange={(v) => {
+                    setAccountId(v === "none" ? "" : v);
+                    if (v === "none") setParcelado(false);
+                  }}>
+                    <SelectTrigger><SelectValue placeholder="Sem conta" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Sem conta —</SelectItem>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.icone} {a.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Parcelamento — só aparece se cartão e despesa */}
+                {(() => {
+                  const acc = accounts.find((a) => a.id === accountId);
+                  if (acc?.tipo !== "cartao" || type !== "expense") return null;
+                  const valorTotal = Number((amount || "0").replace(",", ".")) || 0;
+                  const dt = new Date(date + "T00:00:00");
+                  const firstFatura = (() => {
+                    if (!acc.dia_fechamento) return dt;
+                    const d = dt.getDate() <= acc.dia_fechamento
+                      ? new Date(dt.getFullYear(), dt.getMonth(), 1)
+                      : new Date(dt.getFullYear(), dt.getMonth() + 1, 1);
+                    return d;
+                  })();
+                  return (
+                    <div className="sm:col-span-2 rounded-lg border border-border/60 p-3 space-y-3 bg-card/40">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-normal">Parcelado?</Label>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={!parcelado ? "default" : "outline"}
+                            onClick={() => setParcelado(false)}
+                          >
+                            NÃO
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={parcelado ? "default" : "outline"}
+                            onClick={() => setParcelado(true)}
+                          >
+                            SIM
+                          </Button>
+                        </div>
+                      </div>
+                      {parcelado && (
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Parcelas</Label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                onClick={() => setNumParcelas((n) => Math.max(2, n - 1))}
+                              >−</Button>
+                              <Input
+                                type="number"
+                                min={2}
+                                max={36}
+                                value={numParcelas}
+                                onChange={(e) => setNumParcelas(Math.max(2, Math.min(36, parseInt(e.target.value, 10) || 2)))}
+                                className="h-8 text-center"
+                              />
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                onClick={() => setNumParcelas((n) => Math.min(36, n + 1))}
+                              >+</Button>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Valor/parcela</Label>
+                            <div className="h-8 px-3 flex items-center rounded-md border border-input bg-background tabular-nums text-sm">
+                              {formatCurrency(valorTotal / numParcelas)}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">1ª fatura</Label>
+                            <div className="h-8 px-3 flex items-center rounded-md border border-input bg-background text-sm">
+                              {firstFatura.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                   <Checkbox
                     id="essencial"
                     checked={isEssencial}
