@@ -1327,26 +1327,37 @@ function TransactionsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center justify-between gap-4 pb-2 border-b">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={selectedCount === validRows.length && validRows.length > 0}
-                onCheckedChange={(c) => toggleAll(Boolean(c))}
-              />
-              <span className="text-sm text-muted-foreground">
-                {selectedCount} de {validRows.length} selecionada(s)
-              </span>
-            </div>
-            <div className="w-48">
-              <Select value={importScope} onValueChange={(v) => setImportScope(v as TxScope)}>
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
+          <div className="space-y-3 pb-3 border-b">
+            <div className="space-y-1">
+              <Label className="text-xs">Em qual conta estão essas transações? *</Label>
+              <Select value={importAccountId || undefined} onValueChange={setImportAccountId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a conta bancária" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="family">Escopo: Família</SelectItem>
-                  <SelectItem value="personal">Escopo: Pessoal</SelectItem>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.icone} {a.nome}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedCount === validRows.length && validRows.length > 0}
+                  onCheckedChange={(c) => toggleAll(Boolean(c))}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedCount} de {validRows.length} selecionada(s)
+                </span>
+              </div>
+              <div className="w-40">
+                <Select value={importScope} onValueChange={(v) => setImportScope(v as TxScope)}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="family">Família</SelectItem>
+                    <SelectItem value="personal">Pessoal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -1376,9 +1387,12 @@ function TransactionsPage() {
                           {(r.suggested_nivel === 2 || r.suggested_nivel === 3) && (
                             <Badge variant="secondary" className="font-normal">💡 Sugerido</Badge>
                           )}
-                          {!r.suggested_category_id && (
-                            <Badge variant="outline" className="font-normal text-muted-foreground">❓ Novo</Badge>
+                          {!r.suggested_category_id && r.dup_status !== "existe" && r.dup_status !== "possivel" && (
+                            <Badge variant="outline" className="font-normal text-muted-foreground">❓ Sem categoria</Badge>
                           )}
+                          {r.dup_status === "novo" && <Badge className="font-normal bg-green-500/15 text-green-700">✅ Novo</Badge>}
+                          {r.dup_status === "possivel" && <Badge className="font-normal bg-yellow-500/15 text-yellow-700">⚠️ Possível duplicata</Badge>}
+                          {r.dup_status === "existe" && <Badge variant="secondary" className="font-normal">🔄 Já existe</Badge>}
                         </>
                       )}
                       {r.error && (
