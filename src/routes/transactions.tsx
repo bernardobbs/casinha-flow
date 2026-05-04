@@ -39,6 +39,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AlertsBell } from "@/components/alerts-bell";
+import { ReconciliationPanel } from "@/components/reconciliation-panel";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({
