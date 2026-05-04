@@ -702,10 +702,33 @@ function TransactionsPage() {
             }
           })
         );
-        setParsedRows(enriched);
+        // Detect duplicates: query existing transactions for each row
+        const withDup: ParsedRow[] = await Promise.all(
+          enriched.map(async (r) => {
+            if (r.error) return r;
+            const { data: matches } = await supabase
+              .from("transactions")
+              .select("id, description, date, amount, external_id")
+              .eq("family_id", familyId)
+              .eq("date", r.date)
+              .gte("amount", Math.abs(r.amount) - 0.01)
+              .lte("amount", Math.abs(r.amount) + 0.01)
+              .limit(3);
+            const list = matches ?? [];
+            if (list.some((m: any) => m.external_id === r.external_id)) {
+              return { ...r, dup_status: "existe", selected: false, dup_match: list[0] as any };
+            }
+            const word = r.description.split(/\s+/).find((w) => w.length >= 4)?.toLowerCase();
+            const partial = word ? list.find((m: any) => (m.description ?? "").toLowerCase().includes(word)) : null;
+            if (partial) return { ...r, dup_status: "possivel", dup_match: { ...(partial as any), amount: Number((partial as any).amount) } };
+            return { ...r, dup_status: "novo" };
+          })
+        );
+        setParsedRows(withDup);
       } else {
         setParsedRows(rows);
       }
+      setImportAccountId("");
       setImportOpen(true);
     } catch {
       toast.error("Não foi possível ler o arquivo");
@@ -729,6 +752,10 @@ function TransactionsPage() {
 
   const handleConfirmImport = async () => {
     if (!user || !familyId) return;
+    if (!importAccountId) {
+      toast.error("Selecione a conta bancária antes de importar");
+      return;
+    }
     const toImport = parsedRows.filter((r) => r.selected && !r.error);
     if (toImport.length === 0) {
       toast.error("Selecione ao menos uma linha");
@@ -770,6 +797,7 @@ function TransactionsPage() {
         type: r.type,
         source: "importado" as const,
         scope: importScope,
+        account_id: importAccountId,
         category: cat?.nome ?? r.category,
         category_id: r.suggested_category_id ?? null,
         is_essencial: cat?.is_essencial ?? false,
