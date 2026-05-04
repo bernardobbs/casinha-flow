@@ -1,8 +1,10 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useRouterState } from "@tanstack/react-router";
 import { QuickAddButton } from "@/components/QuickAddButton";
 import { InstallPwaBanner } from "@/components/InstallPwaBanner";
 import { RecurringAutoGen } from "@/components/RecurringAutoGen";
 import { Toaster } from "@/components/ui/sonner";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 
 import appCss from "../styles.css?url";
 
@@ -76,13 +78,34 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const path = useRouterState({ select: (r) => r.location.pathname });
+  const noChrome = path === "/" || path === "/auth";
+
+  if (noChrome) {
+    return (
+      <>
+        <Outlet />
+        <Toaster />
+      </>
+    );
+  }
+
   return (
-    <>
-      <Outlet />
-      <RecurringAutoGen />
-      <QuickAddButton />
-      <InstallPwaBanner />
-      <Toaster />
-    </>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <SidebarInset className="flex-1 min-w-0">
+          <div className="md:hidden sticky top-0 z-20 h-12 flex items-center border-b border-border/60 bg-background/80 backdrop-blur px-2">
+            <SidebarTrigger />
+            <span className="ml-2 font-semibold text-sm">Casinha Flow</span>
+          </div>
+          <Outlet />
+        </SidebarInset>
+        <RecurringAutoGen />
+        <QuickAddButton />
+        <InstallPwaBanner />
+        <Toaster />
+      </div>
+    </SidebarProvider>
   );
 }
