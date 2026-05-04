@@ -474,6 +474,54 @@ function TransactionsPage() {
       return;
     }
 
+    // Branch: parcelamento em cartão (cria plan + N transactions via RPC)
+    const selAcc = accounts.find((a) => a.id === accountId);
+    if (
+      parsed.data.type === "expense" &&
+      parcelado &&
+      selAcc?.tipo === "cartao" &&
+      accountId
+    ) {
+      if (numParcelas < 2) {
+        toast.error("Mínimo 2 parcelas");
+        return;
+      }
+      setSubmitting(true);
+      const { error: instErr } = await supabase.rpc("create_installment_plan", {
+        _family_id: familyId,
+        _account_id: accountId,
+        _description: parsed.data.description,
+        _valor_total: parsed.data.amount,
+        _total_parcelas: numParcelas,
+        _data_compra: parsed.data.date,
+        _category_id: parsed.data.category_id,
+        _is_essencial: parsed.data.is_essencial,
+      });
+      setSubmitting(false);
+      if (instErr) {
+        toast.error(instErr.message);
+        return;
+      }
+      toast.success(`Compra parcelada em ${numParcelas}x criada`);
+      setDescription("");
+      setAmount("");
+      setIsEssencial(false);
+      setCategoryId("");
+      setParcelado(false);
+      setNumParcelas(2);
+      // Refresh
+      const { data: refreshed } = await supabase
+        .from("transactions")
+        .select("*")
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
+      setTransactions(
+        ((refreshed ?? []) as Transaction[]).map((t) => ({ ...t, amount: Number(t.amount) }))
+      );
+      await recalcMonth(parsed.data.date);
+      return;
+    }
+
     // Duplicate detection: same family + same date + same amount + similar description
     const { data: candidates } = await supabase
       .from("transactions")
