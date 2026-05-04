@@ -90,6 +90,8 @@ interface AccountLite {
   tipo: "corrente" | "poupanca" | "carteira" | "cartao" | "investimento";
   icone: string;
   ativo: boolean;
+  dia_fechamento: number | null;
+  dia_vencimento: number | null;
 }
 
 const txSchema = z.object({
