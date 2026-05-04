@@ -1201,126 +1201,14 @@ function TransactionsPage() {
             <TabsTrigger value="conciliacao">Conciliação</TabsTrigger>
           </TabsList>
           <TabsContent value="historico" className="mt-4">
-        <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-          <CardHeader>
-            <CardTitle>Histórico</CardTitle>
-            <CardDescription>
-              {transactions.length === 0
-                ? "Nenhuma transação ainda."
-                : `${transactions.length} transação(ões) registrada(s).`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {transactions.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                Adicione sua primeira movimentação acima.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {transactions.map((t) => {
-                  const mine = t.user_id === user.id;
-                  const cat =
-                    (t.category_id && categories.find((c) => c.id === t.category_id)) ||
-                    (t.category && categories.find((c) => c.nome === t.category)) ||
-                    null;
-                  return (
-                    <li key={t.id} className="py-3 flex items-center gap-3">
-                      <div
-                        className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-base"
-                        style={{
-                          background: cat
-                            ? `color-mix(in oklab, ${cat.cor} 14%, transparent)`
-                            : t.type === "income"
-                            ? "color-mix(in oklab, var(--success) 12%, transparent)"
-                            : "color-mix(in oklab, var(--destructive) 12%, transparent)",
-                          color: cat
-                            ? cat.cor
-                            : t.type === "income"
-                            ? "var(--success)"
-                            : "var(--destructive)",
-                        }}
-                      >
-                        {cat ? (
-                          <span>{cat.icone}</span>
-                        ) : t.type === "income" ? (
-                          <TrendingUp className="h-4 w-4" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4" />
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{t.description}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">{formatDate(t.date)}</span>
-                          <Badge variant="secondary" className="gap-1 font-normal">
-                            <SourceIcon source={t.source} />
-                            {sourceLabel[t.source]}
-                          </Badge>
-                          <Badge variant="outline" className="gap-1 font-normal">
-                            {t.scope === "family" ? <Users className="h-3 w-3" /> : <UserIcon className="h-3 w-3" />}
-                            {t.scope === "family" ? "Família" : "Pessoal"}
-                          </Badge>
-                          {(cat?.nome || t.category) && (
-                            <Badge
-                              variant="outline"
-                              className="gap-1 font-normal"
-                              style={
-                                cat
-                                  ? {
-                                      borderColor: `color-mix(in oklab, ${cat.cor} 40%, transparent)`,
-                                      color: cat.cor,
-                                    }
-                                  : undefined
-                              }
-                            >
-                              <Tag className="h-3 w-3" />
-                              {cat?.nome ?? t.category}
-                            </Badge>
-                          )}
-                          {(cat?.is_essencial || t.is_essencial) && (
-                            <Badge
-                              className="gap-1 font-normal"
-                              style={{
-                                background: "color-mix(in oklab, var(--primary) 14%, transparent)",
-                                color: "var(--primary)",
-                                borderColor: "transparent",
-                              }}
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              Essencial
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div
-                          className="font-semibold"
-                          style={{
-                            color: t.type === "income" ? "var(--success)" : "var(--destructive)",
-                          }}
-                        >
-                          {t.type === "income" ? "+" : "−"} {formatCurrency(t.amount)}
-                        </div>
-                        {mine && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleDelete(t.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+            {familyId && (
+              <MonthView
+                familyId={familyId}
+                userId={user.id}
+                categories={categories}
+                accounts={accounts}
+              />
             )}
-          </CardContent>
-        </Card>
           </TabsContent>
           <TabsContent value="conciliacao" className="mt-4">
             {familyId && (
