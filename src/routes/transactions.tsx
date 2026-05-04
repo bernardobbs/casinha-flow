@@ -753,18 +753,25 @@ function TransactionsPage() {
       return;
     }
 
-    const payload = newRows.map((r) => ({
-      family_id: familyId,
-      user_id: user.id,
-      date: r.date,
-      description: r.description,
-      amount: Math.abs(r.amount),
-      type: r.type,
-      source: "importado" as const,
-      scope: importScope,
-      category: r.category,
-      external_id: r.external_id,
-    }));
+    const payload = newRows.map((r) => {
+      const cat = r.suggested_category_id
+        ? categories.find((c) => c.id === r.suggested_category_id)
+        : undefined;
+      return {
+        family_id: familyId,
+        user_id: user.id,
+        date: r.date,
+        description: r.description,
+        amount: Math.abs(r.amount),
+        type: r.type,
+        source: "importado" as const,
+        scope: importScope,
+        category: cat?.nome ?? r.category,
+        category_id: r.suggested_category_id ?? null,
+        is_essencial: cat?.is_essencial ?? false,
+        external_id: r.external_id,
+      };
+    });
 
     const { data, error } = await supabase
       .from("transactions")
