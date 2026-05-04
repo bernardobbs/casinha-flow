@@ -389,6 +389,19 @@ function Dashboard() {
           <Card className="border-border/60 shadow-[var(--shadow-soft)]">
             <CardContent className="py-6 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
+                <Package className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold tracking-tight">📦 Estoque</h3>
+                  <p className="text-sm text-muted-foreground">Geladeira, freezer, despensa e armário.</p>
+                </div>
+              </div>
+              <Link to="/estoque"><Button variant="outline">Abrir</Button></Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
                 <Settings className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <h3 className="font-semibold tracking-tight">Configurações</h3>
