@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditCardBillsTab } from "@/components/CreditCardBillsTab";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRightLeft, CreditCard, Loader2, Plus, Wallet } from "lucide-react";
 
@@ -479,69 +481,80 @@ function ContasPage() {
           </div>
         </div>
 
-        {accounts.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Nenhuma conta ainda. Crie sua primeira conta acima.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {accounts.map((a) => {
-              const isCard = a.tipo === "cartao";
-              const used = isCard && a.saldo_atual < 0 ? Math.abs(Number(a.saldo_atual)) : 0;
-              const limit = Number(a.limite_credito ?? 0);
-              const usedPct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-              return (
-                <Card
-                  key={a.id}
-                  className="border-border/60 shadow-[var(--shadow-soft)]"
-                  style={{ borderLeft: `4px solid ${a.cor}` }}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <span className="text-xl">{a.icone}</span>
-                        {a.nome}
-                      </CardTitle>
-                      <Badge variant="outline" className="font-normal text-[10px]">
-                        {TYPE_LABEL[a.tipo]}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-xs">
-                      Inicial: {fmt(Number(a.saldo_inicial))}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {isCard ? (
-                      <>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <CreditCard className="h-3 w-3" />
-                            Usado
-                          </span>
-                          <span className="font-semibold tabular-nums">
-                            {fmt(used)} / {fmt(limit)}
-                          </span>
+        <Tabs defaultValue="contas" className="w-full">
+          <TabsList>
+            <TabsTrigger value="contas">Contas</TabsTrigger>
+            <TabsTrigger value="faturas">Faturas</TabsTrigger>
+          </TabsList>
+          <TabsContent value="contas" className="mt-6">
+            {accounts.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  Nenhuma conta ainda. Crie sua primeira conta acima.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {accounts.map((a) => {
+                  const isCard = a.tipo === "cartao";
+                  const used = isCard && a.saldo_atual < 0 ? Math.abs(Number(a.saldo_atual)) : 0;
+                  const limit = Number(a.limite_credito ?? 0);
+                  const usedPct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+                  return (
+                    <Card
+                      key={a.id}
+                      className="border-border/60 shadow-[var(--shadow-soft)]"
+                      style={{ borderLeft: `4px solid ${a.cor}` }}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <span className="text-xl">{a.icone}</span>
+                            {a.nome}
+                          </CardTitle>
+                          <Badge variant="outline" className="font-normal text-[10px]">
+                            {TYPE_LABEL[a.tipo]}
+                          </Badge>
                         </div>
-                        <Progress value={usedPct} />
-                        <p className="text-xs text-muted-foreground">
-                          Fecha dia {a.dia_fechamento ?? "—"} • Vence dia {a.dia_vencimento ?? "—"}
-                        </p>
-                      </>
-                    ) : (
-                      <div className="text-2xl font-semibold tabular-nums" style={{
-                        color: Number(a.saldo_atual) < 0 ? "var(--destructive)" : "var(--foreground)",
-                      }}>
-                        {fmt(Number(a.saldo_atual))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                        <CardDescription className="text-xs">
+                          Inicial: {fmt(Number(a.saldo_inicial))}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {isCard ? (
+                          <>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                <CreditCard className="h-3 w-3" />
+                                Usado
+                              </span>
+                              <span className="font-semibold tabular-nums">
+                                {fmt(used)} / {fmt(limit)}
+                              </span>
+                            </div>
+                            <Progress value={usedPct} />
+                            <p className="text-xs text-muted-foreground">
+                              Fecha dia {a.dia_fechamento ?? "—"} • Vence dia {a.dia_vencimento ?? "—"}
+                            </p>
+                          </>
+                        ) : (
+                          <div className="text-2xl font-semibold tabular-nums" style={{
+                            color: Number(a.saldo_atual) < 0 ? "var(--destructive)" : "var(--foreground)",
+                          }}>
+                            {fmt(Number(a.saldo_atual))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="faturas" className="mt-6">
+            {familyId && <CreditCardBillsTab familyId={familyId} />}
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
