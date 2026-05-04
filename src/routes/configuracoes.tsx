@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Settings as SettingsIcon, Trash2, Wallet } from "lucide-react";
+import { ArrowLeft, Loader2, Settings as SettingsIcon, Trash2, Wallet, Crown, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -69,6 +69,8 @@ function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [aiToday, setAiToday] = useState(0);
   const [rules, setRules] = useState<Rule[]>([]);
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
 
   const [values, setValues] = useState<Record<SettingKey, string>>({
     family_name: "",
