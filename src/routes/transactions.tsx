@@ -349,7 +349,7 @@ function TransactionsPage() {
           .maybeSingle(),
         supabase
           .from("accounts")
-          .select("id, nome, tipo, icone, ativo")
+          .select("id, nome, tipo, icone, ativo, dia_fechamento, dia_vencimento")
           .eq("family_id", profile.family_id)
           .eq("ativo", true)
           .order("created_at", { ascending: true }),
