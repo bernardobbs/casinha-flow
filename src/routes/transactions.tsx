@@ -271,6 +271,8 @@ function TransactionsPage() {
   const [categoryId, setCategoryId] = useState<string>("");
   const [accountId, setAccountId] = useState<string>("");
   const [accounts, setAccounts] = useState<AccountLite[]>([]);
+  const [parcelado, setParcelado] = useState(false);
+  const [numParcelas, setNumParcelas] = useState(2);
   const [suggestion, setSuggestion] = useState<{
     category_id: string;
     nivel: number;
