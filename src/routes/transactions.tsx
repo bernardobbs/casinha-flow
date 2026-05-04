@@ -670,7 +670,38 @@ function TransactionsPage() {
         toast.error("Nenhuma linha encontrada no CSV");
         return;
       }
-      setParsedRows(rows);
+      // Aplica sugestão via categorize_transaction para cada linha válida
+      if (familyId) {
+        const enriched = await Promise.all(
+          rows.map(async (r) => {
+            if (r.error) return r;
+            try {
+              const { data } = await supabase.rpc("categorize_transaction", {
+                _family_id: familyId,
+                _description: r.description,
+              });
+              const sug = Array.isArray(data) && data.length > 0 ? data[0] : null;
+              if (sug) {
+                const cat = categories.find((c) => c.id === sug.category_id);
+                return {
+                  ...r,
+                  category: cat?.nome ?? r.category,
+                  suggested_category_id: sug.category_id,
+                  suggested_origem: sug.origem,
+                  suggested_nivel: sug.nivel,
+                  suggested_confianca: Number(sug.confianca),
+                };
+              }
+              return { ...r, suggested_category_id: null };
+            } catch {
+              return r;
+            }
+          })
+        );
+        setParsedRows(enriched);
+      } else {
+        setParsedRows(rows);
+      }
       setImportOpen(true);
     } catch {
       toast.error("Não foi possível ler o arquivo");
