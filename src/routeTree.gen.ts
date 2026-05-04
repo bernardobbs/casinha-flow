@@ -11,9 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as SituacaoRouteImport } from './routes/situacao'
+import { Route as RevisaoSemanalRouteImport } from './routes/revisao-semanal'
+import { Route as RecorrentesRouteImport } from './routes/recorrentes'
 import { Route as FinancialStateRouteImport } from './routes/financial-state'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CrisisRouteImport } from './routes/crisis'
+import { Route as ContasAPagarRouteImport } from './routes/contas-a-pagar'
 import { Route as ContasRouteImport } from './routes/contas'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as BudgetsRouteImport } from './routes/budgets'
@@ -30,6 +33,16 @@ const SituacaoRoute = SituacaoRouteImport.update({
   path: '/situacao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RevisaoSemanalRoute = RevisaoSemanalRouteImport.update({
+  id: '/revisao-semanal',
+  path: '/revisao-semanal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecorrentesRoute = RecorrentesRouteImport.update({
+  id: '/recorrentes',
+  path: '/recorrentes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FinancialStateRoute = FinancialStateRouteImport.update({
   id: '/financial-state',
   path: '/financial-state',
@@ -43,6 +56,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const CrisisRoute = CrisisRouteImport.update({
   id: '/crisis',
   path: '/crisis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContasAPagarRoute = ContasAPagarRouteImport.update({
+  id: '/contas-a-pagar',
+  path: '/contas-a-pagar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContasRoute = ContasRouteImport.update({
@@ -77,9 +95,12 @@ export interface FileRoutesByFullPath {
   '/budgets': typeof BudgetsRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
+  '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/recorrentes': typeof RecorrentesRoute
+  '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
 }
@@ -89,9 +110,12 @@ export interface FileRoutesByTo {
   '/budgets': typeof BudgetsRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
+  '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/recorrentes': typeof RecorrentesRoute
+  '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
 }
@@ -102,9 +126,12 @@ export interface FileRoutesById {
   '/budgets': typeof BudgetsRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
+  '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/recorrentes': typeof RecorrentesRoute
+  '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
 }
@@ -116,9 +143,12 @@ export interface FileRouteTypes {
     | '/budgets'
     | '/configuracoes'
     | '/contas'
+    | '/contas-a-pagar'
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/recorrentes'
+    | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
   fileRoutesByTo: FileRoutesByTo
@@ -128,9 +158,12 @@ export interface FileRouteTypes {
     | '/budgets'
     | '/configuracoes'
     | '/contas'
+    | '/contas-a-pagar'
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/recorrentes'
+    | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
   id:
@@ -140,9 +173,12 @@ export interface FileRouteTypes {
     | '/budgets'
     | '/configuracoes'
     | '/contas'
+    | '/contas-a-pagar'
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/recorrentes'
+    | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
   fileRoutesById: FileRoutesById
@@ -153,9 +189,12 @@ export interface RootRouteChildren {
   BudgetsRoute: typeof BudgetsRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContasRoute: typeof ContasRoute
+  ContasAPagarRoute: typeof ContasAPagarRoute
   CrisisRoute: typeof CrisisRoute
   DashboardRoute: typeof DashboardRoute
   FinancialStateRoute: typeof FinancialStateRoute
+  RecorrentesRoute: typeof RecorrentesRoute
+  RevisaoSemanalRoute: typeof RevisaoSemanalRoute
   SituacaoRoute: typeof SituacaoRoute
   TransactionsRoute: typeof TransactionsRoute
 }
@@ -174,6 +213,20 @@ declare module '@tanstack/react-router' {
       path: '/situacao'
       fullPath: '/situacao'
       preLoaderRoute: typeof SituacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/revisao-semanal': {
+      id: '/revisao-semanal'
+      path: '/revisao-semanal'
+      fullPath: '/revisao-semanal'
+      preLoaderRoute: typeof RevisaoSemanalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recorrentes': {
+      id: '/recorrentes'
+      path: '/recorrentes'
+      fullPath: '/recorrentes'
+      preLoaderRoute: typeof RecorrentesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/financial-state': {
@@ -195,6 +248,13 @@ declare module '@tanstack/react-router' {
       path: '/crisis'
       fullPath: '/crisis'
       preLoaderRoute: typeof CrisisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contas-a-pagar': {
+      id: '/contas-a-pagar'
+      path: '/contas-a-pagar'
+      fullPath: '/contas-a-pagar'
+      preLoaderRoute: typeof ContasAPagarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contas': {
@@ -241,9 +301,12 @@ const rootRouteChildren: RootRouteChildren = {
   BudgetsRoute: BudgetsRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContasRoute: ContasRoute,
+  ContasAPagarRoute: ContasAPagarRoute,
   CrisisRoute: CrisisRoute,
   DashboardRoute: DashboardRoute,
   FinancialStateRoute: FinancialStateRoute,
+  RecorrentesRoute: RecorrentesRoute,
+  RevisaoSemanalRoute: RevisaoSemanalRoute,
   SituacaoRoute: SituacaoRoute,
   TransactionsRoute: TransactionsRoute,
 }

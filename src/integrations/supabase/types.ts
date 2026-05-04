@@ -709,6 +709,63 @@ export type Database = {
           },
         ]
       }
+      recurring_transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          ativo: boolean
+          category_id: string | null
+          created_at: string
+          description: string
+          dia_do_mes: number | null
+          family_id: string
+          frequencia: Database["public"]["Enums"]["recurring_frequency"]
+          id: string
+          is_essencial: boolean
+          proxima_data: string
+          type: Database["public"]["Enums"]["transaction_type"]
+          ultima_geracao: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          ativo?: boolean
+          category_id?: string | null
+          created_at?: string
+          description: string
+          dia_do_mes?: number | null
+          family_id: string
+          frequencia?: Database["public"]["Enums"]["recurring_frequency"]
+          id?: string
+          is_essencial?: boolean
+          proxima_data?: string
+          type: Database["public"]["Enums"]["transaction_type"]
+          ultima_geracao?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          ativo?: boolean
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          dia_do_mes?: number | null
+          family_id?: string
+          frequencia?: Database["public"]["Enums"]["recurring_frequency"]
+          id?: string
+          is_essencial?: boolean
+          proxima_data?: string
+          type?: Database["public"]["Enums"]["transaction_type"]
+          ultima_geracao?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           account_id: string | null
@@ -784,6 +841,33 @@ export type Database = {
           },
         ]
       }
+      weekly_reviews: {
+        Row: {
+          checklist: Json
+          created_at: string
+          family_id: string
+          fechado_em: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          family_id: string
+          fechado_em?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          family_id?: string
+          fechado_em?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -843,6 +927,7 @@ export type Database = {
           origem: Database["public"]["Enums"]["categorization_origin"]
         }[]
       }
+      check_bills_alerts: { Args: { p_family_id: string }; Returns: undefined }
       check_credit_card_bill_alerts: {
         Args: { _family_id: string }
         Returns: undefined
@@ -912,6 +997,10 @@ export type Database = {
           _to_account: string
         }
         Returns: undefined
+      }
+      generate_recurring_transactions: {
+        Args: { p_family_id: string }
+        Returns: number
       }
       get_budget_status: {
         Args: { _family_id: string; _mes: string }
@@ -1083,6 +1172,7 @@ export type Database = {
       category_type: "despesa" | "receita"
       credit_card_bill_status: "aberta" | "fechada" | "paga"
       family_role: "admin" | "member"
+      recurring_frequency: "mensal" | "semanal" | "quinzenal" | "anual"
       transaction_scope: "family" | "personal"
       transaction_source: "manual" | "importado" | "cartao"
       transaction_special_type: "normal" | "transferencia" | "pagamento_fatura"
@@ -1226,6 +1316,7 @@ export const Constants = {
       category_type: ["despesa", "receita"],
       credit_card_bill_status: ["aberta", "fechada", "paga"],
       family_role: ["admin", "member"],
+      recurring_frequency: ["mensal", "semanal", "quinzenal", "anual"],
       transaction_scope: ["family", "personal"],
       transaction_source: ["manual", "importado", "cartao"],
       transaction_special_type: ["normal", "transferencia", "pagamento_fatura"],

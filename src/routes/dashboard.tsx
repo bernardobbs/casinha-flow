@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target, Settings, Banknote, TrendingUp } from "lucide-react";
+import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target, Settings, Banknote, TrendingUp, Repeat, CalendarClock, ClipboardList } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 
@@ -38,6 +38,7 @@ function Dashboard() {
   const [family, setFamily] = useState<Family | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewStatus, setReviewStatus] = useState<{ label: string; tone: "ok" | "warn" | "danger" }>({ label: "Pendente", tone: "warn" });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -83,6 +84,25 @@ function Dashboard() {
             email: profilesById.get(m.user_id)?.email ?? null,
           }))
         );
+      }
+
+      // Status da última revisão semanal
+      if (profile?.family_id) {
+        const { data: lastRev } = await supabase
+          .from("weekly_reviews")
+          .select("fechado_em")
+          .eq("family_id", profile.family_id)
+          .order("fechado_em", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lastRev?.fechado_em) {
+          const dias = Math.floor((Date.now() - new Date(lastRev.fechado_em).getTime()) / 86400000);
+          if (dias <= 6) setReviewStatus({ label: "Revisão em dia ✅", tone: "ok" });
+          else if (dias <= 7) setReviewStatus({ label: "Revisão pendente", tone: "warn" });
+          else setReviewStatus({ label: `${dias}d sem revisar`, tone: "danger" });
+        } else {
+          setReviewStatus({ label: "Faça sua primeira revisão", tone: "warn" });
+        }
       }
       setLoading(false);
     };
@@ -306,6 +326,50 @@ function Dashboard() {
                 </div>
               </div>
               <Link to="/contas"><Button variant="outline">Abrir</Button></Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Repeat className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold tracking-tight">🔄 Recorrentes</h3>
+                  <p className="text-sm text-muted-foreground">Despesas e receitas que se repetem.</p>
+                </div>
+              </div>
+              <Link to="/recorrentes"><Button variant="outline">Abrir</Button></Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <CalendarClock className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold tracking-tight">📅 Contas a pagar</h3>
+                  <p className="text-sm text-muted-foreground">Lembretes agrupados por urgência.</p>
+                </div>
+              </div>
+              <Link to="/contas-a-pagar"><Button variant="outline">Abrir</Button></Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <ClipboardList className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold tracking-tight">📋 Revisão semanal</h3>
+                  <p className="text-sm text-muted-foreground">Fechamento da semana com checklist.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={reviewStatus.tone === "ok" ? "secondary" : reviewStatus.tone === "danger" ? "destructive" : "outline"}>
+                  {reviewStatus.label}
+                </Badge>
+                <Link to="/revisao-semanal"><Button variant="outline">Abrir</Button></Link>
+              </div>
             </CardContent>
           </Card>
 
