@@ -141,7 +141,7 @@ function GasolinaPage() {
       <VehicleDialog open={openVehicle} onOpenChange={setOpenVehicle} familyId={familyId} userId={user?.id ?? ""} onSaved={reload} />
       <MaintDialog
         open={openMaint.open}
-        onOpenChange={(o) => setOpenMaint({ open: o, vehicleId: o ? openMaint.vehicleId : undefined })}
+        onOpenChange={(o: boolean) => setOpenMaint({ open: o, vehicleId: o ? openMaint.vehicleId : undefined })}
         familyId={familyId}
         userId={user?.id ?? ""}
         vehicleId={openMaint.vehicleId ?? null}

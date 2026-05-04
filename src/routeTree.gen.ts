@@ -13,6 +13,7 @@ import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as SituacaoRouteImport } from './routes/situacao'
 import { Route as RevisaoSemanalRouteImport } from './routes/revisao-semanal'
 import { Route as RecorrentesRouteImport } from './routes/recorrentes'
+import { Route as GasolinaRouteImport } from './routes/gasolina'
 import { Route as FinancialStateRouteImport } from './routes/financial-state'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CrisisRouteImport } from './routes/crisis'
@@ -41,6 +42,11 @@ const RevisaoSemanalRoute = RevisaoSemanalRouteImport.update({
 const RecorrentesRoute = RecorrentesRouteImport.update({
   id: '/recorrentes',
   path: '/recorrentes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GasolinaRoute = GasolinaRouteImport.update({
+  id: '/gasolina',
+  path: '/gasolina',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinancialStateRoute = FinancialStateRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/gasolina'
     | '/recorrentes'
     | '/revisao-semanal'
     | '/situacao'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/gasolina'
     | '/recorrentes'
     | '/revisao-semanal'
     | '/situacao'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/gasolina'
     | '/recorrentes'
     | '/revisao-semanal'
     | '/situacao'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   CrisisRoute: typeof CrisisRoute
   DashboardRoute: typeof DashboardRoute
   FinancialStateRoute: typeof FinancialStateRoute
+  GasolinaRoute: typeof GasolinaRoute
   RecorrentesRoute: typeof RecorrentesRoute
   RevisaoSemanalRoute: typeof RevisaoSemanalRoute
   SituacaoRoute: typeof SituacaoRoute
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/recorrentes'
       fullPath: '/recorrentes'
       preLoaderRoute: typeof RecorrentesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gasolina': {
+      id: '/gasolina'
+      path: '/gasolina'
+      fullPath: '/gasolina'
+      preLoaderRoute: typeof GasolinaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/financial-state': {
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   CrisisRoute: CrisisRoute,
   DashboardRoute: DashboardRoute,
   FinancialStateRoute: FinancialStateRoute,
+  GasolinaRoute: GasolinaRoute,
   RecorrentesRoute: RecorrentesRoute,
   RevisaoSemanalRoute: RevisaoSemanalRoute,
   SituacaoRoute: SituacaoRoute,
