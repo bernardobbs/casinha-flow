@@ -193,14 +193,14 @@ function RecorrentesPage() {
                 </div>
                 <div>
                   <Label>Conta</Label>
-                  <Select value={accountId} onValueChange={setAccountId}>
+                  <Select value={accountId || undefined} onValueChange={setAccountId}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>{accounts.map((a) => (<SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>))}</SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Categoria</Label>
-                  <Select value={categoryId} onValueChange={setCategoryId}>
+                  <Select value={categoryId || undefined} onValueChange={setCategoryId}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {categories.filter((c) => c.tipo === (type === "income" ? "receita" : "despesa")).map((c) => (
