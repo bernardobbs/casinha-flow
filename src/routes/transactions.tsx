@@ -1094,6 +1094,8 @@ function TransactionsPage() {
                     </div>
                   );
                 })()}
+
+                <div className="flex items-center gap-2 sm:col-span-2 pt-1">
                   <Checkbox
                     id="essencial"
                     checked={isEssencial}
