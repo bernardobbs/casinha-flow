@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransactionsRouteImport } from './routes/transactions'
+import { Route as SituacaoRouteImport } from './routes/situacao'
 import { Route as FinancialStateRouteImport } from './routes/financial-state'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CrisisRouteImport } from './routes/crisis'
@@ -22,6 +23,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SituacaoRoute = SituacaoRouteImport.update({
+  id: '/situacao',
+  path: '/situacao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinancialStateRoute = FinancialStateRouteImport.update({
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
   '/financial-state': typeof FinancialStateRoute
+  '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/situacao'
     | '/transactions'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/situacao'
     | '/transactions'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/crisis'
     | '/dashboard'
     | '/financial-state'
+    | '/situacao'
     | '/transactions'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   CrisisRoute: typeof CrisisRoute
   DashboardRoute: typeof DashboardRoute
   FinancialStateRoute: typeof FinancialStateRoute
+  SituacaoRoute: typeof SituacaoRoute
   TransactionsRoute: typeof TransactionsRoute
 }
 
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/transactions'
       fullPath: '/transactions'
       preLoaderRoute: typeof TransactionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/situacao': {
+      id: '/situacao'
+      path: '/situacao'
+      fullPath: '/situacao'
+      preLoaderRoute: typeof SituacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/financial-state': {
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   CrisisRoute: CrisisRoute,
   DashboardRoute: DashboardRoute,
   FinancialStateRoute: FinancialStateRoute,
+  SituacaoRoute: SituacaoRoute,
   TransactionsRoute: TransactionsRoute,
 }
 export const routeTree = rootRouteImport

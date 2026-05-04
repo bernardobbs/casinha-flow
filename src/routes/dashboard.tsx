@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target, Settings, Banknote } from "lucide-react";
+import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target, Settings, Banknote, TrendingUp } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 
@@ -205,6 +205,22 @@ function Dashboard() {
         </Card>
 
         <div className="grid sm:grid-cols-2 gap-4">
+          <Card className="border-border/60 shadow-[var(--shadow-soft)] sm:col-span-2">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center"
+                  style={{ background: "color-mix(in oklab, var(--primary) 14%, transparent)", color: "var(--primary)" }}>
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold tracking-tight">📈 Situação atual</h3>
+                  <p className="text-sm text-muted-foreground">Score de saúde, projeções, alertas e contas a pagar.</p>
+                </div>
+              </div>
+              <Link to="/situacao"><Button>Abrir</Button></Link>
+            </CardContent>
+          </Card>
+
           <Card className="border-border/60 shadow-[var(--shadow-soft)]">
             <CardContent className="py-6 flex items-center justify-between gap-4">
               <div>
