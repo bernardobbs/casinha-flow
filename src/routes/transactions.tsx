@@ -1193,7 +1193,13 @@ function TransactionsPage() {
           </CardContent>
         </Card>
 
-        {/* List */}
+        {/* List + Reconciliation tabs */}
+        <Tabs defaultValue="historico" className="w-full">
+          <TabsList>
+            <TabsTrigger value="historico">Histórico</TabsTrigger>
+            <TabsTrigger value="conciliacao">Conciliação</TabsTrigger>
+          </TabsList>
+          <TabsContent value="historico" className="mt-4">
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
           <CardHeader>
             <CardTitle>Histórico</CardTitle>
@@ -1314,6 +1320,18 @@ function TransactionsPage() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+          <TabsContent value="conciliacao" className="mt-4">
+            {familyId && (
+              <ReconciliationPanel
+                familyId={familyId}
+                categories={categories}
+                accounts={accounts}
+                onChanged={() => void reloadTransactions()}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Import preview dialog */}
