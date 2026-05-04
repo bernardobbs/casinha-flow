@@ -281,13 +281,87 @@ function ConfigPage() {
           <h1 className="text-3xl font-semibold tracking-tight">Configurações</h1>
         </div>
 
-        <Tabs defaultValue="geral">
-          <TabsList>
+        <Tabs defaultValue="familia">
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="familia">Família</TabsTrigger>
             <TabsTrigger value="geral">Geral</TabsTrigger>
             <TabsTrigger value="ia">IA</TabsTrigger>
             <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
             <TabsTrigger value="categorias">Categorias</TabsTrigger>
           </TabsList>
+
+          {/* FAMÍLIA */}
+          <TabsContent value="familia" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Família</CardTitle>
+                <CardDescription>Nome, renda esperada e composição.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nome da família</Label>
+                    <Input value={values.family_name} onChange={(e) => setVal("family_name", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Renda mensal esperada (R$)</Label>
+                    <Input inputMode="decimal" value={values.renda_padrao}
+                      onChange={(e) => setVal("renda_padrao", e.target.value.replace(/[^0-9.,]/g, ""))} placeholder="0,00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Adultos</Label>
+                    <Input type="number" min={0} value={values.num_adultos}
+                      onChange={(e) => setVal("num_adultos", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Crianças</Label>
+                    <Input type="number" min={0} value={values.num_criancas}
+                      onChange={(e) => setVal("num_criancas", e.target.value)} />
+                  </div>
+                </div>
+                <Button disabled={saving} onClick={() => handleSave(["family_name", "renda_padrao", "num_adultos", "num_criancas"])}>
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Membros</CardTitle>
+                <CardDescription>{members.length} pessoa(s) compartilhando esta família.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="divide-y divide-border">
+                  {members.map((m) => (
+                    <li key={m.user_id} className="py-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {m.full_name ?? "Sem nome"}
+                          {m.user_id === user.id && <span className="text-muted-foreground font-normal"> (você)</span>}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                      </div>
+                      <Badge variant={m.role === "admin" ? "default" : "secondary"} className="gap-1 shrink-0">
+                        {m.role === "admin" && <Crown className="h-3 w-3" />}
+                        {m.role === "admin" ? "Admin" : "Membro"}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+                <div className="border-t pt-4 space-y-2">
+                  <Label>Convidar novo membro</Label>
+                  <div className="flex gap-2">
+                    <Input type="email" placeholder="email@exemplo.com" value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)} />
+                    <Button onClick={handleInviteMember}><UserPlus className="h-4 w-4 mr-1" />Convidar</Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Será gerado um link de cadastro. Envie ao convidado para ele se juntar à família.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* GERAL */}
           <TabsContent value="geral" className="mt-6">
