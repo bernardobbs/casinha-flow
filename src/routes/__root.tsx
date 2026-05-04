@@ -1,6 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { QuickAddButton } from "@/components/QuickAddButton";
 import { InstallPwaBanner } from "@/components/InstallPwaBanner";
+import { RecurringAutoGen } from "@/components/RecurringAutoGen";
 import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
@@ -78,6 +79,7 @@ function RootComponent() {
   return (
     <>
       <Outlet />
+      <RecurringAutoGen />
       <QuickAddButton />
       <InstallPwaBanner />
       <Toaster />
