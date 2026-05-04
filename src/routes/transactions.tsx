@@ -494,7 +494,7 @@ function TransactionsPage() {
         _valor_total: parsed.data.amount,
         _total_parcelas: numParcelas,
         _data_compra: parsed.data.date,
-        _category_id: parsed.data.category_id,
+        _category_id: parsed.data.category_id ?? undefined,
         _is_essencial: parsed.data.is_essencial,
       });
       setSubmitting(false);
