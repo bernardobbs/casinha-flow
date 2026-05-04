@@ -411,14 +411,30 @@ function TransactionsPage() {
       ...prev,
     ]);
     toast.success("Transação adicionada");
+
+    // Aprende a regra de categorização (se categoria foi escolhida manualmente)
+    if (payload.category_id && payload.description) {
+      void supabase.rpc("learn_categorization_rule", {
+        _family_id: familyId,
+        _termo: payload.description,
+        _category_id: payload.category_id,
+        _origem: "manual",
+      });
+    }
+
     setDescription("");
     setAmount("");
     setDate(today);
     setIsEssencial(false);
     setCategoryId("");
+    setSuggestion(null);
 
     // Auto-recalc monthly financial state for this transaction's month
     await recalcMonth(payload.date);
+    // Recalc balance da conta
+    if (payload.account_id) {
+      await supabase.rpc("recalc_account_balance", { _account_id: payload.account_id });
+    }
     // Trigger alert checks (budget thresholds, negative balance, microspending)
     if (data?.id) {
       await supabase.rpc("check_transaction_alerts", { _transaction_id: data.id });
