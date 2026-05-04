@@ -104,6 +104,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bills_reminders: {
+        Row: {
+          account_id: string | null
+          category_id: string | null
+          created_at: string
+          data_vencimento: string
+          descricao: string
+          family_id: string
+          id: string
+          observacao: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          valor: number
+        }
+        Insert: {
+          account_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          data_vencimento: string
+          descricao: string
+          family_id: string
+          id?: string
+          observacao?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          valor: number
+        }
+        Update: {
+          account_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          data_vencimento?: string
+          descricao?: string
+          family_id?: string
+          id?: string
+          observacao?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          valor?: number
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           category_id: string
@@ -881,6 +926,50 @@ export type Database = {
           status_cor: string
           valor_gasto: number
           valor_planejado: number
+        }[]
+      }
+      get_dashboard_summary: {
+        Args: { p_family_id: string }
+        Returns: {
+          dia_atual: number
+          dias_mes: number
+          estagio_crise: number
+          mes: string
+          meta_essenciais: number
+          meta_estilo_vida: number
+          meta_reserva: number
+          modo_crise: boolean
+          renda_mensal: number
+          saldo_atual: number
+          saldo_projetado: number
+          score: number
+          score_label: string
+          total_dividas: number
+          total_essenciais: number
+          total_estilo_vida: number
+        }[]
+      }
+      get_projecao_categorias: {
+        Args: { p_family_id: string }
+        Returns: {
+          category_id: string
+          cor: string
+          icone: string
+          is_essencial: boolean
+          nome: string
+          pct_atingido: number
+          status_proj: string
+          valor_gasto: number
+          valor_planejado: number
+          valor_projetado: number
+        }[]
+      }
+      get_saldo_total: {
+        Args: { p_family_id: string }
+        Returns: {
+          divida_cartoes: number
+          saldo_contas: number
+          saldo_total: number
         }[]
       }
       get_user_family_id: { Args: { _user_id: string }; Returns: string }
