@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { AlertsBell } from "@/components/alerts-bell";
 import { ReconciliationPanel } from "@/components/reconciliation-panel";
+import { MonthView } from "@/components/month-view";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({
