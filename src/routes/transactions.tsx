@@ -90,6 +90,8 @@ interface AccountLite {
   tipo: "corrente" | "poupanca" | "carteira" | "cartao" | "investimento";
   icone: string;
   ativo: boolean;
+  dia_fechamento: number | null;
+  dia_vencimento: number | null;
 }
 
 const txSchema = z.object({
@@ -205,6 +207,11 @@ interface ParsedRow {
   external_id: string;
   selected: boolean;
   error?: string;
+  // Sugestão da função categorize_transaction
+  suggested_category_id?: string | null;
+  suggested_origem?: "manual" | "ia" | "keyword" | null;
+  suggested_nivel?: number | null;
+  suggested_confianca?: number | null;
 }
 
 function parseCsv(text: string): ParsedRow[] {
@@ -271,6 +278,8 @@ function TransactionsPage() {
   const [categoryId, setCategoryId] = useState<string>("");
   const [accountId, setAccountId] = useState<string>("");
   const [accounts, setAccounts] = useState<AccountLite[]>([]);
+  const [parcelado, setParcelado] = useState(false);
+  const [numParcelas, setNumParcelas] = useState(2);
   const [suggestion, setSuggestion] = useState<{
     category_id: string;
     nivel: number;
@@ -345,7 +354,7 @@ function TransactionsPage() {
           .maybeSingle(),
         supabase
           .from("accounts")
-          .select("id, nome, tipo, icone, ativo")
+          .select("id, nome, tipo, icone, ativo, dia_fechamento, dia_vencimento")
           .eq("family_id", profile.family_id)
           .eq("ativo", true)
           .order("created_at", { ascending: true }),
@@ -409,14 +418,30 @@ function TransactionsPage() {
       ...prev,
     ]);
     toast.success("Transação adicionada");
+
+    // Aprende a regra de categorização (se categoria foi escolhida manualmente)
+    if (payload.category_id && payload.description) {
+      void supabase.rpc("learn_categorization_rule", {
+        _family_id: familyId,
+        _termo: payload.description,
+        _category_id: payload.category_id,
+        _origem: "manual",
+      });
+    }
+
     setDescription("");
     setAmount("");
     setDate(today);
     setIsEssencial(false);
     setCategoryId("");
+    setSuggestion(null);
 
     // Auto-recalc monthly financial state for this transaction's month
     await recalcMonth(payload.date);
+    // Recalc balance da conta
+    if (payload.account_id) {
+      await supabase.rpc("recalc_account_balance", { _account_id: payload.account_id });
+    }
     // Trigger alert checks (budget thresholds, negative balance, microspending)
     if (data?.id) {
       await supabase.rpc("check_transaction_alerts", { _transaction_id: data.id });
@@ -448,10 +473,59 @@ function TransactionsPage() {
       scope,
       is_essencial: isEssencial,
       category_id: categoryId || null,
+      account_id: accountId || null,
     });
 
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
+      return;
+    }
+
+    // Branch: parcelamento em cartão (cria plan + N transactions via RPC)
+    const selAcc = accounts.find((a) => a.id === accountId);
+    if (
+      parsed.data.type === "expense" &&
+      parcelado &&
+      selAcc?.tipo === "cartao" &&
+      accountId
+    ) {
+      if (numParcelas < 2) {
+        toast.error("Mínimo 2 parcelas");
+        return;
+      }
+      setSubmitting(true);
+      const { error: instErr } = await supabase.rpc("create_installment_plan", {
+        _family_id: familyId,
+        _account_id: accountId,
+        _description: parsed.data.description,
+        _valor_total: parsed.data.amount,
+        _total_parcelas: numParcelas,
+        _data_compra: parsed.data.date,
+        _category_id: parsed.data.category_id ?? undefined,
+        _is_essencial: parsed.data.is_essencial,
+      });
+      setSubmitting(false);
+      if (instErr) {
+        toast.error(instErr.message);
+        return;
+      }
+      toast.success(`Compra parcelada em ${numParcelas}x criada`);
+      setDescription("");
+      setAmount("");
+      setIsEssencial(false);
+      setCategoryId("");
+      setParcelado(false);
+      setNumParcelas(2);
+      // Refresh
+      const { data: refreshed } = await supabase
+        .from("transactions")
+        .select("*")
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
+      setTransactions(
+        ((refreshed ?? []) as Transaction[]).map((t) => ({ ...t, amount: Number(t.amount) }))
+      );
+      await recalcMonth(parsed.data.date);
       return;
     }
 
@@ -596,7 +670,38 @@ function TransactionsPage() {
         toast.error("Nenhuma linha encontrada no CSV");
         return;
       }
-      setParsedRows(rows);
+      // Aplica sugestão via categorize_transaction para cada linha válida
+      if (familyId) {
+        const enriched = await Promise.all(
+          rows.map(async (r) => {
+            if (r.error) return r;
+            try {
+              const { data } = await supabase.rpc("categorize_transaction", {
+                _family_id: familyId,
+                _description: r.description,
+              });
+              const sug = Array.isArray(data) && data.length > 0 ? data[0] : null;
+              if (sug) {
+                const cat = categories.find((c) => c.id === sug.category_id);
+                return {
+                  ...r,
+                  category: cat?.nome ?? r.category,
+                  suggested_category_id: sug.category_id,
+                  suggested_origem: sug.origem,
+                  suggested_nivel: sug.nivel,
+                  suggested_confianca: Number(sug.confianca),
+                };
+              }
+              return { ...r, suggested_category_id: null };
+            } catch {
+              return r;
+            }
+          })
+        );
+        setParsedRows(enriched);
+      } else {
+        setParsedRows(rows);
+      }
       setImportOpen(true);
     } catch {
       toast.error("Não foi possível ler o arquivo");
@@ -648,18 +753,25 @@ function TransactionsPage() {
       return;
     }
 
-    const payload = newRows.map((r) => ({
-      family_id: familyId,
-      user_id: user.id,
-      date: r.date,
-      description: r.description,
-      amount: Math.abs(r.amount),
-      type: r.type,
-      source: "importado" as const,
-      scope: importScope,
-      category: r.category,
-      external_id: r.external_id,
-    }));
+    const payload = newRows.map((r) => {
+      const cat = r.suggested_category_id
+        ? categories.find((c) => c.id === r.suggested_category_id)
+        : undefined;
+      return {
+        family_id: familyId,
+        user_id: user.id,
+        date: r.date,
+        description: r.description,
+        amount: Math.abs(r.amount),
+        type: r.type,
+        source: "importado" as const,
+        scope: importScope,
+        category: cat?.nome ?? r.category,
+        category_id: r.suggested_category_id ?? null,
+        is_essencial: cat?.is_essencial ?? false,
+        external_id: r.external_id,
+      };
+    });
 
     const { data, error } = await supabase
       .from("transactions")
@@ -927,6 +1039,107 @@ function TransactionsPage() {
                   </Select>
                 </div>
 
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Conta</Label>
+                  <Select value={accountId || "none"} onValueChange={(v) => {
+                    setAccountId(v === "none" ? "" : v);
+                    if (v === "none") setParcelado(false);
+                  }}>
+                    <SelectTrigger><SelectValue placeholder="Sem conta" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Sem conta —</SelectItem>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.icone} {a.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Parcelamento — só aparece se cartão e despesa */}
+                {(() => {
+                  const acc = accounts.find((a) => a.id === accountId);
+                  if (acc?.tipo !== "cartao" || type !== "expense") return null;
+                  const valorTotal = Number((amount || "0").replace(",", ".")) || 0;
+                  const dt = new Date(date + "T00:00:00");
+                  const firstFatura = (() => {
+                    if (!acc.dia_fechamento) return dt;
+                    const d = dt.getDate() <= acc.dia_fechamento
+                      ? new Date(dt.getFullYear(), dt.getMonth(), 1)
+                      : new Date(dt.getFullYear(), dt.getMonth() + 1, 1);
+                    return d;
+                  })();
+                  return (
+                    <div className="sm:col-span-2 rounded-lg border border-border/60 p-3 space-y-3 bg-card/40">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-normal">Parcelado?</Label>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={!parcelado ? "default" : "outline"}
+                            onClick={() => setParcelado(false)}
+                          >
+                            NÃO
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={parcelado ? "default" : "outline"}
+                            onClick={() => setParcelado(true)}
+                          >
+                            SIM
+                          </Button>
+                        </div>
+                      </div>
+                      {parcelado && (
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Parcelas</Label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                onClick={() => setNumParcelas((n) => Math.max(2, n - 1))}
+                              >−</Button>
+                              <Input
+                                type="number"
+                                min={2}
+                                max={36}
+                                value={numParcelas}
+                                onChange={(e) => setNumParcelas(Math.max(2, Math.min(36, parseInt(e.target.value, 10) || 2)))}
+                                className="h-8 text-center"
+                              />
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8"
+                                onClick={() => setNumParcelas((n) => Math.min(36, n + 1))}
+                              >+</Button>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Valor/parcela</Label>
+                            <div className="h-8 px-3 flex items-center rounded-md border border-input bg-background tabular-nums text-sm">
+                              {formatCurrency(valorTotal / numParcelas)}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">1ª fatura</Label>
+                            <div className="h-8 px-3 flex items-center rounded-md border border-input bg-background text-sm">
+                              {firstFatura.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <div className="flex items-center gap-2 sm:col-span-2 pt-1">
                   <Checkbox
                     id="essencial"
@@ -1116,10 +1329,23 @@ function TransactionsPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{r.description || "—"}</span>
                       {!r.error && (
-                        <Badge variant="outline" className="font-normal gap-1">
-                          <Tag className="h-3 w-3" />
-                          {r.category}
-                        </Badge>
+                        <>
+                          <Badge variant="outline" className="font-normal gap-1">
+                            <Tag className="h-3 w-3" />
+                            {r.category}
+                          </Badge>
+                          {r.suggested_nivel === 1 && (
+                            <Badge className="font-normal" style={{ background: "color-mix(in oklab, var(--success) 18%, transparent)", color: "var(--success)" }}>
+                              ✅ Aprendido
+                            </Badge>
+                          )}
+                          {(r.suggested_nivel === 2 || r.suggested_nivel === 3) && (
+                            <Badge variant="secondary" className="font-normal">💡 Sugerido</Badge>
+                          )}
+                          {!r.suggested_category_id && (
+                            <Badge variant="outline" className="font-normal text-muted-foreground">❓ Novo</Badge>
+                          )}
+                        </>
                       )}
                       {r.error && (
                         <Badge variant="destructive" className="font-normal">{r.error}</Badge>

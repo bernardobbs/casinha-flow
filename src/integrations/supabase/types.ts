@@ -546,6 +546,89 @@ export type Database = {
           },
         ]
       }
+      installment_plans: {
+        Row: {
+          account_id: string
+          category_id: string | null
+          created_at: string
+          data_compra: string
+          description: string
+          family_id: string
+          id: string
+          is_essencial: boolean
+          total_parcelas: number
+          updated_at: string
+          user_id: string
+          valor_total: number
+        }
+        Insert: {
+          account_id: string
+          category_id?: string | null
+          created_at?: string
+          data_compra?: string
+          description: string
+          family_id: string
+          id?: string
+          is_essencial?: boolean
+          total_parcelas: number
+          updated_at?: string
+          user_id: string
+          valor_total: number
+        }
+        Update: {
+          account_id?: string
+          category_id?: string | null
+          created_at?: string
+          data_compra?: string
+          description?: string
+          family_id?: string
+          id?: string
+          is_essencial?: boolean
+          total_parcelas?: number
+          updated_at?: string
+          user_id?: string
+          valor_total?: number
+        }
+        Relationships: []
+      }
+      installments: {
+        Row: {
+          created_at: string
+          fatura_mes: string
+          id: string
+          numero: number
+          plan_id: string
+          transaction_id: string | null
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          fatura_mes: string
+          id?: string
+          numero: number
+          plan_id: string
+          transaction_id?: string | null
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          fatura_mes?: string
+          id?: string
+          numero?: number
+          plan_id?: string
+          transaction_id?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "installment_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -715,6 +798,10 @@ export type Database = {
           origem: Database["public"]["Enums"]["categorization_origin"]
         }[]
       }
+      check_credit_card_bill_alerts: {
+        Args: { _family_id: string }
+        Returns: undefined
+      }
       check_crisis_activation: {
         Args: { _family_id: string; _mes: string }
         Returns: {
@@ -737,6 +824,49 @@ export type Database = {
           _tipo: string
         }
         Returns: string
+      }
+      create_installment_plan: {
+        Args: {
+          _account_id: string
+          _category_id?: string
+          _data_compra: string
+          _description: string
+          _family_id: string
+          _is_essencial?: boolean
+          _total_parcelas: number
+          _valor_total: number
+        }
+        Returns: {
+          account_id: string
+          category_id: string | null
+          created_at: string
+          data_compra: string
+          description: string
+          family_id: string
+          id: string
+          is_essencial: boolean
+          total_parcelas: number
+          updated_at: string
+          user_id: string
+          valor_total: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "installment_plans"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_transfer: {
+        Args: {
+          _amount: number
+          _date?: string
+          _description?: string
+          _family_id: string
+          _from_account: string
+          _to_account: string
+        }
+        Returns: undefined
       }
       get_budget_status: {
         Args: { _family_id: string; _mes: string }
@@ -785,6 +915,15 @@ export type Database = {
         }
       }
       normalize_text: { Args: { _t: string }; Returns: string }
+      pay_credit_card_bill: {
+        Args: {
+          _amount: number
+          _bill_id: string
+          _date?: string
+          _from_account: string
+        }
+        Returns: undefined
+      }
       recalc_account_balance: { Args: { _account_id: string }; Returns: number }
       recalc_financial_state: {
         Args: { _family_id: string; _mes: string; _renda?: number }
