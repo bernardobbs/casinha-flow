@@ -96,18 +96,18 @@ function EstoquePage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/60 bg-background/80 backdrop-blur sticky top-0 z-10">
-        <div className="container max-w-6xl py-4 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Button></Link>
-            <h1 className="text-xl font-semibold flex items-center gap-2"><Package className="h-5 w-5" /> Estoque</h1>
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Painel</Button></Link>
+            <h1 className="text-lg sm:text-xl font-semibold flex items-center gap-2 truncate"><Package className="h-5 w-5" /> Estoque</h1>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button size="sm" onClick={() => setOpenProduct(true)}><Plus className="h-4 w-4 mr-1" />Produto</Button>
-            <Button size="sm" variant="outline" onClick={() => setOpenImport(true)}><Upload className="h-4 w-4 mr-1" />Importar CSV</Button>
-            <Button size="sm" variant="outline" onClick={() => setOpenList(true)}><ListChecks className="h-4 w-4 mr-1" />Gerar lista</Button>
+            <Button size="sm" variant="outline" onClick={() => setOpenImport(true)}><Upload className="h-4 w-4 mr-1" />CSV</Button>
+            <Button size="sm" variant="outline" onClick={() => setOpenList(true)}><ListChecks className="h-4 w-4 mr-1" />Lista</Button>
           </div>
         </div>
-        <div className="container max-w-6xl pb-3 flex items-center gap-2 flex-wrap">
+        <div className="max-w-6xl mx-auto px-4 pb-3 flex items-center gap-2 flex-wrap">
           {[
             { v: "todos", l: "Todos" },
             { v: "geladeira", l: "❄️ Geladeira" },
@@ -117,11 +117,11 @@ function EstoquePage() {
           ].map(b => (
             <Button key={b.v} size="sm" variant={filter === b.v ? "default" : "outline"} onClick={() => setFilter(b.v)}>{b.l}</Button>
           ))}
-          <Input placeholder="Buscar produto..." value={search} onChange={(e) => setSearch(e.target.value)} className="ml-auto max-w-xs" />
+          <Input placeholder="Buscar produto..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:ml-auto sm:max-w-xs" />
         </div>
       </header>
 
-      <main className="container max-w-6xl py-6 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {atencao.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-semibold flex items-center gap-2 text-destructive"><AlertTriangle className="h-4 w-4" />Atenção</h2>

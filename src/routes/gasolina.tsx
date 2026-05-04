@@ -93,11 +93,11 @@ function GasolinaPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border/60 bg-background/80 backdrop-blur">
-        <div className="container max-w-6xl py-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Button></Link>
-            <h1 className="text-xl font-semibold flex items-center gap-2"><Fuel className="h-5 w-5" /> Gasolina</h1>
+      <header className="border-b border-border/60 bg-background/80 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Painel</Button></Link>
+            <h1 className="text-lg sm:text-xl font-semibold flex items-center gap-2 truncate"><Fuel className="h-5 w-5" /> Gasolina</h1>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpenVehicle(true)}>+ Veículo</Button>
@@ -108,7 +108,7 @@ function GasolinaPage() {
         </div>
       </header>
 
-      <main className="container max-w-6xl py-6 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {vehicles.length === 0 ? (
           <Card><CardContent className="py-10 text-center space-y-3">
             <p className="text-muted-foreground">Nenhum veículo cadastrado ainda.</p>
