@@ -207,6 +207,11 @@ interface ParsedRow {
   external_id: string;
   selected: boolean;
   error?: string;
+  // Sugestão da função categorize_transaction
+  suggested_category_id?: string | null;
+  suggested_origem?: "manual" | "ia" | "keyword" | null;
+  suggested_nivel?: number | null;
+  suggested_confianca?: number | null;
 }
 
 function parseCsv(text: string): ParsedRow[] {
