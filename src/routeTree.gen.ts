@@ -15,6 +15,7 @@ import { Route as RevisaoSemanalRouteImport } from './routes/revisao-semanal'
 import { Route as RecorrentesRouteImport } from './routes/recorrentes'
 import { Route as GasolinaRouteImport } from './routes/gasolina'
 import { Route as FinancialStateRouteImport } from './routes/financial-state'
+import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CrisisRouteImport } from './routes/crisis'
 import { Route as ContasAPagarRouteImport } from './routes/contas-a-pagar'
@@ -52,6 +53,11 @@ const GasolinaRoute = GasolinaRouteImport.update({
 const FinancialStateRoute = FinancialStateRouteImport.update({
   id: '/financial-state',
   path: '/financial-state',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EstoqueRoute = EstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
+  '/estoque': typeof EstoqueRoute
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
+  '/estoque': typeof EstoqueRoute
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
+  '/estoque': typeof EstoqueRoute
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/contas-a-pagar'
     | '/crisis'
     | '/dashboard'
+    | '/estoque'
     | '/financial-state'
     | '/gasolina'
     | '/recorrentes'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/contas-a-pagar'
     | '/crisis'
     | '/dashboard'
+    | '/estoque'
     | '/financial-state'
     | '/gasolina'
     | '/recorrentes'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/contas-a-pagar'
     | '/crisis'
     | '/dashboard'
+    | '/estoque'
     | '/financial-state'
     | '/gasolina'
     | '/recorrentes'
@@ -204,6 +216,7 @@ export interface RootRouteChildren {
   ContasAPagarRoute: typeof ContasAPagarRoute
   CrisisRoute: typeof CrisisRoute
   DashboardRoute: typeof DashboardRoute
+  EstoqueRoute: typeof EstoqueRoute
   FinancialStateRoute: typeof FinancialStateRoute
   GasolinaRoute: typeof GasolinaRoute
   RecorrentesRoute: typeof RecorrentesRoute
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/financial-state'
       fullPath: '/financial-state'
       preLoaderRoute: typeof FinancialStateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/estoque': {
+      id: '/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof EstoqueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -324,6 +344,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContasAPagarRoute: ContasAPagarRoute,
   CrisisRoute: CrisisRoute,
   DashboardRoute: DashboardRoute,
+  EstoqueRoute: EstoqueRoute,
   FinancialStateRoute: FinancialStateRoute,
   GasolinaRoute: GasolinaRoute,
   RecorrentesRoute: RecorrentesRoute,

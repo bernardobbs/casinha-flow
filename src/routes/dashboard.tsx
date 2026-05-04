@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target, Settings, Banknote, TrendingUp, Repeat, CalendarClock, ClipboardList, Fuel } from "lucide-react";
+import { Wallet, LogOut, Users, Home, Loader2, Crown, ShieldAlert, Target, Settings, Banknote, TrendingUp, Repeat, CalendarClock, ClipboardList, Fuel, Package } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 
@@ -383,6 +383,19 @@ function Dashboard() {
                 </div>
               </div>
               <Link to="/gasolina"><Button variant="outline">Abrir</Button></Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+            <CardContent className="py-6 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Package className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="font-semibold tracking-tight">📦 Estoque</h3>
+                  <p className="text-sm text-muted-foreground">Geladeira, freezer, despensa e armário.</p>
+                </div>
+              </div>
+              <Link to="/estoque"><Button variant="outline">Abrir</Button></Link>
             </CardContent>
           </Card>
 
