@@ -826,9 +826,11 @@ function TransactionsPage() {
       [...inserted, ...prev].sort((a, b) => (a.date < b.date ? 1 : -1))
     );
 
+    const accName = accounts.find((a) => a.id === importAccountId)?.nome ?? "";
     toast.success(
-      `${inserted.length} importados, ${duplicates} ignorados (duplicados)`
+      `${inserted.length} importadas para: ${accName} (${duplicates} ignoradas)`
     );
+    await supabase.rpc("recalc_account_balance", { _account_id: importAccountId });
     setImportOpen(false);
     setParsedRows([]);
 
