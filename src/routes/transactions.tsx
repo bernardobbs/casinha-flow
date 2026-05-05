@@ -1282,6 +1282,11 @@ function TransactionsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {importAutoDetected && (
+                <p className="text-xs text-muted-foreground">
+                  🔍 Detectado pelo nome do arquivo: <span className="font-medium">{importAutoDetected}</span> — confirme ou altere
+                </p>
+              )}
             </div>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
