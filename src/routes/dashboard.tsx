@@ -94,6 +94,20 @@ function Dashboard() {
       if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 5));
       if (al.data) setAlerts(al.data as AlertRow[]);
+
+      // Check last stock weekly review
+      const { data: lastRev } = await supabase
+        .from("weekly_reviews")
+        .select("fechado_em, checklist")
+        .eq("family_id", fid)
+        .order("fechado_em", { ascending: false })
+        .limit(20);
+      const stockRev = (lastRev ?? []).find((r: any) => r?.checklist?.tipo === "estoque");
+      if (!stockRev) setStockReviewOk(false);
+      else {
+        const ageDays = (Date.now() - new Date((stockRev as any).fechado_em).getTime()) / 86400000;
+        setStockReviewOk(ageDays <= 7);
+      }
       setLoading(false);
     })();
   }, [user]);
