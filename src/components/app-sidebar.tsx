@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, TrendingUp, Wallet, Banknote, Target,
   Repeat, CalendarClock, ClipboardList, Fuel, Package, Settings,
+  RefreshCw, ListChecks,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -13,6 +14,7 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, emoji: "📊" },
   { title: "Situação", url: "/situacao", icon: TrendingUp, emoji: "📈" },
   { title: "Transações", url: "/transactions", icon: Wallet, emoji: "💳" },
+  { title: "Conciliação", url: "/conciliacao", icon: RefreshCw, emoji: "🔄" },
   { title: "Contas", url: "/contas", icon: Banknote, emoji: "🏦" },
   { title: "Orçamento", url: "/budgets", icon: Target, emoji: "📋" },
   { title: "Recorrentes", url: "/recorrentes", icon: Repeat, emoji: "🔄" },
@@ -20,6 +22,7 @@ const items = [
   { title: "Revisão Semanal", url: "/revisao-semanal", icon: ClipboardList, emoji: "📋" },
   { title: "Gasolina", url: "/gasolina", icon: Fuel, emoji: "⛽" },
   { title: "Estoque", url: "/estoque", icon: Package, emoji: "📦" },
+  { title: "Revisão Estoque", url: "/estoque/revisao-semanal", icon: ListChecks, emoji: "📦" },
   { title: "Configurações", url: "/configuracoes", icon: Settings, emoji: "⚙️" },
 ];
 
