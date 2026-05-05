@@ -320,6 +320,35 @@ function TransactionsPage() {
   const [crisisConfirmOpen, setCrisisConfirmOpen] = useState(false);
   const [crisisPendingPayload, setCrisisPendingPayload] = useState<z.infer<typeof txSchema> | null>(null);
 
+  // Inline duplicate warning
+  const [dupWarn, setDupWarn] = useState<{ id: string; date: string; description: string; amount: number; score: number } | null>(null);
+  const [dupWarnIgnored, setDupWarnIgnored] = useState(false);
+
+  const checkDuplicateInline = async () => {
+    if (!familyId || dupWarnIgnored) return;
+    const amt = Number(amount.replace(",", "."));
+    if (!description.trim() || !date || !Number.isFinite(amt) || amt <= 0) return;
+    const { data } = await supabase.rpc("check_duplicate_transaction", {
+      p_family_id: familyId,
+      p_date: date,
+      p_amount: amt,
+      p_description: description,
+      p_account_id: accountId || undefined,
+    });
+    const top = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    if (top && Number(top.similarity_score) >= 70) {
+      setDupWarn({
+        id: top.id,
+        date: top.date,
+        description: top.description,
+        amount: Number(top.amount),
+        score: Number(top.similarity_score),
+      });
+    } else {
+      setDupWarn(null);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
@@ -1069,10 +1098,30 @@ function TransactionsPage() {
                     type="text"
                     inputMode="decimal"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+                    onChange={(e) => { setAmount(e.target.value.replace(/[^0-9.,]/g, "")); setDupWarnIgnored(false); }}
+                    onBlur={checkDuplicateInline}
                     placeholder="0,00"
                     required
                   />
+                  {dupWarn && (
+                    <div
+                      className="text-xs rounded-md p-2 flex items-start gap-2"
+                      style={{ background: "color-mix(in oklab, hsl(45 90% 50%) 14%, transparent)", color: "hsl(38 80% 30%)" }}
+                    >
+                      <span className="leading-tight">
+                        ⚠️ Transação similar encontrada:{" "}
+                        <strong>{formatDate(dupWarn.date)}</strong> — {dupWarn.description} —{" "}
+                        <strong>{formatCurrency(dupWarn.amount)}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        className="ml-auto underline whitespace-nowrap"
+                        onClick={() => { setDupWarn(null); setDupWarnIgnored(true); }}
+                      >
+                        Ignorar
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

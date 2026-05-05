@@ -320,6 +320,13 @@ export type Database = {
             foreignKeyName: "consumption_history_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consumption_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_status"
             referencedColumns: ["product_id"]
           },
@@ -888,6 +895,13 @@ export type Database = {
             foreignKeyName: "price_history_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_status"
             referencedColumns: ["product_id"]
           },
@@ -908,6 +922,7 @@ export type Database = {
           preco_atual: number | null
           quantidade_atual: number
           quantidade_minima: number
+          ultima_revisao: string | null
           unidade: Database["public"]["Enums"]["stock_unit"]
           updated_at: string
           user_id: string
@@ -926,6 +941,7 @@ export type Database = {
           preco_atual?: number | null
           quantidade_atual?: number
           quantidade_minima?: number
+          ultima_revisao?: string | null
           unidade?: Database["public"]["Enums"]["stock_unit"]
           updated_at?: string
           user_id: string
@@ -944,6 +960,7 @@ export type Database = {
           preco_atual?: number | null
           quantidade_atual?: number
           quantidade_minima?: number
+          ultima_revisao?: string | null
           unidade?: Database["public"]["Enums"]["stock_unit"]
           updated_at?: string
           user_id?: string
@@ -1091,6 +1108,13 @@ export type Database = {
             foreignKeyName: "stock_movements_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_stock_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_stock_status"
             referencedColumns: ["product_id"]
           },
@@ -1102,6 +1126,8 @@ export type Database = {
           amount: number
           category: string | null
           category_id: string | null
+          conciliado: boolean
+          conciliado_em: string | null
           created_at: string
           date: string
           description: string
@@ -1122,6 +1148,8 @@ export type Database = {
           amount: number
           category?: string | null
           category_id?: string | null
+          conciliado?: boolean
+          conciliado_em?: string | null
           created_at?: string
           date?: string
           description: string
@@ -1142,6 +1170,8 @@ export type Database = {
           amount?: number
           category?: string | null
           category_id?: string | null
+          conciliado?: boolean
+          conciliado_em?: string | null
           created_at?: string
           date?: string
           description?: string
@@ -1385,6 +1415,54 @@ export type Database = {
       }
     }
     Views: {
+      v_stock_review: {
+        Row: {
+          categoria: string | null
+          data_validade: string | null
+          dias_para_vencer: number | null
+          dias_restantes: number | null
+          dias_sem_revisao: number | null
+          family_id: string | null
+          id: string | null
+          nome: string | null
+          quantidade_atual: number | null
+          quantidade_minima: number | null
+          ultima_revisao: string | null
+          unidade: Database["public"]["Enums"]["stock_unit"] | null
+          urgencia: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          data_validade?: string | null
+          dias_para_vencer?: never
+          dias_restantes?: never
+          dias_sem_revisao?: never
+          family_id?: string | null
+          id?: string | null
+          nome?: string | null
+          quantidade_atual?: number | null
+          quantidade_minima?: number | null
+          ultima_revisao?: string | null
+          unidade?: Database["public"]["Enums"]["stock_unit"] | null
+          urgencia?: never
+        }
+        Update: {
+          categoria?: string | null
+          data_validade?: string | null
+          dias_para_vencer?: never
+          dias_restantes?: never
+          dias_sem_revisao?: never
+          family_id?: string | null
+          id?: string | null
+          nome?: string | null
+          quantidade_atual?: number | null
+          quantidade_minima?: number | null
+          ultima_revisao?: string | null
+          unidade?: Database["public"]["Enums"]["stock_unit"] | null
+          urgencia?: never
+        }
+        Relationships: []
+      }
       v_stock_status: {
         Row: {
           ativo: boolean | null
@@ -1511,6 +1589,22 @@ export type Database = {
         Returns: {
           criterio: string
           should_activate: boolean
+        }[]
+      }
+      check_duplicate_transaction: {
+        Args: {
+          p_account_id?: string
+          p_amount: number
+          p_date: string
+          p_description: string
+          p_family_id: string
+        }
+        Returns: {
+          amount: number
+          date: string
+          description: string
+          id: string
+          similarity_score: number
         }[]
       }
       check_transaction_alerts: {
@@ -1680,6 +1774,8 @@ export type Database = {
           amount: number
           category: string | null
           category_id: string | null
+          conciliado: boolean
+          conciliado_em: string | null
           created_at: string
           date: string
           description: string

@@ -21,9 +21,11 @@ import { Route as CrisisRouteImport } from './routes/crisis'
 import { Route as ContasAPagarRouteImport } from './routes/contas-a-pagar'
 import { Route as ContasRouteImport } from './routes/contas'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ConciliacaoRouteImport } from './routes/conciliacao'
 import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EstoqueRevisaoSemanalRouteImport } from './routes/estoque.revisao-semanal'
 
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
@@ -85,6 +87,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConciliacaoRoute = ConciliacaoRouteImport.update({
+  id: '/conciliacao',
+  path: '/conciliacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BudgetsRoute = BudgetsRouteImport.update({
   id: '/budgets',
   path: '/budgets',
@@ -100,58 +107,69 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EstoqueRevisaoSemanalRoute = EstoqueRevisaoSemanalRouteImport.update({
+  id: '/revisao-semanal',
+  path: '/revisao-semanal',
+  getParentRoute: () => EstoqueRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
-  '/estoque': typeof EstoqueRoute
+  '/estoque': typeof EstoqueRouteWithChildren
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
+  '/estoque/revisao-semanal': typeof EstoqueRevisaoSemanalRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
-  '/estoque': typeof EstoqueRoute
+  '/estoque': typeof EstoqueRouteWithChildren
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
+  '/estoque/revisao-semanal': typeof EstoqueRevisaoSemanalRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/contas-a-pagar': typeof ContasAPagarRoute
   '/crisis': typeof CrisisRoute
   '/dashboard': typeof DashboardRoute
-  '/estoque': typeof EstoqueRoute
+  '/estoque': typeof EstoqueRouteWithChildren
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
+  '/estoque/revisao-semanal': typeof EstoqueRevisaoSemanalRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,6 +177,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/budgets'
+    | '/conciliacao'
     | '/configuracoes'
     | '/contas'
     | '/contas-a-pagar'
@@ -171,11 +190,13 @@ export interface FileRouteTypes {
     | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
+    | '/estoque/revisao-semanal'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/budgets'
+    | '/conciliacao'
     | '/configuracoes'
     | '/contas'
     | '/contas-a-pagar'
@@ -188,11 +209,13 @@ export interface FileRouteTypes {
     | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
+    | '/estoque/revisao-semanal'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/budgets'
+    | '/conciliacao'
     | '/configuracoes'
     | '/contas'
     | '/contas-a-pagar'
@@ -205,18 +228,20 @@ export interface FileRouteTypes {
     | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
+    | '/estoque/revisao-semanal'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   BudgetsRoute: typeof BudgetsRoute
+  ConciliacaoRoute: typeof ConciliacaoRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContasRoute: typeof ContasRoute
   ContasAPagarRoute: typeof ContasAPagarRoute
   CrisisRoute: typeof CrisisRoute
   DashboardRoute: typeof DashboardRoute
-  EstoqueRoute: typeof EstoqueRoute
+  EstoqueRoute: typeof EstoqueRouteWithChildren
   FinancialStateRoute: typeof FinancialStateRoute
   GasolinaRoute: typeof GasolinaRoute
   RecorrentesRoute: typeof RecorrentesRoute
@@ -311,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/conciliacao': {
+      id: '/conciliacao'
+      path: '/conciliacao'
+      fullPath: '/conciliacao'
+      preLoaderRoute: typeof ConciliacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budgets': {
       id: '/budgets'
       path: '/budgets'
@@ -332,19 +364,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/estoque/revisao-semanal': {
+      id: '/estoque/revisao-semanal'
+      path: '/revisao-semanal'
+      fullPath: '/estoque/revisao-semanal'
+      preLoaderRoute: typeof EstoqueRevisaoSemanalRouteImport
+      parentRoute: typeof EstoqueRoute
+    }
   }
 }
+
+interface EstoqueRouteChildren {
+  EstoqueRevisaoSemanalRoute: typeof EstoqueRevisaoSemanalRoute
+}
+
+const EstoqueRouteChildren: EstoqueRouteChildren = {
+  EstoqueRevisaoSemanalRoute: EstoqueRevisaoSemanalRoute,
+}
+
+const EstoqueRouteWithChildren =
+  EstoqueRoute._addFileChildren(EstoqueRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   BudgetsRoute: BudgetsRoute,
+  ConciliacaoRoute: ConciliacaoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContasRoute: ContasRoute,
   ContasAPagarRoute: ContasAPagarRoute,
   CrisisRoute: CrisisRoute,
   DashboardRoute: DashboardRoute,
-  EstoqueRoute: EstoqueRoute,
+  EstoqueRoute: EstoqueRouteWithChildren,
   FinancialStateRoute: FinancialStateRoute,
   GasolinaRoute: GasolinaRoute,
   RecorrentesRoute: RecorrentesRoute,

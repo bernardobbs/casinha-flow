@@ -66,6 +66,7 @@ function Dashboard() {
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [cats, setCats] = useState<CatProj[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
+  const [stockReviewOk, setStockReviewOk] = useState<boolean | null>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
@@ -93,6 +94,20 @@ function Dashboard() {
       if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 5));
       if (al.data) setAlerts(al.data as AlertRow[]);
+
+      // Check last stock weekly review
+      const { data: lastRev } = await supabase
+        .from("weekly_reviews")
+        .select("fechado_em, checklist")
+        .eq("family_id", fid)
+        .order("fechado_em", { ascending: false })
+        .limit(20);
+      const stockRev = (lastRev ?? []).find((r: any) => r?.checklist?.tipo === "estoque");
+      if (!stockRev) setStockReviewOk(false);
+      else {
+        const ageDays = (Date.now() - new Date((stockRev as any).fechado_em).getTime()) / 86400000;
+        setStockReviewOk(ageDays <= 7);
+      }
       setLoading(false);
     })();
   }, [user]);
@@ -238,7 +253,16 @@ function Dashboard() {
           <AccessCard to="/recorrentes" icon={<Repeat />} label="Recorrentes" />
           <AccessCard to="/revisao-semanal" icon={<ClipboardList />} label="Revisão" />
           <AccessCard to="/gasolina" icon={<Fuel />} label="Gasolina" />
-          <AccessCard to="/estoque" icon={<Package />} label="Estoque" />
+          <Link to="/estoque" className="group">
+            <Card className="border-border/60 hover:border-primary/40 transition">
+              <CardContent className="py-4 flex flex-col items-center gap-1">
+                <Package className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                <span className="text-xs font-medium">Estoque</span>
+                {stockReviewOk === false && <Badge className="bg-yellow-500/15 text-yellow-700 font-normal text-[10px]">⚠️ Revisão pendente</Badge>}
+                {stockReviewOk === true && <Badge className="bg-emerald-500/15 text-emerald-700 font-normal text-[10px]">✅ Em dia</Badge>}
+              </CardContent>
+            </Card>
+          </Link>
           <AccessCard to="/financial-state" icon={<TrendingUp />} label="Estado fin." />
           <AccessCard to="/configuracoes" icon={<Settings />} label="Config." />
         </div>
