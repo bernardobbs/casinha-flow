@@ -1459,6 +1459,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      adjust_account_balance: {
+        Args: {
+          p_account_id: string
+          p_family_id: string
+          p_observacao?: string
+          p_saldo_real: number
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       advance_crisis_stage: {
         Args: { _crisis_id: string }
         Returns: {
