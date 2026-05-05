@@ -92,6 +92,12 @@ function ContasPage() {
   const [creating, setCreating] = useState(false);
   const [transferring, setTransferring] = useState(false);
 
+  // Adjust balance
+  const [adjustAccount, setAdjustAccount] = useState<Account | null>(null);
+  const [adjustValue, setAdjustValue] = useState("");
+  const [adjustObs, setAdjustObs] = useState("Ajuste manual de saldo");
+  const [adjusting, setAdjusting] = useState(false);
+
   // Create form
   const [form, setForm] = useState({
     nome: "",
