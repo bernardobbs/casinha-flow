@@ -320,6 +320,35 @@ function TransactionsPage() {
   const [crisisConfirmOpen, setCrisisConfirmOpen] = useState(false);
   const [crisisPendingPayload, setCrisisPendingPayload] = useState<z.infer<typeof txSchema> | null>(null);
 
+  // Inline duplicate warning
+  const [dupWarn, setDupWarn] = useState<{ id: string; date: string; description: string; amount: number; score: number } | null>(null);
+  const [dupWarnIgnored, setDupWarnIgnored] = useState(false);
+
+  const checkDuplicateInline = async () => {
+    if (!familyId || dupWarnIgnored) return;
+    const amt = Number(amount.replace(",", "."));
+    if (!description.trim() || !date || !Number.isFinite(amt) || amt <= 0) return;
+    const { data } = await supabase.rpc("check_duplicate_transaction", {
+      p_family_id: familyId,
+      p_date: date,
+      p_amount: amt,
+      p_description: description,
+      p_account_id: accountId || null,
+    });
+    const top = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    if (top && Number(top.similarity_score) >= 70) {
+      setDupWarn({
+        id: top.id,
+        date: top.date,
+        description: top.description,
+        amount: Number(top.amount),
+        score: Number(top.similarity_score),
+      });
+    } else {
+      setDupWarn(null);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
