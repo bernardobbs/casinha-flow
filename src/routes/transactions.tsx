@@ -308,6 +308,8 @@ function TransactionsPage() {
   const [importAccountId, setImportAccountId] = useState<string>("");
   const [importing, setImporting] = useState(false);
 
+  const [importAutoDetected, setImportAutoDetected] = useState<string | null>(null);
+
   // duplicate detection
   const [dupOpen, setDupOpen] = useState(false);
   const [dupCandidates, setDupCandidates] = useState<Transaction[]>([]);
