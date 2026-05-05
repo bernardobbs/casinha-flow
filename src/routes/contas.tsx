@@ -33,7 +33,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCardBillsTab } from "@/components/CreditCardBillsTab";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRightLeft, CreditCard, Loader2, Plus, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, CreditCard, Loader2, Plus, Scale, Wallet } from "lucide-react";
 
 export const Route = createFileRoute("/contas")({
   head: () => ({
