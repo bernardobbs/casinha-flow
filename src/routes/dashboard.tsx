@@ -66,6 +66,7 @@ function Dashboard() {
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [cats, setCats] = useState<CatProj[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
+  const [stockReviewOk, setStockReviewOk] = useState<boolean | null>(null);
 
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
