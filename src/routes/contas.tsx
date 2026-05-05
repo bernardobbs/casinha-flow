@@ -577,6 +577,113 @@ function ContasPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={!!adjustAccount} onOpenChange={(o) => { if (!o && !adjusting) setAdjustAccount(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>⚖️ Ajustar saldo</DialogTitle>
+            <DialogDescription>
+              Compare com seu extrato e registre a diferença.
+            </DialogDescription>
+          </DialogHeader>
+          {adjustAccount && (() => {
+            const calculado = Number(adjustAccount.saldo_atual);
+            const real = parseNum(adjustValue);
+            const diff = Number.isFinite(real) ? real - calculado : 0;
+            const hasReal = adjustValue.trim() !== "" && Number.isFinite(real);
+            return (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Conta</Label>
+                  <Input value={`${adjustAccount.icone} ${adjustAccount.nome}`} readOnly />
+                </div>
+                <div className="space-y-2">
+                  <Label>Saldo calculado</Label>
+                  <Input value={fmt(calculado)} readOnly />
+                </div>
+                <div className="space-y-2">
+                  <Label>Saldo real (extrato)</Label>
+                  <Input
+                    autoFocus
+                    inputMode="decimal"
+                    value={adjustValue}
+                    onChange={(e) => setAdjustValue(e.target.value.replace(/[^0-9.,-]/g, ""))}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Observação</Label>
+                  <Input value={adjustObs} onChange={(e) => setAdjustObs(e.target.value)} />
+                </div>
+                {hasReal && (
+                  <div
+                    className="text-sm font-medium px-3 py-2 rounded-md"
+                    style={{
+                      background:
+                        Math.abs(diff) < 0.005
+                          ? "color-mix(in oklab, var(--success) 12%, transparent)"
+                          : diff > 0
+                          ? "color-mix(in oklab, var(--success) 12%, transparent)"
+                          : "color-mix(in oklab, var(--destructive) 12%, transparent)",
+                      color:
+                        Math.abs(diff) < 0.005
+                          ? "var(--success)"
+                          : diff > 0
+                          ? "var(--success)"
+                          : "var(--destructive)",
+                    }}
+                  >
+                    {Math.abs(diff) < 0.005
+                      ? "✅ Valores iguais"
+                      : diff > 0
+                      ? `↑ + ${fmt(diff)} (ajuste positivo)`
+                      : `↓ ${fmt(diff)} (ajuste negativo)`}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                if (!adjustAccount || !familyId || !user) return;
+                const real = parseNum(adjustValue);
+                if (!Number.isFinite(real)) {
+                  toast.error("Informe o saldo real");
+                  return;
+                }
+                if (Math.abs(real - Number(adjustAccount.saldo_atual)) < 0.005) return;
+                setAdjusting(true);
+                const { error } = await supabase.rpc("adjust_account_balance", {
+                  p_account_id: adjustAccount.id,
+                  p_family_id: familyId,
+                  p_user_id: user.id,
+                  p_saldo_real: real,
+                  p_observacao: adjustObs || "Ajuste manual de saldo",
+                });
+                setAdjusting(false);
+                if (error) {
+                  toast.error(error.message);
+                  return;
+                }
+                toast.success("✅ Saldo ajustado com sucesso");
+                setAdjustAccount(null);
+                await loadAccounts();
+              }}
+              disabled={
+                adjusting ||
+                !adjustValue.trim() ||
+                !Number.isFinite(parseNum(adjustValue)) ||
+                (adjustAccount
+                  ? Math.abs(parseNum(adjustValue) - Number(adjustAccount.saldo_atual)) < 0.005
+                  : true)
+              }
+            >
+              {adjusting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
