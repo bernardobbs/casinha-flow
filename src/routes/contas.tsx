@@ -544,6 +544,21 @@ function ContasPage() {
                             {fmt(Number(a.saldo_atual))}
                           </div>
                         )}
+                        <div className="pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 h-7 text-xs"
+                            onClick={() => {
+                              setAdjustAccount(a);
+                              setAdjustValue("");
+                              setAdjustObs("Ajuste manual de saldo");
+                            }}
+                          >
+                            <Scale className="h-3.5 w-3.5" />
+                            Ajustar
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   );
