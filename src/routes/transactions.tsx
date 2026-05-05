@@ -856,8 +856,14 @@ function TransactionsPage() {
     );
 
     const accName = accounts.find((a) => a.id === importAccountId)?.nome ?? "";
+    const entradas = inserted.filter((t) => t.type === "income" && t.tipo_especial !== "transferencia").length;
+    const saidas = inserted.filter((t) => t.type === "expense" && t.tipo_especial !== "transferencia").length;
+    const transfers = inserted.filter((t) => t.tipo_especial === "transferencia").length;
     toast.success(
-      `${inserted.length} importadas para: ${accName} (${duplicates} ignoradas)`
+      `✅ ${inserted.length} importadas para: ${accName}`,
+      {
+        description: `💰 ${entradas} entradas · 💸 ${saidas} saídas · 🔄 ${transfers} transferências · ⚠️ ${duplicates} duplicatas ignoradas`,
+      }
     );
     await supabase.rpc("recalc_account_balance", { _account_id: importAccountId });
     setImportOpen(false);
