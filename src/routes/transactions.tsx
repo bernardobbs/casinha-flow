@@ -1098,10 +1098,30 @@ function TransactionsPage() {
                     type="text"
                     inputMode="decimal"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
+                    onChange={(e) => { setAmount(e.target.value.replace(/[^0-9.,]/g, "")); setDupWarnIgnored(false); }}
+                    onBlur={checkDuplicateInline}
                     placeholder="0,00"
                     required
                   />
+                  {dupWarn && (
+                    <div
+                      className="text-xs rounded-md p-2 flex items-start gap-2"
+                      style={{ background: "color-mix(in oklab, hsl(45 90% 50%) 14%, transparent)", color: "hsl(38 80% 30%)" }}
+                    >
+                      <span className="leading-tight">
+                        ⚠️ Transação similar encontrada:{" "}
+                        <strong>{formatDate(dupWarn.date)}</strong> — {dupWarn.description} —{" "}
+                        <strong>{formatCurrency(dupWarn.amount)}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        className="ml-auto underline whitespace-nowrap"
+                        onClick={() => { setDupWarn(null); setDupWarnIgnored(true); }}
+                      >
+                        Ignorar
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
