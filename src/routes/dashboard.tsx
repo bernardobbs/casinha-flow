@@ -253,7 +253,16 @@ function Dashboard() {
           <AccessCard to="/recorrentes" icon={<Repeat />} label="Recorrentes" />
           <AccessCard to="/revisao-semanal" icon={<ClipboardList />} label="Revisão" />
           <AccessCard to="/gasolina" icon={<Fuel />} label="Gasolina" />
-          <AccessCard to="/estoque" icon={<Package />} label="Estoque" />
+          <Link to="/estoque" className="group">
+            <Card className="border-border/60 hover:border-primary/40 transition">
+              <CardContent className="py-4 flex flex-col items-center gap-1">
+                <Package className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                <span className="text-xs font-medium">Estoque</span>
+                {stockReviewOk === false && <Badge className="bg-yellow-500/15 text-yellow-700 font-normal text-[10px]">⚠️ Revisão pendente</Badge>}
+                {stockReviewOk === true && <Badge className="bg-emerald-500/15 text-emerald-700 font-normal text-[10px]">✅ Em dia</Badge>}
+              </CardContent>
+            </Card>
+          </Link>
           <AccessCard to="/financial-state" icon={<TrendingUp />} label="Estado fin." />
           <AccessCard to="/configuracoes" icon={<Settings />} label="Config." />
         </div>
