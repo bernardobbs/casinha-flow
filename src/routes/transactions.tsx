@@ -333,7 +333,7 @@ function TransactionsPage() {
       p_date: date,
       p_amount: amt,
       p_description: description,
-      p_account_id: accountId || null,
+      p_account_id: accountId || undefined,
     });
     const top = Array.isArray(data) && data.length > 0 ? data[0] : null;
     if (top && Number(top.similarity_score) >= 70) {
