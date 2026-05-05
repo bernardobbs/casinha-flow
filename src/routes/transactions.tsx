@@ -732,7 +732,32 @@ function TransactionsPage() {
       } else {
         setParsedRows(rows);
       }
-      setImportAccountId("");
+      // Auto-sugestão de conta pelo nome do arquivo
+      const fname = file.name.toLowerCase();
+      const detectKeywords: { match: RegExp; hints: string[] }[] = [
+        { match: /(^|[^a-z])bb([^a-z]|$)|banco do brasil|extrato_conta/, hints: ["bb", "brasil"] },
+        { match: /nubank|nu_bank|nu-/, hints: ["nubank", "nu"] },
+        { match: /inter/, hints: ["inter"] },
+        { match: /ita[uú]/, hints: ["itau", "itaú"] },
+        { match: /caixa/, hints: ["caixa"] },
+        { match: /santander/, hints: ["santander"] },
+      ];
+      let detectedId = "";
+      let detectedName: string | null = null;
+      for (const rule of detectKeywords) {
+        if (rule.match.test(fname)) {
+          const acc = accounts.find((a) =>
+            rule.hints.some((h) => a.nome.toLowerCase().includes(h))
+          );
+          if (acc) {
+            detectedId = acc.id;
+            detectedName = acc.nome;
+          }
+          break;
+        }
+      }
+      setImportAccountId(detectedId);
+      setImportAutoDetected(detectedName);
       setImportOpen(true);
     } catch {
       toast.error("Não foi possível ler o arquivo");
