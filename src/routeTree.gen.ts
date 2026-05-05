@@ -21,6 +21,7 @@ import { Route as CrisisRouteImport } from './routes/crisis'
 import { Route as ContasAPagarRouteImport } from './routes/contas-a-pagar'
 import { Route as ContasRouteImport } from './routes/contas'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ConciliacaoRouteImport } from './routes/conciliacao'
 import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -85,6 +86,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConciliacaoRoute = ConciliacaoRouteImport.update({
+  id: '/conciliacao',
+  path: '/conciliacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BudgetsRoute = BudgetsRouteImport.update({
   id: '/budgets',
   path: '/budgets',
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/contas-a-pagar': typeof ContasAPagarRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/contas-a-pagar': typeof ContasAPagarRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
   '/contas-a-pagar': typeof ContasAPagarRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/budgets'
+    | '/conciliacao'
     | '/configuracoes'
     | '/contas'
     | '/contas-a-pagar'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/budgets'
+    | '/conciliacao'
     | '/configuracoes'
     | '/contas'
     | '/contas-a-pagar'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/budgets'
+    | '/conciliacao'
     | '/configuracoes'
     | '/contas'
     | '/contas-a-pagar'
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   BudgetsRoute: typeof BudgetsRoute
+  ConciliacaoRoute: typeof ConciliacaoRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContasRoute: typeof ContasRoute
   ContasAPagarRoute: typeof ContasAPagarRoute
@@ -311,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/conciliacao': {
+      id: '/conciliacao'
+      path: '/conciliacao'
+      fullPath: '/conciliacao'
+      preLoaderRoute: typeof ConciliacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budgets': {
       id: '/budgets'
       path: '/budgets'
@@ -339,6 +359,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   BudgetsRoute: BudgetsRoute,
+  ConciliacaoRoute: ConciliacaoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContasRoute: ContasRoute,
   ContasAPagarRoute: ContasAPagarRoute,
