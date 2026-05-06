@@ -160,44 +160,32 @@ function ContasPage() {
 
   const parseNum = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
 
-  const handleCreate = async () => {
-    if (!familyId) return;
-    if (!form.nome.trim()) {
-      toast.error("Nome obrigatório");
-      return;
-    }
-    setCreating(true);
-    const saldo = Number.isFinite(parseNum(form.saldo_inicial)) ? parseNum(form.saldo_inicial) : 0;
-    const isCard = form.tipo === "cartao";
-    const { error } = await supabase.from("accounts").insert({
-      family_id: familyId,
-      nome: form.nome.trim(),
-      tipo: form.tipo,
-      saldo_inicial: saldo,
-      saldo_atual: saldo,
-      cor: form.cor,
-      icone: TYPE_ICON[form.tipo],
-      limite_credito: isCard ? parseNum(form.limite_credito) || 0 : null,
-      dia_fechamento: isCard ? parseInt(form.dia_fechamento, 10) || null : null,
-      dia_vencimento: isCard ? parseInt(form.dia_vencimento, 10) || null : null,
+  const openNew = () => {
+    setEditAccount(null);
+    setOpenForm(true);
+  };
+
+  const openEdit = (a: Account) => {
+    setEditAccount({
+      id: a.id,
+      nome: a.nome,
+      tipo: a.tipo,
+      cor: a.cor,
+      icone: a.icone,
+      banco: a.banco,
+      bandeira: a.bandeira,
+      agencia: a.agencia,
+      numero_conta: a.numero_conta,
+      digito: a.digito,
+      saldo_inicial: Number(a.saldo_inicial),
+      saldo_atual: Number(a.saldo_atual),
+      limite_credito: a.limite_credito != null ? Number(a.limite_credito) : null,
+      limite_cheque_especial:
+        a.limite_cheque_especial != null ? Number(a.limite_cheque_especial) : null,
+      dia_fechamento: a.dia_fechamento,
+      dia_vencimento: a.dia_vencimento,
     });
-    setCreating(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setOpenCreate(false);
-    setForm({
-      nome: "",
-      tipo: "corrente",
-      saldo_inicial: "",
-      cor: "#3b82f6",
-      limite_credito: "",
-      dia_fechamento: "",
-      dia_vencimento: "",
-    });
-    toast.success("Conta criada");
-    await loadAccounts();
+    setOpenForm(true);
   };
 
   const handleTransfer = async () => {
