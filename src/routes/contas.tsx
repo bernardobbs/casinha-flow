@@ -632,6 +632,16 @@ function ContasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {familyId && (
+        <AccountFormDialog
+          open={openForm}
+          onOpenChange={setOpenForm}
+          familyId={familyId}
+          account={editAccount}
+          onSaved={loadAccounts}
+        />
+      )}
     </div>
   );
 }
