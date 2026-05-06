@@ -379,95 +379,10 @@ function ContasPage() {
               </DialogContent>
             </Dialog>
 
-            <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Nova conta
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Nova conta</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>Nome</Label>
-                    <Input
-                      value={form.nome}
-                      onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                      placeholder="Ex: Banco do Brasil"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <Select
-                      value={form.tipo}
-                      onValueChange={(v) => setForm({ ...form, tipo: v as AccountType })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(TYPE_LABEL) as AccountType[]).map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {TYPE_ICON[t]} {TYPE_LABEL[t]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Saldo inicial (R$)</Label>
-                    <Input
-                      inputMode="decimal"
-                      value={form.saldo_inicial}
-                      onChange={(e) =>
-                        setForm({ ...form, saldo_inicial: e.target.value.replace(/[^0-9.,]/g, "") })
-                      }
-                      placeholder="0,00"
-                    />
-                  </div>
-                  {form.tipo === "cartao" && (
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-2">
-                        <Label>Limite</Label>
-                        <Input
-                          inputMode="decimal"
-                          value={form.limite_credito}
-                          onChange={(e) =>
-                            setForm({ ...form, limite_credito: e.target.value.replace(/[^0-9.,]/g, "") })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Fecha dia</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={31}
-                          value={form.dia_fechamento}
-                          onChange={(e) => setForm({ ...form, dia_fechamento: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Vence dia</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={31}
-                          value={form.dia_vencimento}
-                          onChange={(e) => setForm({ ...form, dia_vencimento: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleCreate} disabled={creating}>
-                    {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button className="gap-2" onClick={openNew}>
+              <Plus className="h-4 w-4" />
+              Nova conta
+            </Button>
           </div>
         </div>
 
