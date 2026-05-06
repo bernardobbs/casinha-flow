@@ -16,48 +16,66 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          agencia: string | null
           ativo: boolean
+          banco: string | null
+          bandeira: string | null
           cor: string
           created_at: string
           dia_fechamento: number | null
           dia_vencimento: number | null
+          digito: string | null
           family_id: string
           icone: string
           id: string
+          limite_cheque_especial: number | null
           limite_credito: number | null
           nome: string
+          numero_conta: string | null
           saldo_atual: number
           saldo_inicial: number
           tipo: Database["public"]["Enums"]["account_type"]
           updated_at: string
         }
         Insert: {
+          agencia?: string | null
           ativo?: boolean
+          banco?: string | null
+          bandeira?: string | null
           cor?: string
           created_at?: string
           dia_fechamento?: number | null
           dia_vencimento?: number | null
+          digito?: string | null
           family_id: string
           icone?: string
           id?: string
+          limite_cheque_especial?: number | null
           limite_credito?: number | null
           nome: string
+          numero_conta?: string | null
           saldo_atual?: number
           saldo_inicial?: number
           tipo?: Database["public"]["Enums"]["account_type"]
           updated_at?: string
         }
         Update: {
+          agencia?: string | null
           ativo?: boolean
+          banco?: string | null
+          bandeira?: string | null
           cor?: string
           created_at?: string
           dia_fechamento?: number | null
           dia_vencimento?: number | null
+          digito?: string | null
           family_id?: string
           icone?: string
           id?: string
+          limite_cheque_especial?: number | null
           limite_credito?: number | null
           nome?: string
+          numero_conta?: string | null
           saldo_atual?: number
           saldo_inicial?: number
           tipo?: Database["public"]["Enums"]["account_type"]
