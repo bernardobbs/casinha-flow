@@ -59,8 +59,14 @@ interface Account {
   icone: string;
   ativo: boolean;
   limite_credito: number | null;
+  limite_cheque_especial: number | null;
   dia_fechamento: number | null;
   dia_vencimento: number | null;
+  banco: string | null;
+  bandeira: string | null;
+  agencia: string | null;
+  numero_conta: string | null;
+  digito: string | null;
 }
 
 const fmt = (n: number) =>
