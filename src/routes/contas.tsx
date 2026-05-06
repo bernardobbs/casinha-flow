@@ -33,7 +33,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreditCardBillsTab } from "@/components/CreditCardBillsTab";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRightLeft, CreditCard, Loader2, Plus, Scale, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, CreditCard, Loader2, Pencil, Plus, Scale, Wallet } from "lucide-react";
+import { AccountFormDialog, type AccountFormData } from "@/components/AccountFormDialog";
 
 export const Route = createFileRoute("/contas")({
   head: () => ({
@@ -58,8 +59,14 @@ interface Account {
   icone: string;
   ativo: boolean;
   limite_credito: number | null;
+  limite_cheque_especial: number | null;
   dia_fechamento: number | null;
   dia_vencimento: number | null;
+  banco: string | null;
+  bandeira: string | null;
+  agencia: string | null;
+  numero_conta: string | null;
+  digito: string | null;
 }
 
 const fmt = (n: number) =>
@@ -87,9 +94,9 @@ function ContasPage() {
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [openCreate, setOpenCreate] = useState(false);
+  const [openForm, setOpenForm] = useState(false);
+  const [editAccount, setEditAccount] = useState<Partial<AccountFormData> | null>(null);
   const [openTransfer, setOpenTransfer] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [transferring, setTransferring] = useState(false);
 
   // Adjust balance
@@ -97,17 +104,6 @@ function ContasPage() {
   const [adjustValue, setAdjustValue] = useState("");
   const [adjustObs, setAdjustObs] = useState("Ajuste manual de saldo");
   const [adjusting, setAdjusting] = useState(false);
-
-  // Create form
-  const [form, setForm] = useState({
-    nome: "",
-    tipo: "corrente" as AccountType,
-    saldo_inicial: "",
-    cor: "#3b82f6",
-    limite_credito: "",
-    dia_fechamento: "",
-    dia_vencimento: "",
-  });
 
   // Transfer form
   const [transfer, setTransfer] = useState({
@@ -164,44 +160,32 @@ function ContasPage() {
 
   const parseNum = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
 
-  const handleCreate = async () => {
-    if (!familyId) return;
-    if (!form.nome.trim()) {
-      toast.error("Nome obrigatório");
-      return;
-    }
-    setCreating(true);
-    const saldo = Number.isFinite(parseNum(form.saldo_inicial)) ? parseNum(form.saldo_inicial) : 0;
-    const isCard = form.tipo === "cartao";
-    const { error } = await supabase.from("accounts").insert({
-      family_id: familyId,
-      nome: form.nome.trim(),
-      tipo: form.tipo,
-      saldo_inicial: saldo,
-      saldo_atual: saldo,
-      cor: form.cor,
-      icone: TYPE_ICON[form.tipo],
-      limite_credito: isCard ? parseNum(form.limite_credito) || 0 : null,
-      dia_fechamento: isCard ? parseInt(form.dia_fechamento, 10) || null : null,
-      dia_vencimento: isCard ? parseInt(form.dia_vencimento, 10) || null : null,
+  const openNew = () => {
+    setEditAccount(null);
+    setOpenForm(true);
+  };
+
+  const openEdit = (a: Account) => {
+    setEditAccount({
+      id: a.id,
+      nome: a.nome,
+      tipo: a.tipo,
+      cor: a.cor,
+      icone: a.icone,
+      banco: a.banco,
+      bandeira: a.bandeira,
+      agencia: a.agencia,
+      numero_conta: a.numero_conta,
+      digito: a.digito,
+      saldo_inicial: Number(a.saldo_inicial),
+      saldo_atual: Number(a.saldo_atual),
+      limite_credito: a.limite_credito != null ? Number(a.limite_credito) : null,
+      limite_cheque_especial:
+        a.limite_cheque_especial != null ? Number(a.limite_cheque_especial) : null,
+      dia_fechamento: a.dia_fechamento,
+      dia_vencimento: a.dia_vencimento,
     });
-    setCreating(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setOpenCreate(false);
-    setForm({
-      nome: "",
-      tipo: "corrente",
-      saldo_inicial: "",
-      cor: "#3b82f6",
-      limite_credito: "",
-      dia_fechamento: "",
-      dia_vencimento: "",
-    });
-    toast.success("Conta criada");
-    await loadAccounts();
+    setOpenForm(true);
   };
 
   const handleTransfer = async () => {
@@ -395,95 +379,10 @@ function ContasPage() {
               </DialogContent>
             </Dialog>
 
-            <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Nova conta
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Nova conta</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>Nome</Label>
-                    <Input
-                      value={form.nome}
-                      onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                      placeholder="Ex: Banco do Brasil"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <Select
-                      value={form.tipo}
-                      onValueChange={(v) => setForm({ ...form, tipo: v as AccountType })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(TYPE_LABEL) as AccountType[]).map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {TYPE_ICON[t]} {TYPE_LABEL[t]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Saldo inicial (R$)</Label>
-                    <Input
-                      inputMode="decimal"
-                      value={form.saldo_inicial}
-                      onChange={(e) =>
-                        setForm({ ...form, saldo_inicial: e.target.value.replace(/[^0-9.,]/g, "") })
-                      }
-                      placeholder="0,00"
-                    />
-                  </div>
-                  {form.tipo === "cartao" && (
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-2">
-                        <Label>Limite</Label>
-                        <Input
-                          inputMode="decimal"
-                          value={form.limite_credito}
-                          onChange={(e) =>
-                            setForm({ ...form, limite_credito: e.target.value.replace(/[^0-9.,]/g, "") })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Fecha dia</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={31}
-                          value={form.dia_fechamento}
-                          onChange={(e) => setForm({ ...form, dia_fechamento: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Vence dia</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={31}
-                          value={form.dia_vencimento}
-                          onChange={(e) => setForm({ ...form, dia_vencimento: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleCreate} disabled={creating}>
-                    {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button className="gap-2" onClick={openNew}>
+              <Plus className="h-4 w-4" />
+              Nova conta
+            </Button>
           </div>
         </div>
 
@@ -522,9 +421,20 @@ function ContasPage() {
                             {TYPE_LABEL[a.tipo]}
                           </Badge>
                         </div>
-                        <CardDescription className="text-xs">
-                          Inicial: {fmt(Number(a.saldo_inicial))}
-                        </CardDescription>
+                        {isCard ? (
+                          <CardDescription className="text-xs">
+                            {a.banco ? `${a.banco} · ` : ""}
+                            Fecha dia {a.dia_fechamento ?? "—"} · Vence dia {a.dia_vencimento ?? "—"}
+                          </CardDescription>
+                        ) : (
+                          <CardDescription className="text-xs">
+                            {a.banco ? `${a.banco}` : "Sem banco"}
+                            {a.agencia ? ` · Ag ${a.agencia}` : ""}
+                            {a.numero_conta
+                              ? ` / CC ${a.numero_conta}${a.digito ? "-" + a.digito : ""}`
+                              : ""}
+                          </CardDescription>
+                        )}
                       </CardHeader>
                       <CardContent className="space-y-2">
                         {isCard ? (
@@ -539,18 +449,47 @@ function ContasPage() {
                               </span>
                             </div>
                             <Progress value={usedPct} />
-                            <p className="text-xs text-muted-foreground">
-                              Fecha dia {a.dia_fechamento ?? "—"} • Vence dia {a.dia_vencimento ?? "—"}
-                            </p>
                           </>
                         ) : (
-                          <div className="text-2xl font-semibold tabular-nums" style={{
-                            color: Number(a.saldo_atual) < 0 ? "var(--destructive)" : "var(--foreground)",
-                          }}>
-                            {fmt(Number(a.saldo_atual))}
-                          </div>
+                          <>
+                            <div
+                              className="text-2xl font-semibold tabular-nums"
+                              style={{
+                                color:
+                                  Number(a.saldo_atual) < 0
+                                    ? "var(--destructive)"
+                                    : "var(--foreground)",
+                              }}
+                            >
+                              {fmt(Number(a.saldo_atual))}
+                            </div>
+                            {a.limite_cheque_especial && Number(a.limite_cheque_especial) > 0 && (
+                              <div className="flex items-center gap-2 text-[11px]">
+                                {Number(a.saldo_atual) < 0 ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-destructive/40 text-destructive"
+                                  >
+                                    ⚠️ CE em uso
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">CE</Badge>
+                                )}
+                                <span className="text-muted-foreground">
+                                  {fmt(
+                                    Math.max(
+                                      0,
+                                      Number(a.limite_cheque_especial) +
+                                        Math.min(0, Number(a.saldo_atual)),
+                                    ),
+                                  )}{" "}
+                                  de {fmt(Number(a.limite_cheque_especial))} disponível
+                                </span>
+                              </div>
+                            )}
+                          </>
                         )}
-                        <div className="pt-2">
+                        <div className="pt-2 flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -563,6 +502,15 @@ function ContasPage() {
                           >
                             <Scale className="h-3.5 w-3.5" />
                             Ajustar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 h-7 text-xs"
+                            onClick={() => openEdit(a)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Editar
                           </Button>
                         </div>
                       </CardContent>
@@ -684,6 +632,16 @@ function ContasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {familyId && (
+        <AccountFormDialog
+          open={openForm}
+          onOpenChange={setOpenForm}
+          familyId={familyId}
+          account={editAccount}
+          onSaved={loadAccounts}
+        />
+      )}
     </div>
   );
 }
