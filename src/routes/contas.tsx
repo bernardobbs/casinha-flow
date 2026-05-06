@@ -421,9 +421,20 @@ function ContasPage() {
                             {TYPE_LABEL[a.tipo]}
                           </Badge>
                         </div>
-                        <CardDescription className="text-xs">
-                          Inicial: {fmt(Number(a.saldo_inicial))}
-                        </CardDescription>
+                        {isCard ? (
+                          <CardDescription className="text-xs">
+                            {a.banco ? `${a.banco} · ` : ""}
+                            Fecha dia {a.dia_fechamento ?? "—"} · Vence dia {a.dia_vencimento ?? "—"}
+                          </CardDescription>
+                        ) : (
+                          <CardDescription className="text-xs">
+                            {a.banco ? `${a.banco}` : "Sem banco"}
+                            {a.agencia ? ` · Ag ${a.agencia}` : ""}
+                            {a.numero_conta
+                              ? ` / CC ${a.numero_conta}${a.digito ? "-" + a.digito : ""}`
+                              : ""}
+                          </CardDescription>
+                        )}
                       </CardHeader>
                       <CardContent className="space-y-2">
                         {isCard ? (
@@ -438,18 +449,47 @@ function ContasPage() {
                               </span>
                             </div>
                             <Progress value={usedPct} />
-                            <p className="text-xs text-muted-foreground">
-                              Fecha dia {a.dia_fechamento ?? "—"} • Vence dia {a.dia_vencimento ?? "—"}
-                            </p>
                           </>
                         ) : (
-                          <div className="text-2xl font-semibold tabular-nums" style={{
-                            color: Number(a.saldo_atual) < 0 ? "var(--destructive)" : "var(--foreground)",
-                          }}>
-                            {fmt(Number(a.saldo_atual))}
-                          </div>
+                          <>
+                            <div
+                              className="text-2xl font-semibold tabular-nums"
+                              style={{
+                                color:
+                                  Number(a.saldo_atual) < 0
+                                    ? "var(--destructive)"
+                                    : "var(--foreground)",
+                              }}
+                            >
+                              {fmt(Number(a.saldo_atual))}
+                            </div>
+                            {a.limite_cheque_especial && Number(a.limite_cheque_especial) > 0 && (
+                              <div className="flex items-center gap-2 text-[11px]">
+                                {Number(a.saldo_atual) < 0 ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-destructive/40 text-destructive"
+                                  >
+                                    ⚠️ CE em uso
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">CE</Badge>
+                                )}
+                                <span className="text-muted-foreground">
+                                  {fmt(
+                                    Math.max(
+                                      0,
+                                      Number(a.limite_cheque_especial) +
+                                        Math.min(0, Number(a.saldo_atual)),
+                                    ),
+                                  )}{" "}
+                                  de {fmt(Number(a.limite_cheque_especial))} disponível
+                                </span>
+                              </div>
+                            )}
+                          </>
                         )}
-                        <div className="pt-2">
+                        <div className="pt-2 flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -462,6 +502,15 @@ function ContasPage() {
                           >
                             <Scale className="h-3.5 w-3.5" />
                             Ajustar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 h-7 text-xs"
+                            onClick={() => openEdit(a)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Editar
                           </Button>
                         </div>
                       </CardContent>
