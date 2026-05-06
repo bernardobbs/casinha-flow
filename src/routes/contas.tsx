@@ -94,9 +94,9 @@ function ContasPage() {
   const [familyId, setFamilyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [openCreate, setOpenCreate] = useState(false);
+  const [openForm, setOpenForm] = useState(false);
+  const [editAccount, setEditAccount] = useState<Partial<AccountFormData> | null>(null);
   const [openTransfer, setOpenTransfer] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [transferring, setTransferring] = useState(false);
 
   // Adjust balance
@@ -104,17 +104,6 @@ function ContasPage() {
   const [adjustValue, setAdjustValue] = useState("");
   const [adjustObs, setAdjustObs] = useState("Ajuste manual de saldo");
   const [adjusting, setAdjusting] = useState(false);
-
-  // Create form
-  const [form, setForm] = useState({
-    nome: "",
-    tipo: "corrente" as AccountType,
-    saldo_inicial: "",
-    cor: "#3b82f6",
-    limite_credito: "",
-    dia_fechamento: "",
-    dia_vencimento: "",
-  });
 
   // Transfer form
   const [transfer, setTransfer] = useState({
