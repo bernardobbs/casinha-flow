@@ -18,7 +18,7 @@ export function RecurringAutoGen() {
       if (!fid) return;
       try {
         await supabase.rpc("generate_recurring_transactions", { p_family_id: fid });
-        await supabase.rpc("generate_bills_reminders", { p_family_id: fid });
+        await supabase.rpc("generate_bills_reminders" as any, { p_family_id: fid });
         sessionStorage.setItem(FLAG, "1");
       } catch {
         /* silencioso */
