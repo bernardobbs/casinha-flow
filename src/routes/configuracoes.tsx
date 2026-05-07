@@ -89,6 +89,30 @@ function ConfigPage() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [resetOpen, setResetOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [resetting, setResetting] = useState(false);
+
+  const handleResetData = async () => {
+    if (!familyId || confirmText !== "CONFIRMAR") return;
+    setResetting(true);
+    const { data, error } = await supabase.rpc("reset_family_data", {
+      p_family_id: familyId,
+      p_keep_config: true,
+    });
+    setResetting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const apagados = (data as { apagados?: Record<string, number> } | null)?.apagados ?? {};
+    toast.success("✅ Dados resetados", {
+      description: `${apagados.transacoes ?? 0} transações, ${apagados.veiculos ?? 0} veículos removidos.`,
+    });
+    setResetOpen(false);
+    setConfirmText("");
+    navigate({ to: "/dashboard" });
+  };
 
   const [values, setValues] = useState<Record<SettingKey, string>>({
     family_name: "",
