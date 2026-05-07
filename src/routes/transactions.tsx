@@ -245,7 +245,7 @@ function parseBBExtrato(text: string): ParsedRow[] {
       amount: valor,
       type,
       category: classifyCategory(desc),
-      external_id: `${dateIso}|${desc.toLowerCase().trim().slice(0, 40)}|${valor.toFixed(2)}`,
+      external_id: `${dateIso}|${desc.toLowerCase().trim().slice(0, 40)}|${valor.toFixed(2)}|${rows.length}`,
       selected: true,
     });
   }
@@ -288,7 +288,7 @@ function parseCsv(text: string): ParsedRow[] {
       amount,
       type,
       category: classifyCategory(description),
-      external_id: `${date}|${description.toLowerCase().trim()}|${amount.toFixed(2)}`,
+      external_id: `${date}|${description.toLowerCase().trim()}|${amount.toFixed(2)}|${rows.length}`,
       selected: true,
     });
   }
