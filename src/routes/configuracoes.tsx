@@ -475,8 +475,67 @@ function ConfigPage() {
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
                   </Button>
                 </div>
+
+                <Separator className="my-6" />
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-destructive">
+                    Zona de perigo
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Apaga todas as transações, veículos, estoque e histórico
+                    da família. Categorias e orçamentos são mantidos.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setResetOpen(true)}
+                  >
+                    🗑️ Resetar dados da família
+                  </Button>
+                </div>
               </CardContent>
             </Card>
+
+            <AlertDialog
+              open={resetOpen}
+              onOpenChange={(o) => {
+                setResetOpen(o);
+                if (!o) setConfirmText("");
+              }}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Resetar dados da família?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Serão apagados: transações,
+                    recorrentes, veículos, estoque, histórico financeiro e alertas.
+                    Categorias e orçamentos serão mantidos.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-2">
+                  <Label>Digite CONFIRMAR para continuar:</Label>
+                  <Input
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="CONFIRMAR"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={resetting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={confirmText !== "CONFIRMAR" || resetting}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleResetData();
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Resetar"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
 
           {/* IA */}
