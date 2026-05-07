@@ -716,6 +716,7 @@ function TransactionsPage() {
               const { data } = await supabase.rpc("categorize_transaction", {
                 _family_id: familyId,
                 _description: r.description,
+                _dummy: false,
               });
               const sug = Array.isArray(data) && data.length > 0 ? data[0] : null;
               if (sug) {

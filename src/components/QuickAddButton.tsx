@@ -142,6 +142,7 @@ export function QuickAddButton() {
       const { data } = await supabase.rpc("categorize_transaction", {
         _family_id: familyId,
         _description: description,
+        _dummy: false,
       });
       const first = (data ?? [])[0];
       if (first) {
