@@ -15,6 +15,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -78,6 +89,33 @@ function ConfigPage() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [resetOpen, setResetOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [resetting, setResetting] = useState(false);
+
+  const handleResetData = async () => {
+    if (!familyId || confirmText !== "CONFIRMAR") return;
+    setResetting(true);
+    const { data, error } = await (supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>)("reset_family_data", {
+      p_family_id: familyId,
+      p_keep_config: true,
+    });
+    setResetting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const apagados = (data as { apagados?: Record<string, number> } | null)?.apagados ?? {};
+    toast.success("✅ Dados resetados", {
+      description: `${apagados.transacoes ?? 0} transações, ${apagados.veiculos ?? 0} veículos removidos.`,
+    });
+    setResetOpen(false);
+    setConfirmText("");
+    navigate({ to: "/dashboard" });
+  };
 
   const [values, setValues] = useState<Record<SettingKey, string>>({
     family_name: "",
@@ -437,8 +475,67 @@ function ConfigPage() {
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
                   </Button>
                 </div>
+
+                <Separator className="my-6" />
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-destructive">
+                    Zona de perigo
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Apaga todas as transações, veículos, estoque e histórico
+                    da família. Categorias e orçamentos são mantidos.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setResetOpen(true)}
+                  >
+                    🗑️ Resetar dados da família
+                  </Button>
+                </div>
               </CardContent>
             </Card>
+
+            <AlertDialog
+              open={resetOpen}
+              onOpenChange={(o) => {
+                setResetOpen(o);
+                if (!o) setConfirmText("");
+              }}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Resetar dados da família?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Serão apagados: transações,
+                    recorrentes, veículos, estoque, histórico financeiro e alertas.
+                    Categorias e orçamentos serão mantidos.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-2">
+                  <Label>Digite CONFIRMAR para continuar:</Label>
+                  <Input
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="CONFIRMAR"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={resetting}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={confirmText !== "CONFIRMAR" || resetting}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleResetData();
+                    }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Resetar"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
 
           {/* IA */}
