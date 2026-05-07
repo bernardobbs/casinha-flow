@@ -20,6 +20,8 @@ export const Route = createFileRoute("/contas-a-pagar")({
 type BillRow = {
   id: string; descricao: string; valor: number; data_vencimento: string;
   status: string; account_id: string | null; category_id: string | null;
+  origem?: "lembrete" | "fatura_cartao" | "parcela";
+  account_nome?: string | null;
 };
 type Acc = { id: string; nome: string };
 
@@ -57,12 +59,10 @@ function ContasAPagarPage() {
       try { await supabase.rpc("check_bills_alerts", { p_family_id: fid }); } catch { /* */ }
 
       const [b, a] = await Promise.all([
-        supabase.from("bills_reminders")
-          .select("id, descricao, valor, data_vencimento, status, account_id, category_id")
-          .eq("family_id", fid).neq("status", "pago").order("data_vencimento", { ascending: true }),
+        supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
         supabase.from("accounts").select("id, nome").eq("family_id", fid).eq("ativo", true).order("nome"),
       ]);
-      setRows((b.data ?? []) as BillRow[]);
+      setRows(((b.data ?? []) as BillRow[]));
       setAccounts((a.data ?? []) as Acc[]);
       setLoading(false);
     })();
@@ -70,9 +70,7 @@ function ContasAPagarPage() {
 
   const reload = async () => {
     if (!familyId) return;
-    const { data } = await supabase.from("bills_reminders")
-      .select("id, descricao, valor, data_vencimento, status, account_id, category_id")
-      .eq("family_id", familyId).neq("status", "pago").order("data_vencimento", { ascending: true });
+    const { data } = await supabase.rpc("get_previsao_mes" as any, { p_family_id: familyId });
     setRows((data ?? []) as BillRow[]);
   };
 
@@ -144,9 +142,13 @@ function ContasAPagarPage() {
               return (
                 <li key={b.id} className="py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{b.descricao}</p>
+                    <p className="font-medium truncate">
+                      {b.origem === "fatura_cartao" ? "💳 " : b.origem === "parcela" ? "📋 " : "🔄 "}
+                      {b.descricao}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Vence {new Date(b.data_vencimento + "T00:00:00").toLocaleDateString("pt-BR")} · {tag}
+                      {b.account_nome ? ` · ${b.account_nome}` : ""}
                     </p>
                   </div>
                   <span className="font-semibold text-sm whitespace-nowrap">{fmtBRL(Number(b.valor))}</span>

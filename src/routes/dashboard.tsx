@@ -98,14 +98,14 @@ function Dashboard() {
       // Check last stock weekly review
       const { data: lastRev } = await supabase
         .from("weekly_reviews")
-        .select("fechado_em, checklist")
+        .select("created_at, checklist")
         .eq("family_id", fid)
-        .order("fechado_em", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(20);
       const stockRev = (lastRev ?? []).find((r: any) => r?.checklist?.tipo === "estoque");
       if (!stockRev) setStockReviewOk(false);
       else {
-        const ageDays = (Date.now() - new Date((stockRev as any).fechado_em).getTime()) / 86400000;
+        const ageDays = (Date.now() - new Date((stockRev as any).created_at).getTime()) / 86400000;
         setStockReviewOk(ageDays <= 7);
       }
       setLoading(false);

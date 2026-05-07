@@ -173,6 +173,7 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
       const { data } = await supabase.rpc("categorize_transaction", {
         _family_id: familyId,
         _description: t.description,
+        _dummy: false,
       });
       const sug = Array.isArray(data) ? data[0] : data;
       if (sug?.category_id) {

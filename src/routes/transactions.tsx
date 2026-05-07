@@ -219,6 +219,39 @@ interface ParsedRow {
   dup_match?: { id: string; description: string; date: string; amount: number } | null;
 }
 
+function parseBBExtrato(text: string): ParsedRow[] {
+  const ignorar = ["Saldo Anterior", "Saldo do dia", "00/00/0000"];
+  const rows: ParsedRow[] = [];
+  const lines = text.split(/\r?\n/).slice(1);
+  for (const line of lines) {
+    if (ignorar.some((x) => line.includes(x))) continue;
+    const dateMatch = line.match(/^(\d{2}\/\d{2}\/\d{4})/);
+    if (!dateMatch) continue;
+    const valorMatch = line.match(/(-?[\d.]+,\d{2})\s+(Entrada|Saída)\s*$/);
+    if (!valorMatch) continue;
+    const [d, m, a] = dateMatch[1].split("/");
+    const dateIso = `${a}-${m}-${d}`;
+    let valor = parseFloat(valorMatch[1].replace(/\./g, "").replace(",", "."));
+    if (valorMatch[2] === "Saída" && valor > 0) valor = -valor;
+    if (valorMatch[2] === "Entrada" && valor < 0) valor = Math.abs(valor);
+    let desc = line.slice(dateMatch[1].length).trim();
+    desc = desc.replace(/-?[\d.]+,\d{2}\s+(Entrada|Saída)?\s*$/, "").trim();
+    desc = desc.replace(/\s+\d{5,}\s*$/, "").trim();
+    desc = desc.replace(/\s{2,}/g, " — ").replace(/^[— ]+|[— ]+$/g, "");
+    const type: TxType = valor >= 0 ? "income" : "expense";
+    rows.push({
+      date: dateIso,
+      description: desc.slice(0, 120),
+      amount: valor,
+      type,
+      category: classifyCategory(desc),
+      external_id: `${dateIso}|${desc.toLowerCase().trim().slice(0, 40)}|${valor.toFixed(2)}`,
+      selected: true,
+    });
+  }
+  return rows;
+}
+
 function parseCsv(text: string): ParsedRow[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length === 0) return [];
@@ -702,7 +735,8 @@ function TransactionsPage() {
     }
     try {
       const text = await file.text();
-      const rows = parseCsv(text);
+      const isBB = /Tipo Lan[cç]amento|Entrada\s*$|Saída\s*$/m.test(text);
+      const rows = isBB ? parseBBExtrato(text) : parseCsv(text);
       if (rows.length === 0) {
         toast.error("Nenhuma linha encontrada no CSV");
         return;
@@ -716,6 +750,7 @@ function TransactionsPage() {
               const { data } = await supabase.rpc("categorize_transaction", {
                 _family_id: familyId,
                 _description: r.description,
+                _dummy: false,
               });
               const sug = Array.isArray(data) && data.length > 0 ? data[0] : null;
               if (sug) {
