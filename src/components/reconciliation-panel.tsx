@@ -104,6 +104,17 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
       toast.error(error.message);
       return;
     }
+    // Aprender regra quando categoria é definida manualmente
+    if (patch.category_id) {
+      const tx = items.find(t => t.id === id);
+      if (tx?.description && familyId) {
+        void supabase.rpc("learn_categorization_rule" as any, {
+          _family_id: familyId,
+          _termo: tx.description.toLowerCase().slice(0, 60),
+          _category_id: patch.category_id,
+        });
+      }
+    }
     setItems((prev) =>
       prev
         .map((t) => (t.id === id ? { ...t, ...patch } : t))

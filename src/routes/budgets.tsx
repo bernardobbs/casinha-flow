@@ -36,6 +36,7 @@ interface Category {
   cor: string;
   icone: string;
   is_essencial: boolean;
+  parent_id?: string | null;
 }
 
 interface BudgetStatus {
@@ -131,7 +132,7 @@ function BudgetsPage() {
       const [{ data: cats }, { data: crisis }, { data: mems }] = await Promise.all([
         supabase
           .from("categories")
-          .select("id, nome, tipo, cor, icone, is_essencial")
+          .select("id, nome, tipo, cor, icone, is_essencial, parent_id")
           .eq("family_id", profile.family_id)
           .eq("tipo", "despesa")
           .order("is_essencial", { ascending: false })
@@ -170,6 +171,35 @@ function BudgetsPage() {
     }
     return { planejado, gasto, porMembro };
   }, [statuses]);
+
+  // Agrupar orçamentos por categoria pai
+  const statusesAgrupados = useMemo(() => {
+    const grupos: { pai: Category | null; itens: BudgetStatus[] }[] = [];
+    const pais = categories.filter(c => !c.parent_id);
+    const semPai: BudgetStatus[] = [];
+
+    for (const pai of pais) {
+      const filhos = statuses.filter(s => {
+        const cat = categories.find(c => c.id === s.category_id);
+        return cat?.parent_id === pai.id;
+      });
+      // Também incluir orçamentos da própria categoria pai
+      const doPai = statuses.filter(s => s.category_id === pai.id);
+      const todos = [...doPai, ...filhos];
+      if (todos.length > 0) grupos.push({ pai, itens: todos });
+    }
+
+    // Orçamentos sem categoria pai definida
+    statuses.forEach(s => {
+      const cat = categories.find(c => c.id === s.category_id);
+      if (!cat?.parent_id && !pais.find(p => p.id === s.category_id)) {
+        semPai.push(s);
+      }
+    });
+    if (semPai.length > 0) grupos.push({ pai: null, itens: semPai });
+
+    return grupos;
+  }, [statuses, categories]);
 
   const availableCategories = useMemo(
     () => categories.filter((c) => !statuses.some((s) => s.category_id === c.id)),
@@ -441,107 +471,94 @@ function BudgetsPage() {
                 Nenhum orçamento definido para este mês.
               </p>
             ) : (
-              <ul className="space-y-4">
-                {statuses.filter(s => filtroResp === "todos" || s.responsavel === filtroResp).map((s) => {
-                  const isSuspended = crisisActive && !s.is_essencial;
-                  const colorMap: Record<string, string> = {
-                    green: "#22c55e",
-                    yellow: "#f59e0b",
-                    red: "var(--destructive)",
-                    gray: "var(--muted-foreground)",
-                  };
-                  const barColor = isSuspended
-                    ? "var(--muted-foreground)"
-                    : colorMap[s.status_cor];
-                  const pct = Math.min(100, s.pct_atingido);
+              <div className="space-y-6">
+                {statusesAgrupados.map(({ pai, itens }) => {
+                  const itensFiltrados = itens.filter(s => filtroResp === "todos" || s.responsavel === filtroResp);
+                  if (itensFiltrados.length === 0) return null;
+                  const totalPai = itensFiltrados.reduce((acc, s) => ({
+                    planejado: acc.planejado + s.valor_planejado,
+                    gasto: acc.gasto + s.valor_gasto
+                  }), { planejado: 0, gasto: 0 });
+
                   return (
-                    <li key={s.category_id} className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-lg">{s.category_icone}</span>
-                          <span
-                            className={`font-medium ${isSuspended ? "line-through text-muted-foreground" : ""}`}
-                          >
-                            {s.category_nome}
-                          </span>
-                          {s.is_essencial && (
-                            <Badge variant="secondary" className="text-[10px] py-0 h-4">
-                              Essencial
-                            </Badge>
-                          )}
-                          {isSuspended && (
-                            <Badge
-                              className="text-[10px] py-0 h-4"
-                              style={{
-                                background: "var(--destructive)",
-                                color: "var(--destructive-foreground)",
-                              }}
-                            >
-                              Suspenso
-                            </Badge>
-                          )}
-                          {s.responsavel && (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] py-0 h-4"
-                              style={{
-                                borderColor: s.responsavel === 'Bernardo' ? '#0EA5E9' : s.responsavel === 'Daniella' ? '#F472B6' : '#22C55E',
-                                color: s.responsavel === 'Bernardo' ? '#0EA5E9' : s.responsavel === 'Daniella' ? '#F472B6' : '#22C55E',
-                              }}
-                            >
-                              {membros.find(m => m.nome === s.responsavel)?.icone ?? '👤'} {s.responsavel}
-                            </Badge>
-                          )}
+                    <div key={pai?.id ?? 'sem-pai'}>
+                      {pai && (
+                        <div className="flex items-center justify-between mb-2 px-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">{pai.icone}</span>
+                            <span className="font-semibold text-sm">{pai.nome}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatCurrency(totalPai.gasto)} / {formatCurrency(totalPai.planejado)}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            defaultValue={s.valor_planejado}
-                            className="w-28 h-8 text-right"
-                            onBlur={(e) => {
-                              const v = Number(e.target.value.replace(",", "."));
-                              if (Number.isFinite(v) && v !== s.valor_planejado) {
-                                void handleUpdate(s.category_id, v);
-                              }
-                            }}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDelete(s.budget_id)}
-                            aria-label="Remover"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div
-                        className="h-2 rounded-full overflow-hidden"
-                        style={{ background: "color-mix(in oklab, var(--muted-foreground) 15%, transparent)" }}
-                      >
-                        <div
-                          className="h-full transition-all"
-                          style={{
-                            width: `${pct}%`,
-                            background: barColor,
-                            opacity: isSuspended ? 0.5 : 1,
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>
-                          {formatCurrency(s.valor_gasto)} / {formatCurrency(s.valor_planejado)}
-                        </span>
-                        <span style={{ color: isSuspended ? undefined : barColor }}>
-                          {s.pct_atingido.toFixed(0)}%
-                        </span>
-                      </div>
-                    </li>
+                      )}
+                      <ul className="space-y-3 pl-2 border-l-2" style={{ borderColor: pai?.cor ?? 'var(--border)' }}>
+                        {itensFiltrados.map((s) => {
+                          const isSuspended = crisisActive && !s.is_essencial;
+                          const colorMap: Record<string, string> = {
+                            green: "#22c55e", yellow: "#f59e0b",
+                            red: "var(--destructive)", gray: "var(--muted-foreground)",
+                          };
+                          const barColor = isSuspended ? "var(--muted-foreground)" : colorMap[s.status_cor];
+                          const pct = Math.min(100, s.pct_atingido);
+                          // Mostrar nome curto (sem prefixo do pai)
+                          const nomeExibido = pai ? s.category_nome.replace(`${pai.nome} — `, '') : s.category_nome;
+                          return (
+                            <li key={s.category_id} className="space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-base">{s.category_icone}</span>
+                                  <span className={`text-sm font-medium ${isSuspended ? "line-through text-muted-foreground" : ""}`}>
+                                    {nomeExibido}
+                                  </span>
+                                  {s.is_essencial && (
+                                    <Badge variant="secondary" className="text-[10px] py-0 h-4">Essencial</Badge>
+                                  )}
+                                  {isSuspended && (
+                                    <Badge className="text-[10px] py-0 h-4" style={{ background: "var(--destructive)", color: "var(--destructive-foreground)" }}>
+                                      Suspenso
+                                    </Badge>
+                                  )}
+                                  {s.responsavel && (
+                                    <Badge variant="outline" className="text-[10px] py-0 h-4" style={{
+                                      borderColor: membros.find(m => m.nome === s.responsavel)?.cor ?? '#6366F1',
+                                      color: membros.find(m => m.nome === s.responsavel)?.cor ?? '#6366F1',
+                                    }}>
+                                      {membros.find(m => m.nome === s.responsavel)?.icone ?? '👤'} {s.responsavel}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number" step="0.01"
+                                    defaultValue={s.valor_planejado}
+                                    className="w-28 h-8 text-right"
+                                    onBlur={(e) => {
+                                      const v = Number(e.target.value.replace(",", "."));
+                                      if (Number.isFinite(v) && v !== s.valor_planejado) void handleUpdate(s.category_id, v);
+                                    }}
+                                  />
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(s.budget_id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "color-mix(in oklab, var(--muted-foreground) 15%, transparent)" }}>
+                                <div className="h-full transition-all" style={{ width: `${pct}%`, background: barColor, opacity: isSuspended ? 0.5 : 1 }} />
+                              </div>
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>{formatCurrency(s.valor_gasto)} / {formatCurrency(s.valor_planejado)}</span>
+                                <span style={{ color: isSuspended ? undefined : barColor }}>{s.pct_atingido.toFixed(0)}%</span>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             )}
           </CardContent>
         </Card>
