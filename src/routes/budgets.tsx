@@ -49,6 +49,7 @@ interface BudgetStatus {
   valor_gasto: number;
   pct_atingido: number;
   status_cor: "green" | "yellow" | "red" | "gray";
+  responsavel?: string | null;
 }
 
 const formatCurrency = (n: number) =>
@@ -85,6 +86,8 @@ function BudgetsPage() {
 
   const [newCategoryId, setNewCategoryId] = useState<string>("");
   const [newAmount, setNewAmount] = useState<string>("");
+  const [newResponsavel, setNewResponsavel] = useState<string>("");
+  const [membros, setMembros] = useState<{id: string; nome: string; icone: string; cor: string}[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -124,7 +127,7 @@ function BudgetsPage() {
       }
       setFamilyId(profile.family_id);
 
-      const [{ data: cats }, { data: crisis }] = await Promise.all([
+      const [{ data: cats }, { data: crisis }, { data: mems }] = await Promise.all([
         supabase
           .from("categories")
           .select("id, nome, tipo, cor, icone, is_essencial")
@@ -138,9 +141,15 @@ function BudgetsPage() {
           .eq("family_id", profile.family_id)
           .eq("ativo", true)
           .maybeSingle(),
+        supabase
+          .from("family_members")
+          .select("id, nome, icone, cor")
+          .eq("family_id", profile.family_id)
+          .order("nome"),
       ]);
       setCategories((cats ?? []) as Category[]);
       setCrisisActive(!!crisis);
+      setMembros((mems ?? []) as {id: string; nome: string; icone: string; cor: string}[]);
       await loadStatuses(profile.family_id, mes);
       setLoading(false);
     })();
@@ -177,6 +186,7 @@ function BudgetsPage() {
         category_id: newCategoryId,
         mes,
         valor_planejado: valor,
+        responsavel: newResponsavel || null,
       },
       { onConflict: "family_id,category_id,mes" },
     );
@@ -187,6 +197,7 @@ function BudgetsPage() {
     toast.success("Orçamento salvo");
     setNewCategoryId("");
     setNewAmount("");
+    setNewResponsavel("");
     await loadStatuses(familyId, mes);
   };
 
@@ -359,6 +370,22 @@ function BudgetsPage() {
                   onChange={(e) => setNewAmount(e.target.value)}
                 />
               </div>
+              <div>
+                <Label className="text-xs">Responsável</Label>
+                <Select value={newResponsavel} onValueChange={setNewResponsavel}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Quem paga?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {membros.map((m) => (
+                      <SelectItem key={m.id} value={m.nome}>
+                        {m.icone} {m.nome}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="Ambos">👫 Ambos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-end">
                 <Button onClick={handleAdd} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
@@ -418,6 +445,18 @@ function BudgetsPage() {
                               }}
                             >
                               Suspenso
+                            </Badge>
+                          )}
+                          {s.responsavel && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 h-4"
+                              style={{
+                                borderColor: s.responsavel === 'Bernardo' ? '#0EA5E9' : s.responsavel === 'Daniella' ? '#F472B6' : '#22C55E',
+                                color: s.responsavel === 'Bernardo' ? '#0EA5E9' : s.responsavel === 'Daniella' ? '#F472B6' : '#22C55E',
+                              }}
+                            >
+                              {membros.find(m => m.nome === s.responsavel)?.icone ?? '👤'} {s.responsavel}
                             </Badge>
                           )}
                         </div>
