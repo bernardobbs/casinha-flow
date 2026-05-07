@@ -96,7 +96,10 @@ function ConfigPage() {
   const handleResetData = async () => {
     if (!familyId || confirmText !== "CONFIRMAR") return;
     setResetting(true);
-    const { data, error } = await supabase.rpc("reset_family_data", {
+    const { data, error } = await (supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>)("reset_family_data", {
       p_family_id: familyId,
       p_keep_config: true,
     });
