@@ -73,10 +73,13 @@ interface Rule {
 }
 
 interface MemberRow {
+  id?: string;
   user_id: string;
   role: "admin" | "member";
   full_name: string | null;
   email: string | null;
+  icone?: string;
+  cor?: string;
 }
 
 function ConfigPage() {
@@ -185,17 +188,19 @@ function ConfigPage() {
   }, [user]);
 
   const loadMembers = async (fid: string) => {
-    const { data: rows } = await supabase.from("family_members")
-      .select("user_id, role").eq("family_id", fid);
-    const ids = (rows ?? []).map(r => r.user_id);
-    if (ids.length === 0) { setMembers([]); return; }
-    const { data: profs } = await supabase.from("profiles")
-      .select("id, full_name, email").in("id", ids);
-    const map = new Map((profs ?? []).map(p => [p.id, p]));
-    setMembers((rows ?? []).map(r => ({
-      user_id: r.user_id, role: r.role,
-      full_name: map.get(r.user_id)?.full_name ?? null,
-      email: map.get(r.user_id)?.email ?? null,
+    const { data: rows } = await supabase
+      .from("family_members")
+      .select("id, user_id, nome, icone, cor, role, tipo")
+      .eq("family_id", fid)
+      .order("nome");
+    setMembers((rows ?? []).map((r: any) => ({
+      user_id: r.user_id,
+      role: r.role,
+      full_name: r.nome ?? null,
+      email: r.tipo === 'auth' ? r.user_id : null,
+      icone: r.icone ?? '👤',
+      cor: r.cor ?? '#6366F1',
+      id: r.id,
     })));
   };
 
@@ -372,12 +377,20 @@ function ConfigPage() {
                 <ul className="divide-y divide-border">
                   {members.map((m) => (
                     <li key={m.user_id} className="py-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">
-                          {m.full_name ?? "Sem nome"}
-                          {m.user_id === user.id && <span className="text-muted-foreground font-normal"> (você)</span>}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0"
+                          style={{ background: m.cor ?? '#6366F1' + '22', border: `2px solid ${m.cor ?? '#6366F1'}` }}
+                        >
+                          {m.icone ?? '👤'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">
+                            {m.full_name ?? "Sem nome"}
+                            {m.user_id === user.id && <span className="text-muted-foreground font-normal"> (você)</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{m.role === 'admin' ? 'Administrador' : 'Membro'}</p>
+                        </div>
                       </div>
                       <Badge variant={m.role === "admin" ? "default" : "secondary"} className="gap-1 shrink-0">
                         {m.role === "admin" && <Crown className="h-3 w-3" />}
@@ -387,11 +400,29 @@ function ConfigPage() {
                   ))}
                 </ul>
                 <div className="border-t pt-4 space-y-2">
-                  <Label>Convidar novo membro</Label>
+                  <Label>Adicionar membro local</Label>
+                  <p className="text-xs text-muted-foreground">Membros locais não precisam de conta para aparecer como responsáveis no orçamento.</p>
                   <div className="flex gap-2">
-                    <Input type="email" placeholder="email@exemplo.com" value={inviteEmail}
+                    <Input type="text" placeholder="Nome do membro (ex: Daniella)" value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)} />
-                    <Button onClick={handleInviteMember}><UserPlus className="h-4 w-4 mr-1" />Convidar</Button>
+                    <Button onClick={async () => {
+                      const nome = inviteEmail.trim();
+                      if (!nome) { toast.error("Informe o nome"); return; }
+                      if (!familyId) return;
+                      const { error } = await supabase.from("family_members").insert({
+                        family_id: familyId,
+                        user_id: crypto.randomUUID(),
+                        nome,
+                        icone: '👤',
+                        cor: '#6366F1',
+                        role: 'member',
+                        tipo: 'local',
+                      });
+                      if (error) { toast.error(error.message); return; }
+                      toast.success(`✅ ${nome} adicionado à família`);
+                      setInviteEmail("");
+                      await loadMembers(familyId);
+                    }}><UserPlus className="h-4 w-4 mr-1" />Adicionar</Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Será gerado um link de cadastro. Envie ao convidado para ele se juntar à família.

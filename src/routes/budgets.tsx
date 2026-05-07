@@ -88,6 +88,7 @@ function BudgetsPage() {
   const [newAmount, setNewAmount] = useState<string>("");
   const [newResponsavel, setNewResponsavel] = useState<string>("");
   const [membros, setMembros] = useState<{id: string; nome: string; icone: string; cor: string}[]>([]);
+  const [filtroResp, setFiltroResp] = useState<string>("todos");
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -158,11 +159,16 @@ function BudgetsPage() {
   const totals = useMemo(() => {
     let planejado = 0;
     let gasto = 0;
+    const porMembro: Record<string, { planejado: number; gasto: number }> = {};
     for (const s of statuses) {
       planejado += s.valor_planejado;
       gasto += s.valor_gasto;
+      const resp = s.responsavel ?? 'Sem responsável';
+      if (!porMembro[resp]) porMembro[resp] = { planejado: 0, gasto: 0 };
+      porMembro[resp].planejado += s.valor_planejado;
+      porMembro[resp].gasto += s.valor_gasto;
     }
-    return { planejado, gasto };
+    return { planejado, gasto, porMembro };
   }, [statuses]);
 
   const availableCategories = useMemo(
@@ -322,6 +328,33 @@ function BudgetsPage() {
           </Card>
         </div>
 
+        {/* Totais por responsável */}
+        {membros.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFiltroResp("todos")}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${filtroResp === "todos" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+            >
+              Todos
+            </button>
+            {membros.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setFiltroResp(filtroResp === m.nome ? "todos" : m.nome)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition flex items-center gap-1 ${filtroResp === m.nome ? "text-white" : "bg-muted text-muted-foreground"}`}
+                style={filtroResp === m.nome ? { background: m.cor } : {}}
+              >
+                {m.icone} {m.nome}
+                {totals.porMembro[m.nome] && (
+                  <span className="opacity-70 text-xs ml-1">
+                    {formatCurrency(totals.porMembro[m.nome].planejado)}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Add */}
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
           <CardHeader>
@@ -409,7 +442,7 @@ function BudgetsPage() {
               </p>
             ) : (
               <ul className="space-y-4">
-                {statuses.map((s) => {
+                {statuses.filter(s => filtroResp === "todos" || s.responsavel === filtroResp).map((s) => {
                   const isSuspended = crisisActive && !s.is_essencial;
                   const colorMap: Record<string, string> = {
                     green: "#22c55e",
