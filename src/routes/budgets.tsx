@@ -151,7 +151,7 @@ function BudgetsPage() {
       ]);
       setCategories((cats ?? []) as Category[]);
       setCrisisActive(!!crisis);
-      setMembros((mems ?? []) as {id: string; nome: string; icone: string; cor: string}[]);
+      setMembros((mems ?? []) as unknown as {id: string; nome: string; icone: string; cor: string}[]);
       await loadStatuses(profile.family_id, mes);
       setLoading(false);
     })();
