@@ -1096,7 +1096,7 @@ function TransactionsPage() {
       let detectedName: string | null = null;
       for (const rule of detectKeywords) {
         if (rule.match.test(fname)) {
-          const acc = accounts.find((a) =>
+          const acc = accsLocal.find((a) =>
             rule.hints.some((h) => a.nome.toLowerCase().includes(h))
           );
           if (acc) {
@@ -1106,6 +1106,12 @@ function TransactionsPage() {
           break;
         }
       }
+      // Se só tem uma conta, selecionar automaticamente
+      if (!detectedId && accsLocal.length === 1) {
+        detectedId = accsLocal[0].id;
+        detectedName = accsLocal[0].nome;
+      }
+      importLog(detectedId ? 'info' : 'warn', detectedId ? `Conta detectada: ${detectedName}` : `Conta não detectada — ${accsLocal.length} disponíveis`);
       setImportAccountId(detectedId);
       setImportAutoDetected(detectedName);
       setImportLogs(getImportLogs());
