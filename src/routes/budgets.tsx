@@ -151,7 +151,7 @@ function BudgetsPage() {
       ]);
       setCategories((cats ?? []) as Category[]);
       setCrisisActive(!!crisis);
-      setMembros((mems ?? []) as {id: string; nome: string; icone: string; cor: string}[]);
+      setMembros((mems ?? []) as unknown as {id: string; nome: string; icone: string; cor: string}[]);
       await loadStatuses(profile.family_id, mes);
       setLoading(false);
     })();
@@ -216,7 +216,7 @@ function BudgetsPage() {
       toast.error("Informe um valor válido");
       return;
     }
-    const { error } = await supabase.from("budgets").upsert(
+    const { error } = await (supabase.from("budgets") as any).upsert(
       {
         family_id: familyId,
         category_id: newCategoryId,
