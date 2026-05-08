@@ -252,6 +252,146 @@ function parseBBExtrato(text: string): ParsedRow[] {
   return rows;
 }
 
+function parseNubank(text: string): ParsedRow[] {
+  // Nubank CSV: Data,Valor,Identificador,Descrição
+  // ou: date,title,amount
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length === 0) return [];
+
+  const header = lines[0].toLowerCase();
+  const cols = splitCsvLine(header);
+
+  // Detectar colunas
+  const idxDate = cols.findIndex(c => c.includes('data') || c === 'date');
+  const idxDesc = cols.findIndex(c => c.includes('descri') || c.includes('title') || c.includes('estabelec'));
+  const idxAmount = cols.findIndex(c => c.includes('valor') || c === 'amount');
+
+  if (idxDate < 0 || idxDesc < 0 || idxAmount < 0) return parseCsv(text);
+
+  const rows: ParsedRow[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = splitCsvLine(lines[i]);
+    if (c.length < 3) continue;
+    const date = parseDate(c[idxDate]);
+    const description = c[idxDesc]?.trim();
+    const amount = parseAmount(c[idxAmount]);
+    if (!date || !description || amount === null) continue;
+
+    // Nubank: despesas são positivas no CSV mas são saídas
+    // Créditos têm valor negativo
+    const type: TxType = amount <= 0 ? "income" : "expense";
+    const valor = amount <= 0 ? Math.abs(amount) : -amount;
+
+    rows.push({
+      date, description,
+      amount: valor,
+      type,
+      category: classifyCategory(description),
+      external_id: `${date}|${description.toLowerCase().slice(0, 40)}|${valor.toFixed(2)}|${rows.length}`,
+      selected: true,
+    });
+  }
+  return rows;
+}
+
+function parseInter(text: string): ParsedRow[] {
+  // Inter CSV: Data;Tipo;Descrição;Valor
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length === 0) return [];
+
+  const header = lines[0].toLowerCase();
+  const sep = header.includes(';') ? ';' : ',';
+  const cols = header.split(sep).map(c => c.trim().replace(/"/g, ''));
+
+  const idxDate = cols.findIndex(c => c.includes('data'));
+  const idxTipo = cols.findIndex(c => c.includes('tipo') || c.includes('categoria'));
+  const idxDesc = cols.findIndex(c => c.includes('descri') || c.includes('hist'));
+  const idxAmount = cols.findIndex(c => c.includes('valor'));
+
+  if (idxDate < 0 || idxAmount < 0) return parseCsv(text);
+
+  const rows: ParsedRow[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(sep).map(x => x.trim().replace(/"/g, ''));
+    if (c.length < 3) continue;
+    const date = parseDate(c[idxDate]);
+    const description = idxDesc >= 0 ? c[idxDesc] : c[idxTipo] ?? '';
+    const amount = parseAmount(c[idxAmount]);
+    if (!date || !description || amount === null) continue;
+
+    const tipo = idxTipo >= 0 ? c[idxTipo].toLowerCase() : '';
+    const isDebito = tipo.includes('debito') || tipo.includes('saída') || tipo.includes('pgto');
+    const type: TxType = isDebito ? "expense" : amount < 0 ? "expense" : "income";
+    const valor = Math.abs(amount) * (type === "expense" ? -1 : 1);
+
+    rows.push({
+      date, description: description.slice(0, 120),
+      amount: valor, type,
+      category: classifyCategory(description),
+      external_id: `${date}|${description.toLowerCase().slice(0, 40)}|${valor.toFixed(2)}|${rows.length}`,
+      selected: true,
+    });
+  }
+  return rows;
+}
+
+function parseCaixaExtrato(text: string): ParsedRow[] {
+  // Caixa: formato similar ao BB com largura fixa
+  // Data       Histórico                          Docto     Crédito      Débito    Saldo
+  const lines = text.split(/\r?\n/).slice(1);
+  const rows: ParsedRow[] = [];
+
+  for (const line of lines) {
+    if (!line.trim() || line.includes('Saldo') || line.includes('Data')) continue;
+    const dateMatch = line.match(/^(\d{2}\/\d{2}\/\d{4})/);
+    if (!dateMatch) continue;
+
+    // Tentar capturar crédito e débito
+    const numeros = [...line.matchAll(/(\d{1,3}(?:\.\d{3})*,\d{2})/g)].map(m => m[1]);
+    if (numeros.length < 2) continue;
+
+    const [d, m, a] = dateMatch[1].split('/');
+    const dateIso = `${a}-${m}-${d}`;
+
+    // Extrair descrição
+    let desc = line.slice(10, 50).trim();
+    desc = desc.replace(/\s{2,}/g, ' ').trim();
+
+    // Último número é saldo, penúltimo é débito se negativo, antepenúltimo é crédito
+    const credito = parseFloat(numeros[numeros.length - 3]?.replace(/\./g, '').replace(',', '.') ?? '0');
+    const debito = parseFloat(numeros[numeros.length - 2]?.replace(/\./g, '').replace(',', '.') ?? '0');
+
+    const valor = credito > 0 ? credito : debito > 0 ? -debito : 0;
+    if (valor === 0) continue;
+
+    const type: TxType = valor > 0 ? "income" : "expense";
+
+    rows.push({
+      date: dateIso, description: desc.slice(0, 120),
+      amount: valor, type,
+      category: classifyCategory(desc),
+      external_id: `${dateIso}|${desc.toLowerCase().slice(0, 40)}|${valor.toFixed(2)}|${rows.length}`,
+      selected: true,
+    });
+  }
+  return rows;
+}
+
+// Detectar banco/formato automaticamente
+function detectFormat(text: string, filename: string): 'bb' | 'nubank' | 'inter' | 'caixa' | 'csv' {
+  const lower = text.toLowerCase().slice(0, 500);
+  const fname = filename.toLowerCase();
+
+  if (/tipo lan[cç]amento|entrada\s*$|saída\s*$/m.test(text)) return 'bb';
+  if (fname.includes('nubank') || lower.includes('nubank') || lower.includes('nu pagamentos')) return 'nubank';
+  if (fname.includes('inter') || lower.includes('banco inter')) return 'inter';
+  if (fname.includes('caixa') || lower.includes('caixa economica')) return 'caixa';
+  if (/data.*valor.*ident|identificador/i.test(text.slice(0, 200))) return 'nubank';
+  if (/data.*tipo.*descri.*valor/i.test(text.slice(0, 200))) return 'inter';
+
+  return 'csv';
+}
+
 function parseCsv(text: string): ParsedRow[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length === 0) return [];
@@ -735,12 +875,20 @@ function TransactionsPage() {
     }
     try {
       const text = await file.text();
-      const isBB = /Tipo Lan[cç]amento|Entrada\s*$|Saída\s*$/m.test(text);
-      const rows = isBB ? parseBBExtrato(text) : parseCsv(text);
+      const formato = detectFormat(text, file.name);
+      let rows: ParsedRow[];
+      switch (formato) {
+        case 'bb':     rows = parseBBExtrato(text); break;
+        case 'nubank': rows = parseNubank(text); break;
+        case 'inter':  rows = parseInter(text); break;
+        case 'caixa':  rows = parseCaixaExtrato(text); break;
+        default:       rows = parseCsv(text);
+      }
       if (rows.length === 0) {
-        toast.error("Nenhuma linha encontrada no CSV");
+        toast.error(`Nenhuma linha encontrada (formato: ${formato.toUpperCase()})`);
         return;
       }
+      toast.info(`📄 ${formato.toUpperCase()} detectado — ${rows.length} transações`);
       // Aplica sugestão via categorize_transaction para cada linha válida
       if (familyId) {
         const enriched = await Promise.all(
