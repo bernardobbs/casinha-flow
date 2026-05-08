@@ -206,12 +206,30 @@ function ConfigPage() {
   };
 
   const handleInviteMember = async () => {
-    const email = inviteEmail.trim().toLowerCase();
-    if (!email || !email.includes("@")) { toast.error("E-mail inválido"); return; }
-    const link = `${window.location.origin}/auth?invite=${encodeURIComponent(email)}`;
-    try { await navigator.clipboard.writeText(link); } catch { /* noop */ }
-    toast.success("Link de convite copiado! Envie ao novo membro.");
+    const nome = inviteEmail.trim();
+    if (!nome) { toast.error("Informe o nome do membro"); return; }
+    if (!familyId) return;
+
+    // Criar convite no banco
+    const { data: invite, error } = await supabase
+      .from("family_invites" as any)
+      .insert({ family_id: familyId, invited_by: user?.id, email: nome })
+      .select("token")
+      .single();
+
+    if (error) { toast.error("Erro ao criar convite"); return; }
+
+    const token = (invite as any)?.token;
+    const link = `${window.location.origin}/auth?invite=${token}`;
+
+    // Copiar para clipboard
+    try { await navigator.clipboard.writeText(link); } catch {}
+
+    toast.success(`✅ Link de convite para ${nome} copiado!`, {
+      description: "Válido por 7 dias. Envie pelo WhatsApp ou email.",
+    });
     setInviteEmail("");
+    await loadMembers(familyId);
   };
 
   const loadRules = async (fid: string) => {
@@ -394,33 +412,23 @@ function ConfigPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="border-t pt-4 space-y-2">
-                  <Label>Adicionar membro local</Label>
-                  <p className="text-xs text-muted-foreground">Membros locais não precisam de conta para aparecer como responsáveis no orçamento.</p>
+                <div className="border-t pt-4 space-y-3">
+                  <div>
+                    <Label>Convidar membro</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Gera um link válido por 7 dias. A pessoa cria a conta e entra na sua família automaticamente.
+                    </p>
+                  </div>
                   <div className="flex gap-2">
-                    <Input type="text" placeholder="Nome do membro (ex: Daniella)" value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)} />
-                    <Button onClick={async () => {
-                      const nome = inviteEmail.trim();
-                      if (!nome) { toast.error("Informe o nome"); return; }
-                      if (!familyId) return;
-                      const { error } = await (supabase.from("family_members") as any).insert({
-                        family_id: familyId,
-                        user_id: crypto.randomUUID(),
-                        nome,
-                        icone: '👤',
-                        cor: '#6366F1',
-                        role: 'member',
-                        tipo: 'local',
-                      });
-                      if (error) { toast.error(error.message); return; }
-                      toast.success(`✅ ${nome} adicionado à família`);
-                      setInviteEmail("");
-                      await loadMembers(familyId);
-                    }}><UserPlus className="h-4 w-4 mr-1" />Adicionar</Button>
+                    <Input type="text" placeholder="Nome (ex: Daniella)" value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleInviteMember()} />
+                    <Button onClick={handleInviteMember}>
+                      <UserPlus className="h-4 w-4 mr-1" />Convidar
+                    </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Será gerado um link de cadastro. Envie ao convidado para ele se juntar à família.
+                    💡 Link copiado automaticamente — envie pelo WhatsApp ou email.
                   </p>
                 </div>
               </CardContent>

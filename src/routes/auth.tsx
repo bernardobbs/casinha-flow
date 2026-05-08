@@ -64,28 +64,53 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<View>("auth");
   const [passwordDone, setPasswordDone] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteAccepted, setInviteAccepted] = useState(false);
+
+  // Aceitar convite após autenticação
+  const acceptInvite = async (token: string) => {
+    const { data, error } = await supabase.rpc("accept_invite" as any, { p_token: token });
+    if (error) {
+      toast.error("Convite inválido ou expirado");
+      return false;
+    }
+    const result = data as any;
+    toast.success(`✅ Bem-vindo à família ${result.family_name}!`);
+    setInviteAccepted(true);
+    return true;
+  };
 
   useEffect(() => {
-    // Detectar recovery token na URL hash (Supabase redireciona para /auth#type=recovery)
+    // Detectar recovery token
     const hash = window.location.hash;
     if (hash.includes("type=recovery") || hash.includes("type=email_change")) {
       setView("new-password");
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate({ to: "/dashboard" });
+    // Detectar token de convite na URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("invite");
+    if (token) setInviteToken(token);
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        if (token) {
+          await acceptInvite(token);
+        }
+        navigate({ to: "/dashboard" });
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setView("new-password");
-        return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "PASSWORD_RECOVERY") { setView("new-password"); return; }
+      if (session && event !== "PASSWORD_RECOVERY") {
+        if (inviteToken) await acceptInvite(inviteToken);
+        navigate({ to: "/dashboard" });
       }
-      if (session && event !== "PASSWORD_RECOVERY") navigate({ to: "/dashboard" });
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, inviteToken]);
 
   // ── Nova senha (recovery) ─────────────────────────────────
   const handleNewPassword = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -339,7 +364,18 @@ function AuthPage() {
           </CardHeader>
           <CardContent className="space-y-4">
 
-            {/* Botão Google */}
+            {/* Banner de convite */}
+            {inviteToken && (
+              <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-3 flex items-start gap-2">
+                <span className="text-lg">🎉</span>
+                <div>
+                  <p className="text-sm font-medium">Você foi convidado!</p>
+                  <p className="text-xs text-muted-foreground">
+                    Crie sua conta ou entre para se juntar à família.
+                  </p>
+                </div>
+              </div>
+            )}
             <Button variant="outline" className="w-full gap-2 h-11" onClick={handleGoogle} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
               Continuar com Google
