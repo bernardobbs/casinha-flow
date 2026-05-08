@@ -1173,7 +1173,7 @@ function TransactionsPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.txt,text/csv,text/plain"
               className="hidden"
               onChange={handleFileChange}
             />
