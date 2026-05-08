@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -439,7 +440,7 @@ function parseCsv(text: string): ParsedRow[] {
 function TransactionsPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId } = useFamily();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -528,22 +529,10 @@ function TransactionsPage() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !familyId) return;
 
     const load = async () => {
       setLoading(true);
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("family_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!profile?.family_id) {
-        setLoading(false);
-        return;
-      }
-      setFamilyId(profile.family_id);
 
       const [{ data: txs, error: txErr }, { data: cats, error: catErr }, { data: crisis }, { data: accs }] = await Promise.all([
         supabase
@@ -589,7 +578,7 @@ function TransactionsPage() {
     };
 
     load();
-  }, [user]);
+  }, [user, familyId]);
 
   const totals = useMemo(() => {
     let income = 0;

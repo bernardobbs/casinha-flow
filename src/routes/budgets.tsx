@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,7 +77,6 @@ const getMonthOptions = (): string[] => {
 function BudgetsPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [statuses, setStatuses] = useState<BudgetStatus[]>([]);
@@ -115,48 +115,40 @@ function BudgetsPage() {
     );
   }, []);
 
+  const { familyId } = useFamily();
+
   useEffect(() => {
-    if (!user) return;
+    if (!user || !familyId) return;
     (async () => {
       setLoading(true);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("family_id")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!profile?.family_id) {
-        setLoading(false);
-        return;
-      }
-      setFamilyId(profile.family_id);
 
       const [{ data: cats }, { data: crisis }, { data: mems }] = await Promise.all([
         supabase
           .from("categories")
           .select("id, nome, tipo, cor, icone, is_essencial, parent_id")
-          .eq("family_id", profile.family_id)
+          .eq("family_id", familyId)
           .eq("tipo", "despesa")
           .order("is_essencial", { ascending: false })
           .order("nome"),
         supabase
           .from("crisis_events")
           .select("id")
-          .eq("family_id", profile.family_id)
+          .eq("family_id", familyId)
           .eq("ativo", true)
           .maybeSingle(),
         supabase
           .from("family_members")
           .select("id, nome, icone, cor")
-          .eq("family_id", profile.family_id)
+          .eq("family_id", familyId)
           .order("nome"),
       ]);
       setCategories((cats ?? []) as Category[]);
       setCrisisActive(!!crisis);
       setMembros((mems ?? []) as unknown as {id: string; nome: string; icone: string; cor: string}[]);
-      await loadStatuses(profile.family_id, mes);
+      await loadStatuses(familyId, mes);
       setLoading(false);
     })();
-  }, [user, mes, loadStatuses]);
+  }, [user, familyId, mes, loadStatuses]);
 
   const totals = useMemo(() => {
     let planejado = 0;
