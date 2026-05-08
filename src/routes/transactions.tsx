@@ -381,39 +381,48 @@ function parseCaixaExtrato(text: string): ParsedRow[] {
 }
 
 function parseBBCSV(text: string): ParsedRow[] {
-  // Formato: "Data","Lançamento","Detalhes","Nº documento","Valor","Tipo Lançamento"
   const ignorar = ['Saldo Anterior', 'S A L D O', 'SALDO'];
   const rows: ParsedRow[] = [];
   const lines = text.split(/\r?\n/).filter(l => l.trim());
 
   for (let i = 1; i < lines.length; i++) {
-    // Parse CSV com aspas
-    const cols = lines[i].match(/("(?:[^"]|"")*"|[^,]*)/g)
-      ?.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim()) ?? [];
+    // Extrair colunas entre aspas (robusto a encoding)
+    const cols = lines[i].match(/"([^"]*)"/g)
+      ?.map(c => c.slice(1, -1).trim()) ?? [];
 
-    if (cols.length < 6) continue;
-    const lancamento = cols[1]?.trim() ?? '';
+    if (cols.length < 5) continue;
+
+    const dataRaw = cols[0];
+    const lancamento = cols[1];
+    const detalhe = cols[2];
+    // cols[3] = nº documento — ignorar
+    const valorRaw = cols[4];
+    const tipoLanc = cols[5] ?? '';
+
+    // Ignorar linhas de saldo
     if (ignorar.some(x => lancamento.includes(x))) continue;
-    const tipoLanc = cols[5]?.trim() ?? '';
+    // Ignorar linhas sem tipo (saldo inicial/final)
     if (!tipoLanc) continue;
 
-    const dataRaw = cols[0]?.trim();
-    const valorStr = (cols[4] ?? '').trim().replace(/\./g, '').replace(',', '.');
-    const valor = parseFloat(valorStr);
-    if (!dataRaw || isNaN(valor)) continue;
+    // Parse data DD/MM/YYYY
+    const dateParts = dataRaw.split('/');
+    if (dateParts.length !== 3) continue;
+    const dateIso = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
 
-    // Descrição: Lançamento + Detalhes (sem data/hora)
+    // Parse valor: "-1.100,00" → -1100.00
+    const valor = parseFloat(valorRaw.replace(/\./g, '').replace(',', '.'));
+    if (isNaN(valor)) continue;
+
+    // Descrição: Lançamento + Detalhes sem data/hora do início
     let desc = lancamento;
-    const detalhe = cols[2]?.trim();
     if (detalhe) {
       const semDataHora = detalhe.replace(/^\d{2}\/\d{2}\s+\d{2}:\d{2}\s+/, '').trim();
       if (semDataHora) desc = `${lancamento} — ${semDataHora}`;
     }
 
-    const [d, m, a] = dataRaw.split('/');
-    const dateIso = `${a}-${m}-${d}`;
+    // Normalizar acentos quebrados na descrição
+    desc = desc.replace(/\uFFFD/g, '');
 
-    // Tipo: valor negativo = saída
     const type: TxType = valor < 0 ? 'expense' : 'income';
     const amount = Math.abs(valor) * (type === 'expense' ? -1 : 1);
 
@@ -433,8 +442,11 @@ function detectFormat(text: string, filename: string): 'bb' | 'bb_csv' | 'nubank
   const lower = text.toLowerCase().slice(0, 500);
   const fname = filename.toLowerCase();
 
-  // BB CSV com aspas: "Data","Lancamento","Detalhes"...
-  if (/^"data","lan/i.test(text.trim()) || /^"data".*"lan/i.test(text.split('\n')[0] ?? '')) return 'bb_csv';
+  // BB CSV: primeira linha tem "Data" + "Valor" + "Tipo"
+  const _primeiraLinha = text.split('\n')[0] ?? '';
+  if (/^"data"/i.test(_primeiraLinha) && /valor/i.test(_primeiraLinha) && /tipo/i.test(_primeiraLinha)) return 'bb_csv';
+  // BB CSV alternativo: 6 colunas entre aspas
+  if (/^"[^"]+","[^"]*","[^"]*","[^"]*","[^"]*","[^"]*"/i.test(_primeiraLinha)) return 'bb_csv';
   // BB fixo: largura fixa com Entrada/Saída no final
   if (/tipo lan[cç]amento|entrada\s*$|sa[ií]da\s*$/m.test(text)) return 'bb';
   if (fname.includes('nubank') || lower.includes('nubank') || lower.includes('nu pagamentos')) return 'nubank';
@@ -928,19 +940,22 @@ function TransactionsPage() {
       return;
     }
     try {
-      // Tentar Latin-1 primeiro (padrão do BB), depois UTF-8
-      let text: string;
-      try {
-        const buffer = await file.arrayBuffer();
-        text = new TextDecoder('windows-1252').decode(buffer);
-        // Se não houver caracteres problemáticos, usar direto
-        if (text.includes('\uFFFD')) {
-          text = new TextDecoder('utf-8').decode(buffer);
-        }
-      } catch {
-        text = await file.text();
-      }
+      // BB exporta em Windows-1252. Tentar decodificar corretamente.
+      const buffer = await file.arrayBuffer();
+      let text = '';
 
+      // Tentar windows-1252 (Latin-1 extended) — padrão BB
+      const w1252 = new TextDecoder('windows-1252').decode(buffer);
+      // Tentar UTF-8
+      let utf8 = '';
+      try { utf8 = new TextDecoder('utf-8', { fatal: true }).decode(buffer); } catch {}
+
+      // Escolher o encoding com menos caracteres de substituição
+      const w1252Erros = (w1252.match(/\uFFFD/g) ?? []).length;
+      const utf8Erros = utf8 ? (utf8.match(/\uFFFD/g) ?? []).length : 999;
+      text = utf8Erros < w1252Erros ? utf8 : w1252;
+
+      importLog('info', `Encoding: ${utf8Erros < w1252Erros ? 'UTF-8' : 'Windows-1252'} (erros: ${Math.min(w1252Erros, utf8Erros)})`);
       importLog('info', `Arquivo lido: ${text.length} chars, ${text.split('\n').length} linhas`);
       importLog('info', `Primeiras 3 linhas:\n${text.split('\n').slice(0,3).join('\n')}`);
 
