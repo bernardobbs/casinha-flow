@@ -38,6 +38,7 @@ type CatProj = {
   pct_atingido: number; status_proj: string;
 };
 type AlertRow = { id: string; mensagem: string; severidade: string; created_at: string };
+type ContaPendente = { descricao: string; valor: number; data_vencimento: string; origem: string };
 
 const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -67,6 +68,8 @@ function Dashboard() {
   const [cats, setCats] = useState<CatProj[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
   const [stockReviewOk, setStockReviewOk] = useState<boolean | null>(null);
+  const [contasPendentes, setContasPendentes] = useState<ContaPendente[]>([]);
+  const [totalPendente, setTotalPendente] = useState(0);
 
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
@@ -82,26 +85,30 @@ function Dashboard() {
       setFamilyName((profile as any)?.families?.name ?? "");
       if (!fid) { setLoading(false); return; }
 
-      const [s, sa, c, al] = await Promise.all([
+      const [s, sa, c, al, prev] = await Promise.all([
         supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
         supabase.rpc("get_saldo_total", { p_family_id: fid }),
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
         supabase.from("alerts").select("id,mensagem,severidade,created_at")
           .eq("family_id", fid).eq("lido", false).eq("severidade", "critical")
           .order("created_at", { ascending: false }).limit(3),
+        supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
       ]);
+
       if (s.data && Array.isArray(s.data) && s.data[0]) setSummary(s.data[0] as DashSummary);
       if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
-      if (c.data) setCats((c.data as CatProj[]).slice(0, 5));
+      if (c.data) setCats((c.data as CatProj[]).slice(0, 6));
       if (al.data) setAlerts(al.data as AlertRow[]);
+      if (prev.data) {
+        const pendentes = (prev.data as ContaPendente[]).filter((p: any) => p.status !== 'pago');
+        setContasPendentes(pendentes.slice(0, 3));
+        setTotalPendente(pendentes.reduce((acc: number, p: any) => acc + Number(p.valor), 0));
+      }
 
-      // Check last stock weekly review
+      // Badge estoque
       const { data: lastRev } = await supabase
-        .from("weekly_reviews")
-        .select("created_at, checklist")
-        .eq("family_id", fid)
-        .order("created_at", { ascending: false })
-        .limit(20);
+        .from("weekly_reviews").select("created_at, checklist")
+        .eq("family_id", fid).order("created_at", { ascending: false }).limit(20);
       const stockRev = (lastRev ?? []).find((r: any) => r?.checklist?.tipo === "estoque");
       if (!stockRev) setStockReviewOk(false);
       else {
@@ -123,7 +130,8 @@ function Dashboard() {
   }
   if (!user) return null;
 
-  const firstName = user.user_metadata?.full_name?.split(" ")[0] ?? "olá";
+  const firstName = user.user_metadata?.full_name?.split(" ")[0]
+    ?? user.email?.split("@")[0] ?? "olá";
   const mesLabel = summary
     ? new Date(summary.mes + "T12:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
     : "";
@@ -132,6 +140,8 @@ function Dashboard() {
 
   const catBadge = (s: string) =>
     s === "vai_estourar" ? "🔴" : s === "atencao" ? "⚠️" : s === "ok" ? "✅" : "—";
+
+  const diasRestantes = summary ? summary.dias_mes - summary.dia_atual : 0;
 
   return (
     <div className="min-h-screen" style={{ background: "var(--gradient-subtle)" }}>
@@ -143,7 +153,10 @@ function Dashboard() {
             </div>
             <div className="flex flex-col leading-tight min-w-0">
               <span className="font-semibold tracking-tight truncate">Olá, {firstName}! 👋</span>
-              <span className="text-[11px] text-muted-foreground capitalize">{mesLabel} {familyName && `• ${familyName}`}</span>
+              <span className="text-[11px] text-muted-foreground capitalize">
+                {mesLabel} {familyName && `• ${familyName}`}
+                {diasRestantes > 0 && ` • ${diasRestantes} dias restantes`}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -156,10 +169,10 @@ function Dashboard() {
       <CrisisBanner />
 
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
-        {/* Saldo total destaque */}
+        {/* Saldo + Score */}
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
           <CardContent className="py-5 flex items-center justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Saldo total</p>
               <p className={`text-3xl font-semibold tracking-tight ${(saldo?.saldo_total ?? 0) < 0 ? "text-destructive" : ""}`}>
                 {fmtBRL(saldo?.saldo_total ?? 0)}
@@ -167,9 +180,16 @@ function Dashboard() {
               <p className="text-[11px] text-muted-foreground mt-1">
                 Contas {fmtBRL(saldo?.saldo_contas ?? 0)} • Cartões {fmtBRL(saldo?.divida_cartoes ?? 0)}
               </p>
+              {totalPendente > 0 && (
+                <Link to="/contas-a-pagar">
+                  <p className="text-[11px] text-amber-600 mt-1 hover:underline">
+                    ⚠️ {fmtBRL(totalPendente)} comprometido este mês
+                  </p>
+                </Link>
+              )}
             </div>
             {summary && (
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center shrink-0">
                 <MiniGauge score={summary.score} />
                 <span className="text-xs font-medium -mt-1">{summary.score_label}</span>
               </div>
@@ -182,7 +202,8 @@ function Dashboard() {
           <Stat label="Receita" value={fmtBRL(summary?.renda_mensal ?? 0)} tone="success" />
           <Stat label="Gasto" value={fmtBRL(gastoTotal)} tone="destructive" />
           <Stat label="Saldo mês" value={fmtBRL((summary?.renda_mensal ?? 0) - gastoTotal)} />
-          <Stat label="Projeção" value={fmtBRL(summary?.saldo_projetado ?? 0)} tone={(summary?.saldo_projetado ?? 0) < 0 ? "destructive" : "default"} />
+          <Stat label="Projeção" value={fmtBRL(summary?.saldo_projetado ?? 0)}
+            tone={(summary?.saldo_projetado ?? 0) < 0 ? "destructive" : "default"} />
         </div>
 
         {/* 50/30/20 */}
@@ -195,7 +216,36 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Categorias top 5 */}
+        {/* Contas pendentes próximas */}
+        {contasPendentes.length > 0 && (
+          <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900/40">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarClock className="h-4 w-4 text-amber-600" />
+                  Próximas a vencer
+                </CardTitle>
+                <Link to="/contas-a-pagar" className="text-xs text-primary hover:underline">Ver todas →</Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {contasPendentes.map((p, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <span className="truncate">
+                    {(p as any).origem === 'fatura_cartao' ? '💳' : (p as any).origem === 'parcela' ? '📋' : '🔄'} {p.descricao}
+                  </span>
+                  <span className="font-medium tabular-nums shrink-0 ml-2">{fmtBRL(Number(p.valor))}</span>
+                </div>
+              ))}
+              <div className="border-t pt-2 flex justify-between text-xs font-semibold text-amber-700 dark:text-amber-400">
+                <span>Total comprometido</span>
+                <span>{fmtBRL(totalPendente)}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Categorias top 6 */}
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
           <CardHeader className="pb-3 flex-row items-center justify-between">
             <CardTitle className="text-base">Por categoria</CardTitle>
@@ -206,10 +256,12 @@ function Dashboard() {
               <p className="text-sm text-muted-foreground">Sem categorias com gastos este mês.</p>
             ) : cats.map((c) => {
               const pct = c.valor_planejado > 0 ? Math.min(100, (c.valor_gasto / c.valor_planejado) * 100) : 0;
+              // Mostrar nome curto (sem prefixo pai)
+              const nomeExibido = c.nome.includes(" — ") ? c.nome.split(" — ").slice(1).join(" — ") : c.nome;
               return (
                 <div key={c.category_id} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium truncate">{catBadge(c.status_proj)} {c.icone} {c.nome}</span>
+                    <span className="font-medium truncate">{catBadge(c.status_proj)} {c.icone} {nomeExibido}</span>
                     <span className="text-muted-foreground tabular-nums text-xs">
                       {fmtBRL(c.valor_gasto)}{c.valor_planejado > 0 ? ` / ${fmtBRL(c.valor_planejado)}` : ""}
                     </span>
@@ -237,7 +289,7 @@ function Dashboard() {
           </Card>
         )}
 
-        {/* Ações rápidas 2x2 */}
+        {/* Ações rápidas */}
         <div className="grid grid-cols-2 gap-3">
           <QuickAction to="/transactions" icon={<Plus className="h-4 w-4" />} label="Lançar" />
           <QuickAction to="/transactions" icon={<Upload className="h-4 w-4" />} label="Importar" />
