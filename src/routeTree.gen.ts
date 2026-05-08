@@ -13,6 +13,8 @@ import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as SituacaoRouteImport } from './routes/situacao'
 import { Route as RevisaoSemanalRouteImport } from './routes/revisao-semanal'
 import { Route as RecorrentesRouteImport } from './routes/recorrentes'
+import { Route as MembrosRouteImport } from './routes/membros'
+import { Route as ManutencaoRouteImport } from './routes/manutencao'
 import { Route as GasolinaRouteImport } from './routes/gasolina'
 import { Route as FinancialStateRouteImport } from './routes/financial-state'
 import { Route as EstoqueRouteImport } from './routes/estoque'
@@ -22,8 +24,10 @@ import { Route as ContasAPagarRouteImport } from './routes/contas-a-pagar'
 import { Route as ContasRouteImport } from './routes/contas'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ConciliacaoRouteImport } from './routes/conciliacao'
+import { Route as ComprasRouteImport } from './routes/compras'
 import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AssistenteRouteImport } from './routes/assistente'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EstoqueRevisaoSemanalRouteImport } from './routes/estoque.revisao-semanal'
 
@@ -45,6 +49,16 @@ const RevisaoSemanalRoute = RevisaoSemanalRouteImport.update({
 const RecorrentesRoute = RecorrentesRouteImport.update({
   id: '/recorrentes',
   path: '/recorrentes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MembrosRoute = MembrosRouteImport.update({
+  id: '/membros',
+  path: '/membros',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManutencaoRoute = ManutencaoRouteImport.update({
+  id: '/manutencao',
+  path: '/manutencao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GasolinaRoute = GasolinaRouteImport.update({
@@ -92,6 +106,11 @@ const ConciliacaoRoute = ConciliacaoRouteImport.update({
   path: '/conciliacao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComprasRoute = ComprasRouteImport.update({
+  id: '/compras',
+  path: '/compras',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BudgetsRoute = BudgetsRouteImport.update({
   id: '/budgets',
   path: '/budgets',
@@ -100,6 +119,11 @@ const BudgetsRoute = BudgetsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssistenteRoute = AssistenteRouteImport.update({
+  id: '/assistente',
+  path: '/assistente',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -115,8 +139,10 @@ const EstoqueRevisaoSemanalRoute = EstoqueRevisaoSemanalRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/assistente': typeof AssistenteRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/compras': typeof ComprasRoute
   '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
@@ -126,6 +152,8 @@ export interface FileRoutesByFullPath {
   '/estoque': typeof EstoqueRouteWithChildren
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
+  '/manutencao': typeof ManutencaoRoute
+  '/membros': typeof MembrosRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
@@ -134,8 +162,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/assistente': typeof AssistenteRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/compras': typeof ComprasRoute
   '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
@@ -145,6 +175,8 @@ export interface FileRoutesByTo {
   '/estoque': typeof EstoqueRouteWithChildren
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
+  '/manutencao': typeof ManutencaoRoute
+  '/membros': typeof MembrosRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
@@ -154,8 +186,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/assistente': typeof AssistenteRoute
   '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/compras': typeof ComprasRoute
   '/conciliacao': typeof ConciliacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contas': typeof ContasRoute
@@ -165,6 +199,8 @@ export interface FileRoutesById {
   '/estoque': typeof EstoqueRouteWithChildren
   '/financial-state': typeof FinancialStateRoute
   '/gasolina': typeof GasolinaRoute
+  '/manutencao': typeof ManutencaoRoute
+  '/membros': typeof MembrosRoute
   '/recorrentes': typeof RecorrentesRoute
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
@@ -175,8 +211,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/assistente'
     | '/auth'
     | '/budgets'
+    | '/compras'
     | '/conciliacao'
     | '/configuracoes'
     | '/contas'
@@ -186,6 +224,8 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/financial-state'
     | '/gasolina'
+    | '/manutencao'
+    | '/membros'
     | '/recorrentes'
     | '/revisao-semanal'
     | '/situacao'
@@ -194,8 +234,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/assistente'
     | '/auth'
     | '/budgets'
+    | '/compras'
     | '/conciliacao'
     | '/configuracoes'
     | '/contas'
@@ -205,6 +247,8 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/financial-state'
     | '/gasolina'
+    | '/manutencao'
+    | '/membros'
     | '/recorrentes'
     | '/revisao-semanal'
     | '/situacao'
@@ -213,8 +257,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/assistente'
     | '/auth'
     | '/budgets'
+    | '/compras'
     | '/conciliacao'
     | '/configuracoes'
     | '/contas'
@@ -224,6 +270,8 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/financial-state'
     | '/gasolina'
+    | '/manutencao'
+    | '/membros'
     | '/recorrentes'
     | '/revisao-semanal'
     | '/situacao'
@@ -233,8 +281,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AssistenteRoute: typeof AssistenteRoute
   AuthRoute: typeof AuthRoute
   BudgetsRoute: typeof BudgetsRoute
+  ComprasRoute: typeof ComprasRoute
   ConciliacaoRoute: typeof ConciliacaoRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContasRoute: typeof ContasRoute
@@ -244,6 +294,8 @@ export interface RootRouteChildren {
   EstoqueRoute: typeof EstoqueRouteWithChildren
   FinancialStateRoute: typeof FinancialStateRoute
   GasolinaRoute: typeof GasolinaRoute
+  ManutencaoRoute: typeof ManutencaoRoute
+  MembrosRoute: typeof MembrosRoute
   RecorrentesRoute: typeof RecorrentesRoute
   RevisaoSemanalRoute: typeof RevisaoSemanalRoute
   SituacaoRoute: typeof SituacaoRoute
@@ -278,6 +330,20 @@ declare module '@tanstack/react-router' {
       path: '/recorrentes'
       fullPath: '/recorrentes'
       preLoaderRoute: typeof RecorrentesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/membros': {
+      id: '/membros'
+      path: '/membros'
+      fullPath: '/membros'
+      preLoaderRoute: typeof MembrosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manutencao': {
+      id: '/manutencao'
+      path: '/manutencao'
+      fullPath: '/manutencao'
+      preLoaderRoute: typeof ManutencaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gasolina': {
@@ -343,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConciliacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compras': {
+      id: '/compras'
+      path: '/compras'
+      fullPath: '/compras'
+      preLoaderRoute: typeof ComprasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budgets': {
       id: '/budgets'
       path: '/budgets'
@@ -355,6 +428,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assistente': {
+      id: '/assistente'
+      path: '/assistente'
+      fullPath: '/assistente'
+      preLoaderRoute: typeof AssistenteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -387,8 +467,10 @@ const EstoqueRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AssistenteRoute: AssistenteRoute,
   AuthRoute: AuthRoute,
   BudgetsRoute: BudgetsRoute,
+  ComprasRoute: ComprasRoute,
   ConciliacaoRoute: ConciliacaoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContasRoute: ContasRoute,
@@ -398,6 +480,8 @@ const rootRouteChildren: RootRouteChildren = {
   EstoqueRoute: EstoqueRouteWithChildren,
   FinancialStateRoute: FinancialStateRoute,
   GasolinaRoute: GasolinaRoute,
+  ManutencaoRoute: ManutencaoRoute,
+  MembrosRoute: MembrosRoute,
   RecorrentesRoute: RecorrentesRoute,
   RevisaoSemanalRoute: RevisaoSemanalRoute,
   SituacaoRoute: SituacaoRoute,
@@ -406,3 +490,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
