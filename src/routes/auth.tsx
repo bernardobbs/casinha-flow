@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Wallet, Loader2, ArrowLeft, Mail } from "lucide-react";
+import { Wallet, Loader2, ArrowLeft, Mail, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -37,7 +37,15 @@ const resetSchema = z.object({
   email: z.string().trim().email("Email inválido").max(255),
 });
 
-type View = "auth" | "reset" | "reset-sent";
+const newPasswordSchema = z.object({
+  password: z.string().min(8, "Mínimo 8 caracteres").max(72),
+  confirm: z.string(),
+}).refine(d => d.password === d.confirm, {
+  message: "As senhas não coincidem",
+  path: ["confirm"],
+});
+
+type View = "auth" | "reset" | "reset-sent" | "new-password";
 
 // Ícone Google
 function GoogleIcon() {
@@ -55,16 +63,47 @@ function AuthPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<View>("auth");
+  const [passwordDone, setPasswordDone] = useState(false);
 
   useEffect(() => {
+    // Detectar recovery token na URL hash (Supabase redireciona para /auth#type=recovery)
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery") || hash.includes("type=email_change")) {
+      setView("new-password");
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate({ to: "/dashboard" });
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate({ to: "/dashboard" });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setView("new-password");
+        return;
+      }
+      if (session && event !== "PASSWORD_RECOVERY") navigate({ to: "/dashboard" });
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // ── Nova senha (recovery) ─────────────────────────────────
+  const handleNewPassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const parsed = newPasswordSchema.safeParse({
+      password: form.get("password"),
+      confirm: form.get("confirm"),
+    });
+    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    setPasswordDone(true);
+    toast.success("✅ Senha atualizada com sucesso!");
+    setTimeout(() => navigate({ to: "/dashboard" }), 1500);
+  };
 
   // ── Google OAuth ──────────────────────────────────────────
   const handleGoogle = async () => {
@@ -150,6 +189,66 @@ function AuthPage() {
     if (error) { toast.error(error.message); return; }
     setView("reset-sent");
   };
+
+  // ── TELA DE NOVA SENHA (vinda do link do email) ───────────
+  if (view === "new-password") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12"
+        style={{ background: "var(--gradient-subtle)" }}>
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <div className="h-9 w-9 rounded-lg flex items-center justify-center"
+              style={{ background: "var(--gradient-primary)" }}>
+              <Wallet className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-lg tracking-tight">Casinha Flow</span>
+          </div>
+          <Card className="border-border/60 shadow-[var(--shadow-elevated)]">
+            {passwordDone ? (
+              <CardHeader className="text-center space-y-2">
+                <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
+                  <span className="text-2xl">✅</span>
+                </div>
+                <CardTitle>Senha atualizada!</CardTitle>
+                <CardDescription>Redirecionando para o painel...</CardDescription>
+              </CardHeader>
+            ) : (
+              <>
+                <CardHeader>
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                    <Lock className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle>Criar nova senha</CardTitle>
+                  <CardDescription>Escolha uma senha segura para sua conta.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleNewPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">Nova senha</Label>
+                      <Input id="new-password" name="password" type="password"
+                        required minLength={8} maxLength={72}
+                        placeholder="Mínimo 8 caracteres" autoFocus />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirmar senha</Label>
+                      <Input id="confirm-password" name="confirm" type="password"
+                        required minLength={8} maxLength={72}
+                        placeholder="Repita a senha" />
+                    </div>
+                    <Button type="submit" className="w-full h-11" disabled={loading}>
+                      {loading
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : "Salvar nova senha"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </>
+            )}
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   // ── TELA DE RECUPERAÇÃO DE SENHA ──────────────────────────
   if (view === "reset" || view === "reset-sent") {
