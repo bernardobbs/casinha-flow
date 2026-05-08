@@ -1082,18 +1082,6 @@ function TransactionsPage() {
         setParsedRows(rows);
       }
 
-      // Auto-detectar conta pelo nome do arquivo
-      const fname = file.name.toLowerCase();
-      let detectedId = '';
-      let detectedName = '';
-      for (const acc of accsLocal) {
-        const accLower = acc.nome.toLowerCase();
-        if (fname.includes('bb') && acc.tipo === 'corrente') { detectedId = acc.id; detectedName = acc.nome; break; }
-        if (fname.includes('nubank') && accLower.includes('nubank')) { detectedId = acc.id; detectedName = acc.nome; break; }
-        if (fname.includes('inter') && accLower.includes('inter')) { detectedId = acc.id; detectedName = acc.nome; break; }
-      }
-      if (!detectedId && accsLocal.length === 1) { detectedId = accsLocal[0].id; detectedName = accsLocal[0].nome; }
-      if (detectedId) importLog('info', `Conta auto-detectada: ${detectedName}`);
       // Auto-sugestão de conta pelo nome do arquivo
       const fname = file.name.toLowerCase();
       const detectKeywords: { match: RegExp; hints: string[] }[] = [
