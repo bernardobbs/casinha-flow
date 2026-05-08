@@ -152,7 +152,7 @@ function ContasAPagarPage() {
           p_user_id: user.id,
         });
       } else if (payOpen.origem === "parcela") {
-        await supabase.from("installments")
+        await (supabase.from("installments") as any)
           .update({ status: "pago" }).eq("id", payOpen.id);
       }
 

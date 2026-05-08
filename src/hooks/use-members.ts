@@ -24,7 +24,7 @@ export function useMembers(familyId: string | null) {
       .eq('family_id', familyId)
       .order('nome')
       .then(({ data }) => {
-        setMembros((data ?? []) as Member[]);
+        setMembros((data ?? []) as unknown as Member[]);
         setLoading(false);
       });
   }, [familyId]);
