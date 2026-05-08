@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +52,7 @@ const fmt = (n: number) =>
 function ConciliacaoPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId } = useFamily();
   const [loading, setLoading] = useState(true);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);
@@ -62,15 +63,6 @@ function ConciliacaoPage() {
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
-
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data: profile } = await supabase
-        .from("profiles").select("family_id").eq("id", user.id).maybeSingle();
-      if (profile?.family_id) setFamilyId(profile.family_id);
-    })();
-  }, [user]);
 
   const load = async () => {
     if (!familyId) return;

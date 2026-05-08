@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,7 @@ const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currenc
 function RecorrentesPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId } = useFamily();
   const [rows, setRows] = useState<RecRow[]>([]);
   const [accounts, setAccounts] = useState<Acc[]>([]);
   const [categories, setCategories] = useState<Cat[]>([]);
@@ -52,28 +53,22 @@ function RecorrentesPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !familyId) return;
     (async () => {
       setLoading(true);
-      const { data: profile } = await supabase
-        .from("profiles").select("family_id").eq("id", user.id).maybeSingle();
-      const fid = profile?.family_id ?? null;
-      setFamilyId(fid);
-      if (!fid) { setLoading(false); return; }
-
       const [r, a, c] = await Promise.all([
         supabase.from("recurring_transactions")
           .select("id, description, amount, type, frequencia, dia_do_mes, proxima_data, ativo, account_id, category_id, is_essencial")
-          .eq("family_id", fid).order("proxima_data", { ascending: true }),
-        supabase.from("accounts").select("id, nome").eq("family_id", fid).eq("ativo", true).order("nome"),
-        supabase.from("categories").select("id, nome, tipo").eq("family_id", fid).order("nome"),
+          .eq("family_id", familyId).order("proxima_data", { ascending: true }),
+        supabase.from("accounts").select("id, nome").eq("family_id", familyId).eq("ativo", true).order("nome"),
+        supabase.from("categories").select("id, nome, tipo").eq("family_id", familyId).order("nome"),
       ]);
       setRows((r.data ?? []) as RecRow[]);
       setAccounts((a.data ?? []) as Acc[]);
       setCategories((c.data ?? []) as Cat[]);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, familyId]);
 
   const reload = async () => {
     if (!familyId) return;
