@@ -30,6 +30,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AssistenteRouteImport } from './routes/assistente'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EstoqueRevisaoSemanalRouteImport } from './routes/estoque.revisao-semanal'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 
 const TransactionsRoute = TransactionsRouteImport.update({
   id: '/transactions',
@@ -136,11 +137,16 @@ const EstoqueRevisaoSemanalRoute = EstoqueRevisaoSemanalRouteImport.update({
   path: '/revisao-semanal',
   getParentRoute: () => EstoqueRoute,
 } as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/assistente': typeof AssistenteRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/budgets': typeof BudgetsRoute
   '/compras': typeof ComprasRoute
   '/conciliacao': typeof ConciliacaoRoute
@@ -158,12 +164,13 @@ export interface FileRoutesByFullPath {
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/estoque/revisao-semanal': typeof EstoqueRevisaoSemanalRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/assistente': typeof AssistenteRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/budgets': typeof BudgetsRoute
   '/compras': typeof ComprasRoute
   '/conciliacao': typeof ConciliacaoRoute
@@ -181,13 +188,14 @@ export interface FileRoutesByTo {
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/estoque/revisao-semanal': typeof EstoqueRevisaoSemanalRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/assistente': typeof AssistenteRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/budgets': typeof BudgetsRoute
   '/compras': typeof ComprasRoute
   '/conciliacao': typeof ConciliacaoRoute
@@ -205,6 +213,7 @@ export interface FileRoutesById {
   '/revisao-semanal': typeof RevisaoSemanalRoute
   '/situacao': typeof SituacaoRoute
   '/transactions': typeof TransactionsRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/estoque/revisao-semanal': typeof EstoqueRevisaoSemanalRoute
 }
 export interface FileRouteTypes {
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
+    | '/auth/reset-password'
     | '/estoque/revisao-semanal'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
+    | '/auth/reset-password'
     | '/estoque/revisao-semanal'
   id:
     | '__root__'
@@ -276,13 +287,14 @@ export interface FileRouteTypes {
     | '/revisao-semanal'
     | '/situacao'
     | '/transactions'
+    | '/auth/reset-password'
     | '/estoque/revisao-semanal'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssistenteRoute: typeof AssistenteRoute
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   BudgetsRoute: typeof BudgetsRoute
   ComprasRoute: typeof ComprasRoute
   ConciliacaoRoute: typeof ConciliacaoRoute
@@ -451,8 +463,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EstoqueRevisaoSemanalRouteImport
       parentRoute: typeof EstoqueRoute
     }
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
+
+interface AuthRouteChildren {
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface EstoqueRouteChildren {
   EstoqueRevisaoSemanalRoute: typeof EstoqueRevisaoSemanalRoute
@@ -468,7 +497,7 @@ const EstoqueRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AssistenteRoute: AssistenteRoute,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   BudgetsRoute: BudgetsRoute,
   ComprasRoute: ComprasRoute,
   ConciliacaoRoute: ConciliacaoRoute,
