@@ -1180,11 +1180,21 @@ function TransactionsPage() {
 
     if (newRows.length === 0) {
       setImporting(false);
-      toast.info(`0 importados, ${duplicates} ignorados (duplicados)`);
+      importLog('warn', `0 novas — todas ${duplicates} consideradas duplicatas. Verifique se external_ids batem.`);
+      setImportLogs(getImportLogs());
+      toast.info(`0 importados — ${duplicates} já existem no banco`);
       setImportOpen(false);
       setParsedRows([]);
       return;
     }
+
+    importLog('info', `Payload: ${newRows.length} linhas. Primeira: ${JSON.stringify({
+      date: newRows[0].date,
+      desc: newRows[0].description?.slice(0,30),
+      amount: newRows[0].amount,
+      external_id: newRows[0].external_id,
+      fid: fid?.slice(0,8)
+    })}`);
 
     const payload = newRows.map((r) => {
       const cat = r.suggested_category_id
