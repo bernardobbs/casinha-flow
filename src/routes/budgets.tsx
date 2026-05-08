@@ -115,7 +115,7 @@ function BudgetsPage() {
     );
   }, []);
 
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
 
   useEffect(() => {
     if (!user || !familyId) return;
@@ -257,7 +257,7 @@ function BudgetsPage() {
     if (familyId) await loadStatuses(familyId, mes);
   };
 
-  if (authLoading || loading) return <SkeletonBudgets />;
+  if (authLoading || familyLoading || loading) return <SkeletonBudgets />;
   if (!user) return null;
 
   return (

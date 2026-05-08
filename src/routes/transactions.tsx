@@ -440,7 +440,7 @@ function parseCsv(text: string): ParsedRow[] {
 function TransactionsPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -529,7 +529,11 @@ function TransactionsPage() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      // Se authLoading terminou mas não tem familyId, parar loading
+      if (!authLoading && user) setLoading(false);
+      return;
+    }
 
     const load = async () => {
       setLoading(true);
@@ -538,24 +542,26 @@ function TransactionsPage() {
         supabase
           .from("transactions")
           .select("*")
+          .eq("family_id", familyId)
           .order("date", { ascending: false })
           .order("created_at", { ascending: false }),
         supabase
           .from("categories")
           .select("*")
+          .eq("family_id", familyId)
           .order("tipo", { ascending: true })
           .order("is_essencial", { ascending: false })
           .order("nome", { ascending: true }),
         supabase
           .from("crisis_events")
           .select("id")
-          .eq("family_id", profile.family_id)
+          .eq("family_id", familyId)
           .eq("ativo", true)
           .maybeSingle(),
         supabase
           .from("accounts")
           .select("id, nome, tipo, icone, ativo, dia_fechamento, dia_vencimento")
-          .eq("family_id", profile.family_id)
+          .eq("family_id", familyId)
           .eq("ativo", true)
           .order("created_at", { ascending: true }),
       ]);
@@ -1080,7 +1086,7 @@ function TransactionsPage() {
     }
   };
 
-  if (authLoading || loading) return <SkeletonTransactions />;
+  if (authLoading || familyLoading || loading) return <SkeletonTransactions />;
   if (!user) return null;
 
   return (

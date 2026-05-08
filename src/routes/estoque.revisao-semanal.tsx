@@ -54,7 +54,7 @@ const URG_ORDER: Record<StockItem["urgencia"], number> = {
 function RevisaoEstoquePage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);

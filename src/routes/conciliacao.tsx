@@ -53,7 +53,7 @@ const fmt = (n: number) =>
 function ConciliacaoPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
   const [loading, setLoading] = useState(true);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [cats, setCats] = useState<Cat[]>([]);

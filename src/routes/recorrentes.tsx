@@ -35,7 +35,7 @@ const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currenc
 function RecorrentesPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
   const [rows, setRows] = useState<RecRow[]>([]);
   const [accounts, setAccounts] = useState<Acc[]>([]);
   const [categories, setCategories] = useState<Cat[]>([]);

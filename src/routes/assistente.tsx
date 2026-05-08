@@ -176,7 +176,7 @@ function gerarRespostaDemo(pergunta: string, context: string): string {
 function AssistentePage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
