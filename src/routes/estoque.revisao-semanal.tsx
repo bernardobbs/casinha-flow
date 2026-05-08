@@ -110,9 +110,19 @@ function RevisaoEstoquePage() {
       data: today,
     });
     if (error) { setBusyId(null); toast.error(error.message); return; }
-    await supabase.from("products").update({ ultima_revisao: today }).eq("id", item.id);
+
+    const novaQtd = Math.max(0, item.quantidade_atual + delta);
+    await supabase.from("products")
+      .update({ ultima_revisao: today, quantidade_atual: novaQtd })
+      .eq("id", item.id);
+
+    // Recalcular consumo médio após saída
+    if (tipo === "saida") {
+      await supabase.rpc("recalc_consumo_medio" as any, { p_product_id: item.id });
+    }
+
     setItems((prev) => prev.map((p) => p.id === item.id
-      ? { ...p, quantidade_atual: Math.max(0, p.quantidade_atual + delta), ultima_revisao: today, dias_sem_revisao: 0 }
+      ? { ...p, quantidade_atual: novaQtd, ultima_revisao: today, dias_sem_revisao: 0 }
       : p));
     setRevisedIds((s) => new Set(s).add(item.id));
     setBusyId(null);
@@ -147,14 +157,23 @@ function RevisaoEstoquePage() {
   const finalizar = async () => {
     if (!user || !familyId) return;
     setFinalizing(true);
+
+    // Recalcular consumo médio de todos os itens revisados
+    for (const id of revisedIds) {
+      await supabase.rpc("recalc_consumo_medio" as any, { p_product_id: id });
+    }
+
     const { error } = await supabase.from("weekly_reviews").insert({
       family_id: familyId,
       user_id: user.id,
       checklist: {
         tipo: "estoque",
         revisados: revisedIds.size,
+        total_itens: items.length,
         criticos: counts.criticos,
         zerados: counts.zerados,
+        vencendo: counts.vencendo,
+        data: new Date().toISOString().slice(0, 10),
       },
     });
     setFinalizing(false);
@@ -211,7 +230,12 @@ function RevisaoEstoquePage() {
                         <div className="text-xs text-muted-foreground">
                           {item.quantidade_atual} {item.unidade}
                           {item.dias_para_vencer !== null && item.dias_para_vencer <= 30 && (
-                            <span className="ml-2">· vence em {item.dias_para_vencer}d</span>
+                            <span className="ml-2 text-amber-600">· vence em {item.dias_para_vencer}d</span>
+                          )}
+                          {item.dias_restantes !== null && (
+                            <span className={`ml-2 ${item.dias_restantes <= 3 ? "text-red-600" : item.dias_restantes <= 7 ? "text-amber-600" : "text-muted-foreground"}`}>
+                              · ~{item.dias_restantes}d restantes
+                            </span>
                           )}
                         </div>
                       </div>
