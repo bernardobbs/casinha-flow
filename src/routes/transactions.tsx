@@ -380,12 +380,63 @@ function parseCaixaExtrato(text: string): ParsedRow[] {
   return rows;
 }
 
-// Detectar banco/formato automaticamente
-function detectFormat(text: string, filename: string): 'bb' | 'nubank' | 'inter' | 'caixa' | 'csv' {
+function parseBBCSV(text: string): ParsedRow[] {
+  // Formato: "Data","Lançamento","Detalhes","Nº documento","Valor","Tipo Lançamento"
+  const ignorar = ['Saldo Anterior', 'S A L D O', 'SALDO'];
+  const rows: ParsedRow[] = [];
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+
+  for (let i = 1; i < lines.length; i++) {
+    // Parse CSV com aspas
+    const cols = lines[i].match(/("(?:[^"]|"")*"|[^,]*)/g)
+      ?.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim()) ?? [];
+
+    if (cols.length < 6) continue;
+    const lancamento = cols[1]?.trim() ?? '';
+    if (ignorar.some(x => lancamento.includes(x))) continue;
+    const tipoLanc = cols[5]?.trim() ?? '';
+    if (!tipoLanc) continue;
+
+    const dataRaw = cols[0]?.trim();
+    const valorStr = (cols[4] ?? '').trim().replace(/\./g, '').replace(',', '.');
+    const valor = parseFloat(valorStr);
+    if (!dataRaw || isNaN(valor)) continue;
+
+    // Descrição: Lançamento + Detalhes (sem data/hora)
+    let desc = lancamento;
+    const detalhe = cols[2]?.trim();
+    if (detalhe) {
+      const semDataHora = detalhe.replace(/^\d{2}\/\d{2}\s+\d{2}:\d{2}\s+/, '').trim();
+      if (semDataHora) desc = `${lancamento} — ${semDataHora}`;
+    }
+
+    const [d, m, a] = dataRaw.split('/');
+    const dateIso = `${a}-${m}-${d}`;
+
+    // Tipo: valor negativo = saída
+    const type: TxType = valor < 0 ? 'expense' : 'income';
+    const amount = Math.abs(valor) * (type === 'expense' ? -1 : 1);
+
+    rows.push({
+      date: dateIso,
+      description: desc.slice(0, 120),
+      amount,
+      type,
+      category: classifyCategory(desc),
+      external_id: `${dateIso}|${desc.toLowerCase().slice(0, 40)}|${valor.toFixed(2)}|${rows.length}`,
+      selected: true,
+    });
+  }
+  return rows;
+}
+function detectFormat(text: string, filename: string): 'bb' | 'bb_csv' | 'nubank' | 'inter' | 'caixa' | 'csv' {
   const lower = text.toLowerCase().slice(0, 500);
   const fname = filename.toLowerCase();
 
-  if (/tipo lan[cç]amento|entrada\s*$|saída\s*$/m.test(text)) return 'bb';
+  // BB CSV com aspas: "Data","Lancamento","Detalhes"...
+  if (/^"data","lan/i.test(text.trim()) || /^"data".*"lan/i.test(text.split('\n')[0] ?? '')) return 'bb_csv';
+  // BB fixo: largura fixa com Entrada/Saída no final
+  if (/tipo lan[cç]amento|entrada\s*$|sa[ií]da\s*$/m.test(text)) return 'bb';
   if (fname.includes('nubank') || lower.includes('nubank') || lower.includes('nu pagamentos')) return 'nubank';
   if (fname.includes('inter') || lower.includes('banco inter')) return 'inter';
   if (fname.includes('caixa') || lower.includes('caixa economica')) return 'caixa';
@@ -877,7 +928,19 @@ function TransactionsPage() {
       return;
     }
     try {
-      const text = await file.text();
+      // Tentar Latin-1 primeiro (padrão do BB), depois UTF-8
+      let text: string;
+      try {
+        const buffer = await file.arrayBuffer();
+        text = new TextDecoder('windows-1252').decode(buffer);
+        // Se não houver caracteres problemáticos, usar direto
+        if (text.includes('\uFFFD')) {
+          text = new TextDecoder('utf-8').decode(buffer);
+        }
+      } catch {
+        text = await file.text();
+      }
+
       importLog('info', `Arquivo lido: ${text.length} chars, ${text.split('\n').length} linhas`);
       importLog('info', `Primeiras 3 linhas:\n${text.split('\n').slice(0,3).join('\n')}`);
 
@@ -887,6 +950,7 @@ function TransactionsPage() {
       let rows: ParsedRow[];
       switch (formato) {
         case 'bb':     rows = parseBBExtrato(text); break;
+        case 'bb_csv': rows = parseBBCSV(text); break;
         case 'nubank': rows = parseNubank(text); break;
         case 'inter':  rows = parseInter(text); break;
         case 'caixa':  rows = parseCaixaExtrato(text); break;
