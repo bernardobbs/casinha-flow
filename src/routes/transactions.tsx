@@ -41,6 +41,7 @@ import {
 import { AlertsBell } from "@/components/alerts-bell";
 import { ReconciliationPanel } from "@/components/reconciliation-panel";
 import { MonthView } from "@/components/month-view";
+import { SkeletonTransactions } from "@/components/skeletons";
 
 export const Route = createFileRoute("/transactions")({
   head: () => ({
@@ -1090,13 +1091,7 @@ function TransactionsPage() {
     }
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (authLoading || loading) return <SkeletonTransactions />;
   if (!user) return null;
 
   return (

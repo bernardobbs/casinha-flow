@@ -15,6 +15,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { SkeletonPage } from "@/components/skeletons";
 import {
   Wallet,
   ArrowLeft,
@@ -246,13 +247,7 @@ function FinancialStatePage() {
     return Math.min(100, Math.round((v / meta) * 100));
   };
 
-  if (authLoading || (loading && !state)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (authLoading || (loading && !state)) return <SkeletonPage />;
   if (!user) return null;
 
   const e = state?.total_essenciais ?? 0;

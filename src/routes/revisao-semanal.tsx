@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
+import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/revisao-semanal")({
   head: () => ({ meta: [{ title: "Revisão semanal — Casinha Flow" }] }),
@@ -140,9 +141,7 @@ function RevisaoSemanalPage() {
     setPayOpen(null); setPayAccount("");
   };
 
-  if (authLoading || loading) return (
-    <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-  );
+  if (authLoading || loading) return <SkeletonPage />;
 
   return (
     <div className="min-h-screen bg-background">

@@ -35,6 +35,7 @@ import { CreditCardBillsTab } from "@/components/CreditCardBillsTab";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRightLeft, CreditCard, Loader2, Pencil, Plus, Scale, Wallet } from "lucide-react";
 import { AccountFormDialog, type AccountFormData } from "@/components/AccountFormDialog";
+import { SkeletonContas } from "@/components/skeletons";
 
 export const Route = createFileRoute("/contas")({
   head: () => ({
@@ -242,13 +243,7 @@ function ContasPage() {
     await loadAccounts();
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (authLoading || loading) return <SkeletonContas />;
   if (!user) return null;
 
   const totalConsolidado = accounts

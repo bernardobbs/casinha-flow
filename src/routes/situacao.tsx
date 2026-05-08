@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { SkeletonSituacao } from "@/components/skeletons";
 
 export const Route = createFileRoute("/situacao")({
   head: () => ({
@@ -143,13 +144,7 @@ function SituacaoPage() {
     return acoes;
   }, [summary, cats, bills]);
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (authLoading || loading) return <SkeletonSituacao />;
 
   if (!familyId) {
     return (

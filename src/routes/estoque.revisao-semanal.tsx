@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, Minus, Plus } from "lucide-react";
+import { SkeletonRevisaoEstoque } from "@/components/skeletons";
 
 export const Route = createFileRoute("/estoque/revisao-semanal")({
   head: () => ({
@@ -176,7 +177,7 @@ function RevisaoEstoquePage() {
 
   const todayPt = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  if (authLoading) return <SkeletonRevisaoEstoque />;
   if (!user) return null;
 
   return (

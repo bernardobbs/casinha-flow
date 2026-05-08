@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, Package, Plus, Upload, ListChecks, Loader2, Minus, AlertTriangle } from "lucide-react";
+import { SkeletonEstoque } from "@/components/skeletons";
 
 export const Route = createFileRoute("/estoque")({
   head: () => ({
@@ -89,9 +90,7 @@ function EstoquePage() {
     [filtered]
   );
 
-  if (authLoading || loading) {
-    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
-  }
+  if (authLoading || loading) return <SkeletonEstoque />;
 
   return (
     <div className="min-h-screen bg-background">

@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Wallet, ArrowLeft, Loader2, Target, Plus, Trash2 } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
+import { SkeletonBudgets } from "@/components/skeletons";
 
 export const Route = createFileRoute("/budgets")({
   head: () => ({
@@ -264,13 +265,7 @@ function BudgetsPage() {
     if (familyId) await loadStatuses(familyId, mes);
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (authLoading || loading) return <SkeletonBudgets />;
   if (!user) return null;
 
   return (

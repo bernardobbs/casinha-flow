@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Plus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { SkeletonContasAPagar } from "@/components/skeletons";
 
 export const Route = createFileRoute("/contas-a-pagar")({
   head: () => ({ meta: [{ title: "Contas a pagar — Casinha Flow" }] }),
@@ -168,9 +169,7 @@ function ContasAPagarPage() {
     reload();
   };
 
-  if (authLoading || loading) return (
-    <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-  );
+  if (authLoading || loading) return <SkeletonContasAPagar />;
 
   const Section = ({ titulo, items, urgencia }: { titulo: string; items: BillRow[]; urgencia: "danger" | "warn" | "info" | "muted" }) => {
     if (items.length === 0) return null;

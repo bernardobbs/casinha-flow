@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
+import { SkeletonDashboard } from "@/components/skeletons";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -126,7 +127,7 @@ function Dashboard() {
   };
 
   if (authLoading || loading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return <SkeletonDashboard />;
   }
   if (!user) return null;
 

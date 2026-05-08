@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { SkeletonRecorrentes } from "@/components/skeletons";
 
 export const Route = createFileRoute("/recorrentes")({
   head: () => ({ meta: [{ title: "Recorrentes — Casinha Flow" }] }),
@@ -135,9 +136,7 @@ function RecorrentesPage() {
       return acc + Number(r.amount) * fator;
     }, 0);
 
-  if (authLoading || loading) return (
-    <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-  );
+  if (authLoading || loading) return <SkeletonRecorrentes />;
 
   return (
     <div className="min-h-screen bg-background">

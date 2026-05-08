@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/conciliacao")({
   head: () => ({
@@ -136,7 +137,7 @@ function ConciliacaoPage() {
     despesa: cats.filter((c) => c.tipo === "despesa"),
   }), [cats]);
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  if (authLoading) return <SkeletonPage />;
   if (!user) return null;
 
   return (

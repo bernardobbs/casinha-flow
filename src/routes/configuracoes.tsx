@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Settings as SettingsIcon, Trash2, Wallet, Crown, UserPlus } from "lucide-react";
+import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -287,13 +288,7 @@ function ConfigPage() {
     return Number.isFinite(n) && n > 0 ? n : 5;
   }, [values.ai_daily_limit]);
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (authLoading || loading) return <SkeletonPage />;
   if (!user) return null;
 
   return (

@@ -33,6 +33,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { CrisisAiAnalysis } from "@/components/crisis-ai-analysis";
+import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/crisis")({
   head: () => ({
@@ -222,13 +223,7 @@ function CrisisPage() {
     loadAll();
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  if (authLoading || loading) return <SkeletonPage />;
   if (!user) return null;
 
   const days = active
