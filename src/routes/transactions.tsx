@@ -4,6 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
+import { importLog, clearImportLogs, getImportLogs } from "@/lib/import-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -482,6 +483,8 @@ function TransactionsPage() {
   const [importScope, setImportScope] = useState<TxScope>("family");
   const [importAccountId, setImportAccountId] = useState<string>("");
   const [importing, setImporting] = useState(false);
+  const [showImportLogs, setShowImportLogs] = useState(false);
+  const [importLogs, setImportLogs] = useState<{level: string; msg: string; ts: string}[]>([]);
 
   const [importAutoDetected, setImportAutoDetected] = useState<string | null>(null);
 
@@ -865,13 +868,22 @@ function TransactionsPage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    clearImportLogs();
+    importLog('info', `Arquivo selecionado: ${file.name} (${(file.size/1024).toFixed(1)}KB)`);
+    setImportLogs([]);
+
     if (file.size > 2 * 1024 * 1024) {
       toast.error("Arquivo muito grande (máx 2MB)");
       return;
     }
     try {
       const text = await file.text();
+      importLog('info', `Arquivo lido: ${text.length} chars, ${text.split('\n').length} linhas`);
+      importLog('info', `Primeiras 3 linhas:\n${text.split('\n').slice(0,3).join('\n')}`);
+
       const formato = detectFormat(text, file.name);
+      importLog('info', `Formato detectado: ${formato.toUpperCase()}`);
+
       let rows: ParsedRow[];
       switch (formato) {
         case 'bb':     rows = parseBBExtrato(text); break;
@@ -880,22 +892,33 @@ function TransactionsPage() {
         case 'caixa':  rows = parseCaixaExtrato(text); break;
         default:       rows = parseCsv(text);
       }
+
+      importLog('info', `Linhas parseadas: ${rows.length}`);
+      const comErro = rows.filter(r => r.error);
+      const validas = rows.filter(r => !r.error);
+      if (comErro.length > 0) importLog('warn', `${comErro.length} linhas com erro`, comErro.map(r => r.error));
+      importLog('info', `${validas.length} linhas válidas`, validas.slice(0,3));
+
       if (rows.length === 0) {
+        importLog('error', 'Nenhuma linha encontrada após parse');
         toast.error(`Nenhuma linha encontrada (formato: ${formato.toUpperCase()})`);
         return;
       }
       toast.info(`📄 ${formato.toUpperCase()} detectado — ${rows.length} transações`);
-      // Aplica sugestão via categorize_transaction para cada linha válida
+
+      // Categorização automática
       if (familyId) {
+        importLog('info', `Categorizando ${validas.length} transações...`);
         const enriched = await Promise.all(
           rows.map(async (r) => {
             if (r.error) return r;
             try {
-              const { data } = await supabase.rpc("categorize_transaction", {
+              const { data, error: catErr } = await supabase.rpc("categorize_transaction", {
                 _family_id: familyId,
                 _description: r.description,
                 _dummy: false,
               });
+              if (catErr) importLog('warn', `Erro ao categorizar "${r.description}"`, catErr.message);
               const sug = Array.isArray(data) && data.length > 0 ? data[0] : null;
               if (sug) {
                 const cat = categories.find((c) => c.id === sug.category_id);
@@ -909,16 +932,21 @@ function TransactionsPage() {
                 };
               }
               return { ...r, suggested_category_id: null };
-            } catch {
+            } catch (e) {
+              importLog('warn', `Exceção ao categorizar "${r.description}"`, e);
               return r;
             }
           })
         );
-        // Detect duplicates: query existing transactions for each row
+        const categorizadas = enriched.filter(r => r.suggested_category_id);
+        importLog('info', `${categorizadas.length}/${validas.length} transações categorizadas`);
+
+        // Detecção de duplicatas
+        importLog('info', 'Verificando duplicatas...');
         const withDup: ParsedRow[] = await Promise.all(
           enriched.map(async (r) => {
             if (r.error) return r;
-            const { data: matches } = await supabase
+            const { data: matches, error: dupErr } = await supabase
               .from("transactions")
               .select("id, description, date, amount, external_id")
               .eq("family_id", familyId)
@@ -926,6 +954,7 @@ function TransactionsPage() {
               .gte("amount", Math.abs(r.amount) - 0.01)
               .lte("amount", Math.abs(r.amount) + 0.01)
               .limit(3);
+            if (dupErr) importLog('warn', `Erro ao verificar duplicata`, dupErr.message);
             const list = matches ?? [];
             if (list.some((m: any) => m.external_id === r.external_id)) {
               return { ...r, dup_status: "existe", selected: false, dup_match: list[0] as any };
@@ -936,8 +965,11 @@ function TransactionsPage() {
             return { ...r, dup_status: "novo" };
           })
         );
+        const duplicatas = withDup.filter(r => r.dup_status === 'existe');
+        importLog('info', `${duplicatas.length} duplicatas encontradas`);
         setParsedRows(withDup);
       } else {
+        importLog('warn', 'familyId não disponível — pulando categorização');
         setParsedRows(rows);
       }
       // Auto-sugestão de conta pelo nome do arquivo
@@ -966,6 +998,7 @@ function TransactionsPage() {
       }
       setImportAccountId(detectedId);
       setImportAutoDetected(detectedName);
+      setImportLogs(getImportLogs());
       setImportOpen(true);
     } catch {
       toast.error("Não foi possível ler o arquivo");
@@ -988,12 +1021,17 @@ function TransactionsPage() {
   const selectedCount = parsedRows.filter((r) => r.selected && !r.error).length;
 
   const handleConfirmImport = async () => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      importLog('error', `Abortado: user=${!!user} familyId=${familyId}`);
+      return;
+    }
     if (!importAccountId) {
       toast.error("Selecione a conta bancária antes de importar");
       return;
     }
     const toImport = parsedRows.filter((r) => r.selected && !r.error);
+    importLog('info', `Iniciando import: ${toImport.length} linhas selecionadas de ${parsedRows.length} total`);
+
     if (toImport.length === 0) {
       toast.error("Selecione ao menos uma linha");
       return;
@@ -1001,17 +1039,20 @@ function TransactionsPage() {
 
     setImporting(true);
 
-    // Pre-check existing external_ids in this family
+    // Pre-check existing external_ids
     const externalIds = toImport.map((r) => r.external_id);
-    const { data: existing } = await supabase
+    const { data: existing, error: checkErr } = await supabase
       .from("transactions")
       .select("external_id")
       .eq("family_id", familyId)
       .in("external_id", externalIds);
 
+    if (checkErr) importLog('warn', 'Erro ao checar duplicatas', checkErr.message);
+
     const existingSet = new Set((existing ?? []).map((e) => e.external_id));
     const newRows = toImport.filter((r) => !existingSet.has(r.external_id));
     const duplicates = toImport.length - newRows.length;
+    importLog('info', `${newRows.length} novas, ${duplicates} duplicatas`);
 
     if (newRows.length === 0) {
       setImporting(false);
@@ -1050,9 +1091,17 @@ function TransactionsPage() {
     setImporting(false);
 
     if (error) {
+      importLog('error', 'Erro no INSERT', { message: error.message, details: error.details, hint: error.hint, code: error.code });
       toast.error(`Erro na importação: ${error.message}`);
+      // Mostrar logs no console para debug
+      console.group('🔴 Import Logs');
+      getImportLogs().forEach(l => console[l.level === 'error' ? 'error' : 'log'](`[${l.ts}] ${l.msg}`, l.data ?? ''));
+      console.groupEnd();
       return;
     }
+
+    importLog('success', `${(data ?? []).length} transações inseridas com sucesso`);
+    setImportLogs(getImportLogs());
 
     const inserted = (data ?? []).map((t) => ({
       ...(t as Transaction),
@@ -1598,6 +1647,32 @@ function TransactionsPage() {
               ))}
             </ul>
           </div>
+
+          {/* Painel de logs */}
+          {importLogs.length > 0 && (
+            <div className="border-t pt-3">
+              <button
+                onClick={() => setShowImportLogs(v => !v)}
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                🔍 {showImportLogs ? "Ocultar" : "Ver"} logs de importação ({importLogs.length})
+              </button>
+              {showImportLogs && (
+                <div className="mt-2 max-h-40 overflow-y-auto rounded bg-muted p-2 font-mono text-[10px] space-y-0.5">
+                  {importLogs.map((l, i) => (
+                    <div key={i} className={
+                      l.level === 'error' ? 'text-red-500' :
+                      l.level === 'warn' ? 'text-amber-600' :
+                      l.level === 'success' ? 'text-emerald-600' :
+                      'text-muted-foreground'
+                    }>
+                      {l.level === 'error' ? '❌' : l.level === 'warn' ? '⚠️' : l.level === 'success' ? '✅' : '📋'} {l.msg}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setImportOpen(false)} disabled={importing}>
