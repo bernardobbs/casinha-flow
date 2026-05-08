@@ -570,7 +570,7 @@ function TransactionsPage() {
     const amt = Number(amount.replace(",", "."));
     if (!description.trim() || !date || !Number.isFinite(amt) || amt <= 0) return;
     const { data } = await supabase.rpc("check_duplicate_transaction", {
-      p_family_id: familyId,
+      p_family_id: fid,
       p_date: date,
       p_amount: amt,
       p_description: description,
@@ -608,26 +608,26 @@ function TransactionsPage() {
         supabase
           .from("transactions")
           .select("*")
-          .eq("family_id", familyId)
+          .eq("family_id", fid)
           .order("date", { ascending: false })
           .order("created_at", { ascending: false }),
         supabase
           .from("categories")
           .select("*")
-          .eq("family_id", familyId)
+          .eq("family_id", fid)
           .order("tipo", { ascending: true })
           .order("is_essencial", { ascending: false })
           .order("nome", { ascending: true }),
         supabase
           .from("crisis_events")
           .select("id")
-          .eq("family_id", familyId)
+          .eq("family_id", fid)
           .eq("ativo", true)
           .maybeSingle(),
         supabase
           .from("accounts")
           .select("id, nome, tipo, icone, ativo, dia_fechamento, dia_vencimento")
-          .eq("family_id", familyId)
+          .eq("family_id", fid)
           .eq("ativo", true)
           .order("created_at", { ascending: true }),
       ]);
@@ -671,7 +671,7 @@ function TransactionsPage() {
     const { data, error } = await supabase
       .from("transactions")
       .insert({
-        family_id: familyId,
+        family_id: fid,
         user_id: user.id,
         ...payload,
         category: cat?.nome ?? null,
@@ -694,7 +694,7 @@ function TransactionsPage() {
     // Aprende a regra de categorização (se categoria foi escolhida manualmente)
     if (payload.category_id && payload.description) {
       void supabase.rpc("learn_categorization_rule", {
-        _family_id: familyId,
+        _family_id: fid,
         _termo: payload.description,
         _category_id: payload.category_id,
         _origem: "manual",
@@ -727,7 +727,7 @@ function TransactionsPage() {
       .toISOString()
       .slice(0, 10);
     await supabase.rpc("recalc_financial_state", {
-      _family_id: familyId,
+      _family_id: fid,
       _mes: firstDay,
     });
   };
@@ -767,7 +767,7 @@ function TransactionsPage() {
       }
       setSubmitting(true);
       const { error: instErr } = await supabase.rpc("create_installment_plan", {
-        _family_id: familyId,
+        _family_id: fid,
         _account_id: accountId,
         _description: parsed.data.description,
         _valor_total: parsed.data.amount,
@@ -805,7 +805,7 @@ function TransactionsPage() {
     const { data: candidates } = await supabase
       .from("transactions")
       .select("*")
-      .eq("family_id", familyId)
+      .eq("family_id", fid)
       .eq("date", parsed.data.date)
       .eq("amount", parsed.data.amount)
       .ilike("description", `%${parsed.data.description}%`)
@@ -896,7 +896,7 @@ function TransactionsPage() {
     const { data, error } = await supabase
       .from("categories")
       .insert({
-        family_id: familyId,
+        family_id: fid,
         nome,
         tipo: newCatTipo,
         cor: newCatCor,
@@ -934,6 +934,36 @@ function TransactionsPage() {
     clearImportLogs();
     importLog('info', `Arquivo selecionado: ${file.name} (${(file.size/1024).toFixed(1)}KB)`);
     setImportLogs([]);
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx 2MB)");
+      return;
+    }
+
+    // Garantir familyId disponível
+    let fid = familyId;
+    if (!fid && user) {
+      importLog('info', 'Buscando familyId...');
+      const { data: prof } = await supabase
+        .from("profiles").select("family_id").eq("id", user.id).maybeSingle();
+      fid = prof?.family_id ?? null;
+      importLog(fid ? 'info' : 'error', `familyId: ${fid ?? 'não encontrado'}`);
+    }
+
+    // Garantir accounts carregadas
+    let accsLocal = accounts;
+    if (accsLocal.length === 0 && fid) {
+      importLog('info', 'Carregando contas...');
+      const { data: accsData } = await supabase
+        .from("accounts")
+        .select("id, nome, tipo, icone, ativo")
+        .eq("family_id", fid)
+        .eq("ativo", true)
+        .order("created_at", { ascending: true });
+      accsLocal = (accsData ?? []) as AccountLite[];
+      setAccounts(accsLocal);
+      importLog('info', `${accsLocal.length} contas carregadas: ${accsLocal.map(a => a.nome).join(', ')}`);
+    }
 
     if (file.size > 2 * 1024 * 1024) {
       toast.error("Arquivo muito grande (máx 2MB)");
@@ -985,15 +1015,17 @@ function TransactionsPage() {
       }
       toast.info(`📄 ${formato.toUpperCase()} detectado — ${rows.length} transações`);
 
+      importLog(fid ? 'info' : 'warn', `familyId no parse: ${fid ?? 'ausente'}`);
+
       // Categorização automática
-      if (familyId) {
+      if (fid) {
         importLog('info', `Categorizando ${validas.length} transações...`);
         const enriched = await Promise.all(
           rows.map(async (r) => {
             if (r.error) return r;
             try {
               const { data, error: catErr } = await supabase.rpc("categorize_transaction", {
-                _family_id: familyId,
+                _family_id: fid,
                 _description: r.description,
                 _dummy: false,
               });
@@ -1018,22 +1050,20 @@ function TransactionsPage() {
           })
         );
         const categorizadas = enriched.filter(r => r.suggested_category_id);
-        importLog('info', `${categorizadas.length}/${validas.length} transações categorizadas`);
+        importLog('info', `${categorizadas.length}/${validas.length} categorizadas`);
 
         // Detecção de duplicatas
-        importLog('info', 'Verificando duplicatas...');
         const withDup: ParsedRow[] = await Promise.all(
           enriched.map(async (r) => {
             if (r.error) return r;
-            const { data: matches, error: dupErr } = await supabase
+            const { data: matches } = await supabase
               .from("transactions")
               .select("id, description, date, amount, external_id")
-              .eq("family_id", familyId)
+              .eq("family_id", fid)
               .eq("date", r.date)
               .gte("amount", Math.abs(r.amount) - 0.01)
               .lte("amount", Math.abs(r.amount) + 0.01)
               .limit(3);
-            if (dupErr) importLog('warn', `Erro ao verificar duplicata`, dupErr.message);
             const list = matches ?? [];
             if (list.some((m: any) => m.external_id === r.external_id)) {
               return { ...r, dup_status: "existe", selected: false, dup_match: list[0] as any };
@@ -1048,9 +1078,22 @@ function TransactionsPage() {
         importLog('info', `${duplicatas.length} duplicatas encontradas`);
         setParsedRows(withDup);
       } else {
-        importLog('warn', 'familyId não disponível — pulando categorização');
+        importLog('warn', 'familyId não disponível — sem categorização');
         setParsedRows(rows);
       }
+
+      // Auto-detectar conta pelo nome do arquivo
+      const fname = file.name.toLowerCase();
+      let detectedId = '';
+      let detectedName = '';
+      for (const acc of accsLocal) {
+        const accLower = acc.nome.toLowerCase();
+        if (fname.includes('bb') && acc.tipo === 'corrente') { detectedId = acc.id; detectedName = acc.nome; break; }
+        if (fname.includes('nubank') && accLower.includes('nubank')) { detectedId = acc.id; detectedName = acc.nome; break; }
+        if (fname.includes('inter') && accLower.includes('inter')) { detectedId = acc.id; detectedName = acc.nome; break; }
+      }
+      if (!detectedId && accsLocal.length === 1) { detectedId = accsLocal[0].id; detectedName = accsLocal[0].nome; }
+      if (detectedId) importLog('info', `Conta auto-detectada: ${detectedName}`);
       // Auto-sugestão de conta pelo nome do arquivo
       const fname = file.name.toLowerCase();
       const detectKeywords: { match: RegExp; hints: string[] }[] = [
@@ -1100,8 +1143,16 @@ function TransactionsPage() {
   const selectedCount = parsedRows.filter((r) => r.selected && !r.error).length;
 
   const handleConfirmImport = async () => {
-    if (!user || !familyId) {
-      importLog('error', `Abortado: user=${!!user} familyId=${familyId}`);
+    // Garantir familyId — pode não estar no state ainda
+    let fid = familyId;
+    if (!fid && user) {
+      const { data: prof } = await supabase
+        .from("profiles").select("family_id").eq("id", user.id).maybeSingle();
+      fid = prof?.family_id ?? null;
+    }
+    if (!user || !fid) {
+      importLog('error', `Abortado: user=${!!user} familyId=${fid}`);
+      toast.error("Sessão inválida — recarregue a página");
       return;
     }
     if (!importAccountId) {
@@ -1123,7 +1174,7 @@ function TransactionsPage() {
     const { data: existing, error: checkErr } = await supabase
       .from("transactions")
       .select("external_id")
-      .eq("family_id", familyId)
+      .eq("family_id", fid)
       .in("external_id", externalIds);
 
     if (checkErr) importLog('warn', 'Erro ao checar duplicatas', checkErr.message);
@@ -1146,7 +1197,7 @@ function TransactionsPage() {
         ? categories.find((c) => c.id === r.suggested_category_id)
         : undefined;
       return {
-        family_id: familyId,
+        family_id: fid,
         user_id: user.id,
         date: r.date,
         description: r.description,
