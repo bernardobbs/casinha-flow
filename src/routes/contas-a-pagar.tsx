@@ -18,10 +18,16 @@ export const Route = createFileRoute("/contas-a-pagar")({
 });
 
 type BillRow = {
-  id: string; descricao: string; valor: number; data_vencimento: string;
-  status: string; account_id: string | null; category_id: string | null;
-  origem?: "lembrete" | "fatura_cartao" | "parcela";
-  account_nome?: string | null;
+  id: string;
+  descricao: string;
+  valor: number;
+  data_vencimento: string;
+  status: string;
+  account_id: string | null;
+  account_nome: string | null;
+  category_id: string | null;
+  origem: "lembrete" | "fatura_cartao" | "parcela";
+  tipo: string;
 };
 type Acc = { id: string; nome: string };
 
@@ -75,7 +81,10 @@ function ContasAPagarPage() {
   };
 
   const grupos = useMemo(() => {
-    const atrasadas: BillRow[] = []; const hoje: BillRow[] = []; const proximos: BillRow[] = []; const futuras: BillRow[] = [];
+    const atrasadas: BillRow[] = [];
+    const hoje: BillRow[] = [];
+    const proximos: BillRow[] = [];
+    const futuras: BillRow[] = [];
     rows.forEach((r) => {
       const d = diasAte(r.data_vencimento);
       if (d < 0 || r.status === "atrasado") atrasadas.push(r);
@@ -85,6 +94,12 @@ function ContasAPagarPage() {
     });
     return { atrasadas, hoje, proximos, futuras };
   }, [rows]);
+
+  const totaisPorOrigem = useMemo(() => ({
+    faturas: rows.filter(r => r.origem === "fatura_cartao").reduce((s, r) => s + Number(r.valor), 0),
+    recorrentes: rows.filter(r => r.origem === "lembrete").reduce((s, r) => s + Number(r.valor), 0),
+    parcelas: rows.filter(r => r.origem === "parcela").reduce((s, r) => s + Number(r.valor), 0),
+  }), [rows]);
 
   const totalPendente = rows
     .filter((r) => new Date(r.data_vencimento).getMonth() === new Date().getMonth() && new Date(r.data_vencimento).getFullYear() === new Date().getFullYear())
@@ -106,18 +121,50 @@ function ContasAPagarPage() {
   const pagar = async () => {
     if (!payOpen || !familyId || !user) return;
     if (!payAccount) return toast.error("Selecione a conta");
-    const { error: txErr } = await supabase.from("transactions").insert({
-      family_id: familyId, user_id: user.id, account_id: payAccount,
-      category_id: payOpen.category_id, type: "expense",
-      amount: payOpen.valor, description: payOpen.descricao,
-      date: new Date().toISOString().slice(0, 10),
-      source: "manual", tipo_especial: "normal",
-    });
-    if (txErr) return toast.error(txErr.message);
-    await supabase.from("bills_reminders").update({ status: "pago" }).eq("id", payOpen.id);
-    if (payAccount) await supabase.rpc("recalc_account_balance", { _account_id: payAccount });
-    toast.success("✅ Pago");
-    setPayOpen(null); setPayAccount("");
+
+    try {
+      // 1. Criar transação de saída
+      const { error: txErr } = await supabase.from("transactions").insert({
+        family_id: familyId,
+        user_id: user.id,
+        account_id: payAccount,
+        category_id: payOpen.category_id,
+        type: "expense",
+        amount: payOpen.valor,
+        description: payOpen.descricao,
+        date: new Date().toISOString().slice(0, 10),
+        source: "manual",
+        tipo_especial: "normal",
+        conciliado: true,
+      });
+      if (txErr) return toast.error(txErr.message);
+
+      // 2. Marcar como pago conforme a origem
+      if (payOpen.origem === "lembrete") {
+        await supabase.from("bills_reminders")
+          .update({ status: "pago" }).eq("id", payOpen.id);
+      } else if (payOpen.origem === "fatura_cartao") {
+        await supabase.rpc("pay_credit_card_bill" as any, {
+          p_bill_id: payOpen.id,
+          p_account_id: payAccount,
+          p_family_id: familyId,
+          p_user_id: user.id,
+        });
+      } else if (payOpen.origem === "parcela") {
+        await supabase.from("installments")
+          .update({ status: "pago" }).eq("id", payOpen.id);
+      }
+
+      // 3. Recalcular saldo da conta
+      await supabase.rpc("recalc_account_balance", { _account_id: payAccount });
+
+      toast.success("✅ Pago com sucesso!");
+    } catch (e) {
+      toast.error("Erro ao registrar pagamento");
+    }
+
+    setPayOpen(null);
+    setPayAccount("");
     reload();
   };
 
@@ -189,9 +236,33 @@ function ContasAPagarPage() {
 
       <main className="container max-w-5xl mx-auto px-4 py-6 space-y-4">
         <Card>
-          <CardContent className="py-4 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Total pendente do mês</span>
-            <span className="text-xl font-semibold">{fmtBRL(totalPendente)}</span>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Total pendente do mês</span>
+              <span className="text-xl font-semibold">{fmtBRL(totalPendente)}</span>
+            </div>
+            {(totaisPorOrigem.faturas > 0 || totaisPorOrigem.recorrentes > 0 || totaisPorOrigem.parcelas > 0) && (
+              <div className="grid grid-cols-3 gap-2 border-t pt-3">
+                {totaisPorOrigem.faturas > 0 && (
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">💳 Faturas</p>
+                    <p className="text-sm font-medium">{fmtBRL(totaisPorOrigem.faturas)}</p>
+                  </div>
+                )}
+                {totaisPorOrigem.recorrentes > 0 && (
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">🔄 Recorrentes</p>
+                    <p className="text-sm font-medium">{fmtBRL(totaisPorOrigem.recorrentes)}</p>
+                  </div>
+                )}
+                {totaisPorOrigem.parcelas > 0 && (
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">📋 Parcelas</p>
+                    <p className="text-sm font-medium">{fmtBRL(totaisPorOrigem.parcelas)}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
