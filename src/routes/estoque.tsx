@@ -235,6 +235,7 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
   const [nome, setNome] = useState("");
   const [categoria, setCategoria] = useState("");
   const [marca, setMarca] = useState("");
+  const [produtoBase, setProdutoBase] = useState("");
   const [unidade, setUnidade] = useState<typeof UNITS[number]>("un");
   const [localizacao, setLocalizacao] = useState("despensa");
   const [qtd, setQtd] = useState("0");
@@ -244,7 +245,7 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!open) { setNome(""); setCategoria(""); setMarca(""); setQtd("0"); setQtdMin("1"); setPreco(""); setValidade(""); }
+    if (!open) { setNome(""); setCategoria(""); setMarca(""); setProdutoBase(""); setQtd("0"); setQtdMin("1"); setPreco(""); setValidade(""); }
   }, [open]);
 
   const submit = async () => {
@@ -253,9 +254,8 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
     const { error } = await supabase.from("products" as any).insert({
       family_id: familyId, user_id: userId, nome,
       categoria: categoria || null, marca: marca || null,
-      unidade, localizacao,
-      quantidade_atual: parseFloat(qtd.replace(",", ".")) || 0,
-      quantidade_minima: parseFloat(qtdMin.replace(",", ".")) || 1,
+      produto_base: produtoBase || nome || null,
+      estoque_minimo: parseFloat(qtdMin.replace(",", ".")) || 1,
       preco_atual: preco ? parseFloat(preco.replace(",", ".")) : null,
       data_validade: validade || null,
     });
@@ -270,10 +270,18 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
       <DialogContent>
         <DialogHeader><DialogTitle>+ Novo produto</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div><Label>Nome</Label><Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Arroz, Leite..." /></div>
+          <div><Label>Nome</Label><Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Arroz Tio João 5kg" /></div>
+          <div>
+            <Label>Produto base</Label>
+            <Input value={produtoBase} onChange={(e) => setProdutoBase(e.target.value)}
+              placeholder="Ex: Arroz (agrupa marcas diferentes)" />
+            <p className="text-xs text-muted-foreground mt-1">
+              Use o mesmo nome para agrupar marcas do mesmo produto
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Categoria</Label><Input value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Cereais" /></div>
-            <div><Label>Marca</Label><Input value={marca} onChange={(e) => setMarca(e.target.value)} /></div>
+            <div><Label>Marca</Label><Input value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Tio João, Ideal..." /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Unidade</Label>
