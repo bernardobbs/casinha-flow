@@ -216,7 +216,7 @@ function BudgetsPage() {
       toast.error("Informe um valor válido");
       return;
     }
-    const { error } = await supabase.from("budgets").upsert(
+    const { error } = await (supabase.from("budgets") as any).upsert(
       {
         family_id: familyId,
         category_id: newCategoryId,
