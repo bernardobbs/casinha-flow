@@ -570,7 +570,7 @@ function TransactionsPage() {
     const amt = Number(amount.replace(",", "."));
     if (!description.trim() || !date || !Number.isFinite(amt) || amt <= 0) return;
     const { data } = await supabase.rpc("check_duplicate_transaction", {
-      p_family_id: fid,
+      p_family_id: familyId,
       p_date: date,
       p_amount: amt,
       p_description: description,
@@ -608,26 +608,26 @@ function TransactionsPage() {
         supabase
           .from("transactions")
           .select("*")
-          .eq("family_id", fid)
+          .eq("family_id", familyId)
           .order("date", { ascending: false })
           .order("created_at", { ascending: false }),
         supabase
           .from("categories")
           .select("*")
-          .eq("family_id", fid)
+          .eq("family_id", familyId)
           .order("tipo", { ascending: true })
           .order("is_essencial", { ascending: false })
           .order("nome", { ascending: true }),
         supabase
           .from("crisis_events")
           .select("id")
-          .eq("family_id", fid)
+          .eq("family_id", familyId)
           .eq("ativo", true)
           .maybeSingle(),
         supabase
           .from("accounts")
           .select("id, nome, tipo, icone, ativo, dia_fechamento, dia_vencimento")
-          .eq("family_id", fid)
+          .eq("family_id", familyId)
           .eq("ativo", true)
           .order("created_at", { ascending: true }),
       ]);
@@ -671,7 +671,7 @@ function TransactionsPage() {
     const { data, error } = await supabase
       .from("transactions")
       .insert({
-        family_id: fid,
+        family_id: familyId,
         user_id: user.id,
         ...payload,
         category: cat?.nome ?? null,
@@ -694,7 +694,7 @@ function TransactionsPage() {
     // Aprende a regra de categorização (se categoria foi escolhida manualmente)
     if (payload.category_id && payload.description) {
       void supabase.rpc("learn_categorization_rule", {
-        _family_id: fid,
+        _family_id: familyId,
         _termo: payload.description,
         _category_id: payload.category_id,
         _origem: "manual",
@@ -727,7 +727,7 @@ function TransactionsPage() {
       .toISOString()
       .slice(0, 10);
     await supabase.rpc("recalc_financial_state", {
-      _family_id: fid,
+      _family_id: familyId,
       _mes: firstDay,
     });
   };
@@ -767,7 +767,7 @@ function TransactionsPage() {
       }
       setSubmitting(true);
       const { error: instErr } = await supabase.rpc("create_installment_plan", {
-        _family_id: fid,
+        _family_id: familyId,
         _account_id: accountId,
         _description: parsed.data.description,
         _valor_total: parsed.data.amount,
@@ -805,7 +805,7 @@ function TransactionsPage() {
     const { data: candidates } = await supabase
       .from("transactions")
       .select("*")
-      .eq("family_id", fid)
+      .eq("family_id", familyId)
       .eq("date", parsed.data.date)
       .eq("amount", parsed.data.amount)
       .ilike("description", `%${parsed.data.description}%`)
@@ -896,7 +896,7 @@ function TransactionsPage() {
     const { data, error } = await supabase
       .from("categories")
       .insert({
-        family_id: fid,
+        family_id: familyId,
         nome,
         tipo: newCatTipo,
         cor: newCatCor,
