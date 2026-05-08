@@ -2,9 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Credenciais do banco principal do projeto
-const SUPABASE_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? "https://mmqoyozyeidxbgbxqnda.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
