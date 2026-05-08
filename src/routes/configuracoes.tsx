@@ -409,7 +409,7 @@ function ConfigPage() {
                       const nome = inviteEmail.trim();
                       if (!nome) { toast.error("Informe o nome"); return; }
                       if (!familyId) return;
-                      const { error } = await supabase.from("family_members").insert({
+                      const { error } = await (supabase.from("family_members") as any).insert({
                         family_id: familyId,
                         user_id: crypto.randomUUID(),
                         nome,
