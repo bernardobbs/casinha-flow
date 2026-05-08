@@ -104,7 +104,7 @@ function AuthPage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY") { setView("new-password"); return; }
-      if (session && event !== "PASSWORD_RECOVERY") {
+      if (session) {
         if (inviteToken) await acceptInvite(inviteToken);
         navigate({ to: "/dashboard" });
       }
