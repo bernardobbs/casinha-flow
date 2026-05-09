@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Wallet, ArrowLeft, Loader2, Target, Plus, Trash2 } from "lucide-react";
+import { Wallet, ArrowLeft, Loader2, Target, Plus, Trash2, Copy } from "lucide-react";
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 import { SkeletonBudgets } from "@/components/skeletons";
@@ -295,18 +295,43 @@ function BudgetsPage() {
               Defina limites por categoria e acompanhe o consumo do mês.
             </p>
           </div>
-          <Select value={mes} onValueChange={setMes}>
-            <SelectTrigger className="w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {getMonthOptions().map((m) => (
-                <SelectItem key={m} value={m}>
-                  {monthLabel(m)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={mes} onValueChange={setMes}>
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {getMonthOptions().map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {monthLabel(m)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 whitespace-nowrap"
+              onClick={async () => {
+                if (!familyId) return;
+                const { data, error } = await supabase.rpc(
+                  "copy_budget_from_previous_month" as any,
+                  { p_family_id: familyId, p_mes_destino: mes }
+                );
+                if (error) { toast.error(error.message); return; }
+                const copiados = Number(data ?? 0);
+                if (copiados === 0) {
+                  toast.info("Este mês já tem orçamento completo");
+                } else {
+                  toast.success(`✅ ${copiados} categorias copiadas do mês anterior`);
+                  await loadStatuses(familyId, mes);
+                }
+              }}
+            >
+              <Copy className="h-4 w-4" />
+              Copiar mês anterior
+            </Button>
+          </div>
         </div>
 
         {/* Totals */}
