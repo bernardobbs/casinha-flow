@@ -211,6 +211,7 @@ interface ParsedRow {
   category: string;
   external_id: string;
   selected: boolean;
+  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura";
   error?: string;
   // Sugestão da função categorize_transaction
   suggested_category_id?: string | null;
@@ -380,6 +381,27 @@ function parseCaixaExtrato(text: string): ParsedRow[] {
   return rows;
 }
 
+// Detectar tipo especial baseado na descrição
+function detectTipoEspecial(desc: string): "normal" | "transferencia" | "pagamento_fatura" {
+  const d = desc.toLowerCase();
+  // Transferências e investimentos — não são receita nem despesa real
+  if (
+    d.includes("rende fácil") || d.includes("rende facil") ||
+    d.includes("bb rende") || d.includes("aplicacao") || d.includes("aplicação") ||
+    d.includes("resgate") || d.includes("poupança") || d.includes("poupanca") ||
+    d.includes("transferência") || d.includes("transferencia recebida") ||
+    d.includes("pix - rejeitado") || d.includes("pix rejeitado") ||
+    d.includes("estorno") || d.includes("devoluç") || d.includes("devoluc")
+  ) return "transferencia";
+  // Pagamento de fatura de cartão
+  if (
+    d.includes("pagto cartão") || d.includes("pagto cartao") ||
+    d.includes("pagamento cartão") || d.includes("fatura") ||
+    d.includes("pagto cart")
+  ) return "pagamento_fatura";
+  return "normal";
+}
+
 function parseBBCSV(text: string): ParsedRow[] {
   const ignorar = ['Saldo Anterior', 'S A L D O', 'SALDO'];
   const rows: ParsedRow[] = [];
@@ -423,6 +445,7 @@ function parseBBCSV(text: string): ParsedRow[] {
     // Normalizar acentos quebrados na descrição
     desc = desc.replace(/\uFFFD/g, '');
 
+    const tipoEspecial = detectTipoEspecial(desc);
     const type: TxType = valor < 0 ? 'expense' : 'income';
     const amount = Math.abs(valor) * (type === 'expense' ? -1 : 1);
 
@@ -431,9 +454,13 @@ function parseBBCSV(text: string): ParsedRow[] {
       description: desc.slice(0, 120),
       amount,
       type,
-      category: classifyCategory(desc),
+      tipo_especial: tipoEspecial,
+      category: tipoEspecial === 'transferencia' ? 'Transferência' :
+                tipoEspecial === 'pagamento_fatura' ? 'Extra — Banco / Taxas' :
+                classifyCategory(desc),
       external_id: `${dateIso}|${desc.toLowerCase().slice(0, 40)}|${valor.toFixed(2)}|${rows.length}`,
-      selected: true,
+      // Desmarcar automaticamente transferências positivas (entrada do Rende Fácil)
+      selected: !(tipoEspecial === 'transferencia' && valor > 0),
     });
   }
   return rows;
@@ -1214,6 +1241,7 @@ function TransactionsPage() {
         category_id: r.suggested_category_id ?? null,
         is_essencial: cat?.is_essencial ?? false,
         external_id: r.external_id,
+        tipo_especial: r.tipo_especial ?? "normal",
       };
     });
 
@@ -1709,10 +1737,12 @@ function TransactionsPage() {
                           {(r.suggested_nivel === 2 || r.suggested_nivel === 3) && (
                             <Badge variant="secondary" className="font-normal">💡 Sugerido</Badge>
                           )}
-                          {!r.suggested_category_id && r.dup_status !== "existe" && r.dup_status !== "possivel" && (
+                          {!r.suggested_category_id && r.dup_status !== "existe" && r.dup_status !== "possivel" && r.tipo_especial !== "transferencia" && (
                             <Badge variant="outline" className="font-normal text-muted-foreground">❓ Sem categoria</Badge>
                           )}
-                          {r.dup_status === "novo" && <Badge className="font-normal bg-green-500/15 text-green-700">✅ Novo</Badge>}
+                          {r.tipo_especial === "transferencia" && <Badge className="font-normal bg-blue-500/15 text-blue-700">↔️ Transferência</Badge>}
+                          {r.tipo_especial === "pagamento_fatura" && <Badge className="font-normal bg-purple-500/15 text-purple-700">💳 Fatura</Badge>}
+                          {r.dup_status === "novo" && r.tipo_especial === "normal" && <Badge className="font-normal bg-green-500/15 text-green-700">✅ Novo</Badge>}
                           {r.dup_status === "possivel" && <Badge className="font-normal bg-yellow-500/15 text-yellow-700">⚠️ Possível duplicata</Badge>}
                           {r.dup_status === "existe" && <Badge variant="secondary" className="font-normal">🔄 Já existe</Badge>}
                         </>
