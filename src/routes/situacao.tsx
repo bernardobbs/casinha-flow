@@ -13,7 +13,7 @@ import { SkeletonSituacao } from "@/components/skeletons";
 export const Route = createFileRoute("/situacao")({
   head: () => ({
     meta: [
-      { title: "Situação Atual — Casinha Flow" },
+      { title: "Situação Atual — Casinha Hub" },
       { name: "description", content: "Visão financeira completa: score de saúde, projeções, alertas e contas a pagar." },
     ],
   }),

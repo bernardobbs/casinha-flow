@@ -10,7 +10,7 @@ import { Loader2, Lock, CheckCircle2 } from "lucide-react";
 import { Wallet } from "lucide-react";
 
 export const Route = createFileRoute("/auth/reset-password")({
-  head: () => ({ meta: [{ title: "Nova senha — Casinha Flow" }] }),
+  head: () => ({ meta: [{ title: "Nova senha — Casinha Hub" }] }),
   component: ResetPasswordPage,
 });
 
@@ -69,7 +69,7 @@ function ResetPasswordPage() {
             style={{ background: "var(--gradient-primary)" }}>
             <Wallet className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg tracking-tight">Casinha Flow</span>
+          <span className="font-semibold text-lg tracking-tight">Casinha Hub</span>
         </div>
 
         <Card className="border-border/60 shadow-[var(--shadow-elevated)]">

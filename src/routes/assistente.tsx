@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Bot, Send, Loader2, User, RefreshCw, Lightbulb } from "lucide-react";
 
 export const Route = createFileRoute("/assistente")({
-  head: () => ({ meta: [{ title: "Assistente IA — Casinha Flow" }] }),
+  head: () => ({ meta: [{ title: "Assistente IA — Casinha Hub" }] }),
   component: AssistentePage,
 });
 
@@ -110,7 +110,7 @@ async function askClaude(
   }
 
   const t0 = Date.now();
-  const system = `Você é o Assistente Doméstico do Casinha Flow, um app de gestão familiar.
+  const system = `Você é o Assistente Doméstico do Casinha Hub, o hub completo de gestão doméstica.
 Você tem acesso aos dados REAIS da família. Responda em português brasileiro.
 Seja conciso, direto e útil. Use emojis moderadamente.
 Quando mencionar valores, use formato brasileiro (R$ 1.234,56).

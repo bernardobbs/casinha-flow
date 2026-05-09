@@ -24,7 +24,7 @@ import { SkeletonPage } from "@/components/skeletons";
 export const Route = createFileRoute("/conciliacao")({
   head: () => ({
     meta: [
-      { title: "Conciliação — Casinha Flow" },
+      { title: "Conciliação — Casinha Hub" },
       { name: "description", content: "Reconcilie transações pendentes da família." },
     ],
   }),

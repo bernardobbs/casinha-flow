@@ -16,7 +16,7 @@ import { SkeletonRevisaoEstoque } from "@/components/skeletons";
 export const Route = createFileRoute("/estoque/revisao-semanal")({
   head: () => ({
     meta: [
-      { title: "Revisão de Estoque — Casinha Flow" },
+      { title: "Revisão de Estoque — Casinha Hub" },
       { name: "description", content: "Revisão semanal de estoque da família." },
     ],
   }),

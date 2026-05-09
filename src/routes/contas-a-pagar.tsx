@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { SkeletonContasAPagar } from "@/components/skeletons";
 
 export const Route = createFileRoute("/contas-a-pagar")({
-  head: () => ({ meta: [{ title: "Contas a pagar — Casinha Flow" }] }),
+  head: () => ({ meta: [{ title: "Contas a pagar — Casinha Hub" }] }),
   component: ContasAPagarPage,
 });
 

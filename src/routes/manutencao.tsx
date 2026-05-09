@@ -3,7 +3,7 @@ import { Wrench } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const Route = createFileRoute("/manutencao")({
-  head: () => ({ meta: [{ title: "Manutenção — Casinha Flow" }] }),
+  head: () => ({ meta: [{ title: "Manutenção — Casinha Hub" }] }),
   component: ManutencaoPage,
 });
 

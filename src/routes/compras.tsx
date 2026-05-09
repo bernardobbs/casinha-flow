@@ -27,7 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 
 export const Route = createFileRoute("/compras")({
-  head: () => ({ meta: [{ title: "Compras — Casinha Flow" }] }),
+  head: () => ({ meta: [{ title: "Compras — Casinha Hub" }] }),
   component: ComprasPage,
 });
 

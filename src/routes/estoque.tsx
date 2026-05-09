@@ -16,7 +16,7 @@ import { SkeletonEstoque } from "@/components/skeletons";
 export const Route = createFileRoute("/estoque")({
   head: () => ({
     meta: [
-      { title: "Estoque — Casinha Flow" },
+      { title: "Estoque — Casinha Hub" },
       { name: "description", content: "Controle de estoque doméstico: geladeira, freezer, despensa e armário." },
     ],
   }),

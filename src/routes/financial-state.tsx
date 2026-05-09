@@ -31,7 +31,7 @@ import {
 export const Route = createFileRoute("/financial-state")({
   head: () => ({
     meta: [
-      { title: "Estado financeiro — Casinha Flow" },
+      { title: "Estado financeiro — Casinha Hub" },
       {
         name: "description",
         content:
@@ -276,9 +276,9 @@ function FinancialStatePage() {
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="font-semibold tracking-tight">Casinha Flow</span>
+              <span className="font-semibold tracking-tight">Casinha Hub</span>
               <span className="text-[10px] text-muted-foreground hidden sm:block">
-                controle e liberdade andando juntos
+                O centro de controle da sua casa
               </span>
             </div>
           </Link>

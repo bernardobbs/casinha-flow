@@ -3,7 +3,7 @@ import { Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const Route = createFileRoute("/membros")({
-  head: () => ({ meta: [{ title: "Membros — Casinha Flow" }] }),
+  head: () => ({ meta: [{ title: "Membros — Casinha Hub" }] }),
   component: MembrosPage,
 });
 

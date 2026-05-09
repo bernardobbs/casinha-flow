@@ -19,7 +19,7 @@ import { SkeletonGasolina } from "@/components/skeletons";
 export const Route = createFileRoute("/gasolina")({
   head: () => ({
     meta: [
-      { title: "Gasolina — Casinha Flow" },
+      { title: "Gasolina — Casinha Hub" },
       { name: "description", content: "Controle de combustível, abastecimentos e manutenção dos veículos da família." },
     ],
   }),

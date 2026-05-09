@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/revisao-semanal")({
-  head: () => ({ meta: [{ title: "Revisão semanal — Casinha Flow" }] }),
+  head: () => ({ meta: [{ title: "Revisão semanal — Casinha Hub" }] }),
   component: RevisaoSemanalPage,
 });
 

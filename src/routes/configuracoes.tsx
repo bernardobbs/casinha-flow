@@ -41,7 +41,7 @@ import { SkeletonPage } from "@/components/skeletons";
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
     meta: [
-      { title: "Configurações — Casinha Flow" },
+      { title: "Configurações — Casinha Hub" },
       { name: "description", content: "Preferências da família, IA, notificações e regras de categorização." },
     ],
   }),
@@ -320,7 +320,7 @@ function ConfigPage() {
             >
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold tracking-tight">Casinha Flow</span>
+            <span className="font-semibold tracking-tight">Casinha Hub</span>
           </Link>
           <Link to="/dashboard">
             <Button variant="ghost" size="sm" className="gap-2">

@@ -38,7 +38,7 @@ import { SkeletonPage } from "@/components/skeletons";
 export const Route = createFileRoute("/crisis")({
   head: () => ({
     meta: [
-      { title: "Módulo Crise — Casinha Flow" },
+      { title: "Módulo Crise — Casinha Hub" },
       {
         name: "description",
         content:
@@ -252,9 +252,9 @@ function CrisisPage() {
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="font-semibold tracking-tight">Casinha Flow</span>
+              <span className="font-semibold tracking-tight">Casinha Hub</span>
               <span className="text-[10px] text-muted-foreground hidden sm:block">
-                controle e liberdade andando juntos
+                O centro de controle da sua casa
               </span>
             </div>
           </Link>

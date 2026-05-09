@@ -1,15 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, TrendingUp, Wallet, Banknote, Target,
-  Repeat, CalendarClock, ClipboardList, Fuel, Package, Settings,
-  RefreshCw, ListChecks, ShoppingCart, Wrench, Users, Bot,
-  BarChart3, AlertTriangle, Zap,
+  LayoutDashboard, Wallet, Banknote, Target, Repeat,
+  CalendarClock, Package, Wrench, Users, Bot,
+  BarChart3, AlertTriangle, Zap, ShoppingCart,
+  ListChecks, RefreshCw, ClipboardList, Fuel, TrendingUp,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   SidebarHeader, useSidebar,
 } from "@/components/ui/sidebar";
+
+const APP_NAME = "Casinha Hub";
+const APP_TAGLINE = "O centro de controle da sua casa";
 
 const groups = [
   {
@@ -21,15 +24,15 @@ const groups = [
       { title: "Contas", url: "/contas", icon: Banknote },
       { title: "Orçamento", url: "/budgets", icon: Target },
       { title: "Recorrentes", url: "/recorrentes", icon: Repeat },
-      { title: "Contas a Pagar", url: "/contas-a-pagar", icon: CalendarClock },
+      { title: "A Pagar", url: "/contas-a-pagar", icon: CalendarClock },
     ],
   },
   {
     label: "🏠 Casa",
     items: [
+      { title: "Compras", url: "/compras", icon: ShoppingCart },
       { title: "Estoque", url: "/estoque", icon: Package },
       { title: "Revisão Estoque", url: "/estoque/revisao-semanal", icon: ListChecks },
-      { title: "Compras", url: "/compras", icon: ShoppingCart },
       { title: "Manutenção", url: "/manutencao", icon: Wrench },
       { title: "Gasolina", url: "/gasolina", icon: Fuel },
     ],
@@ -37,14 +40,14 @@ const groups = [
   {
     label: "📊 Planejamento",
     items: [
-      { title: "Situação", url: "/situacao", icon: BarChart3 },
       { title: "Revisão Semanal", url: "/revisao-semanal", icon: ClipboardList },
-      { title: "Crise", url: "/crisis", icon: AlertTriangle },
+      { title: "Situação", url: "/situacao", icon: BarChart3 },
       { title: "Estado Financeiro", url: "/financial-state", icon: TrendingUp },
+      { title: "Crise", url: "/crisis", icon: AlertTriangle },
     ],
   },
   {
-    label: "🤖 IA",
+    label: "🤖 Inteligência",
     items: [
       { title: "Assistente", url: "/assistente", icon: Bot },
     ],
@@ -53,7 +56,7 @@ const groups = [
     label: "⚙️ Sistema",
     items: [
       { title: "Membros", url: "/membros", icon: Users },
-      { title: "Configurações", url: "/configuracoes", icon: Settings },
+      { title: "Configurações", url: "/configuracoes", icon: Zap },
     ],
   },
 ];
@@ -69,13 +72,21 @@ export function AppSidebar() {
       <SidebarHeader className="px-3 py-3">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md flex items-center justify-center text-sm"
+            <div className="h-7 w-7 rounded-md flex items-center justify-center text-sm shrink-0"
               style={{ background: "var(--gradient-primary)" }}>
               <Zap className="h-4 w-4 text-primary-foreground" />
             </div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold tracking-tight">Casinha Flow</span>
-              <span className="text-[10px] text-muted-foreground">controle e liberdade</span>
+            <div className="flex flex-col leading-tight min-w-0">
+              <span className="text-sm font-semibold tracking-tight">{APP_NAME}</span>
+              <span className="text-[10px] text-muted-foreground truncate">{APP_TAGLINE}</span>
+            </div>
+          </div>
+        )}
+        {collapsed && (
+          <div className="flex justify-center">
+            <div className="h-7 w-7 rounded-md flex items-center justify-center"
+              style={{ background: "var(--gradient-primary)" }}>
+              <Zap className="h-4 w-4 text-primary-foreground" />
             </div>
           </div>
         )}

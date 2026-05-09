@@ -24,7 +24,7 @@ import { SkeletonBudgets } from "@/components/skeletons";
 export const Route = createFileRoute("/budgets")({
   head: () => ({
     meta: [
-      { title: "Orçamentos — Casinha Flow" },
+      { title: "Orçamentos — Casinha Hub" },
       { name: "description", content: "Defina orçamentos por categoria e acompanhe o consumo do mês." },
     ],
   }),
@@ -269,7 +269,7 @@ function BudgetsPage() {
             <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold tracking-tight">Casinha Flow</span>
+            <span className="font-semibold tracking-tight">Casinha Hub</span>
           </Link>
           <div className="flex items-center gap-2">
             <AlertsBell />

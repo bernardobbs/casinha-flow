@@ -14,8 +14,8 @@ import { Wallet, Loader2, ArrowLeft, Mail, Lock } from "lucide-react";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Entrar — Casinha Flow" },
-      { name: "description", content: "Casinha Flow — controle e liberdade andando juntos." },
+      { title: "Entrar — Casinha Hub" },
+      { name: "description", content: "Organize finanças, compras, estoque e a rotina da sua casa em um único lugar." },
     ],
   }),
   component: AuthPage,
@@ -226,7 +226,7 @@ function AuthPage() {
               style={{ background: "var(--gradient-primary)" }}>
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-lg tracking-tight">Casinha Flow</span>
+            <span className="font-semibold text-lg tracking-tight">Casinha Hub</span>
           </div>
           <Card className="border-border/60 shadow-[var(--shadow-elevated)]">
             {passwordDone ? (
@@ -285,7 +285,7 @@ function AuthPage() {
             <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-lg tracking-tight">Casinha Flow</span>
+            <span className="font-semibold text-lg tracking-tight">Casinha Hub</span>
           </Link>
 
           <Card className="border-border/60 shadow-[var(--shadow-elevated)]">
@@ -352,15 +352,15 @@ function AuthPage() {
             <Wallet className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="flex flex-col items-start leading-tight">
-            <span className="font-semibold text-lg tracking-tight">Casinha Flow</span>
-            <span className="text-[11px] text-muted-foreground">controle e liberdade andando juntos</span>
+            <span className="font-semibold text-lg tracking-tight">Casinha Hub</span>
+            <span className="text-[11px] text-muted-foreground">O centro de controle da sua casa</span>
           </div>
         </Link>
 
         <Card className="border-border/60 shadow-[var(--shadow-elevated)]">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl tracking-tight">Acesse sua conta</CardTitle>
-            <CardDescription>Gerencie as finanças da sua família em um só lugar.</CardDescription>
+            <CardTitle className="text-2xl tracking-tight">Acesse o Casinha Hub</CardTitle>
+            <CardDescription>Finanças, compras, estoque e rotina da casa em um único lugar.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
 
@@ -449,7 +449,7 @@ function AuthPage() {
                     <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
                   </div>
                   <Button type="submit" className="w-full h-11" disabled={loading}>
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar conta grátis"}
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar minha conta"}
                   </Button>
                 </form>
               </TabsContent>

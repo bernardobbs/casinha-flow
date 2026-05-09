@@ -18,7 +18,7 @@ import { SkeletonDashboard } from "@/components/skeletons";
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Painel — Casinha Flow" },
+      { title: "Painel — Casinha Hub" },
       { name: "description", content: "Resumo do mês: saldo, score de saúde, orçamentos e alertas." },
     ],
   }),

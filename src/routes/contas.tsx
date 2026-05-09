@@ -40,7 +40,7 @@ import { SkeletonContas } from "@/components/skeletons";
 export const Route = createFileRoute("/contas")({
   head: () => ({
     meta: [
-      { title: "Contas — Casinha Flow" },
+      { title: "Contas — Casinha Hub" },
       { name: "description", content: "Contas bancárias, carteiras e cartões da família." },
     ],
   }),
@@ -261,7 +261,7 @@ function ContasPage() {
             >
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold tracking-tight">Casinha Flow</span>
+            <span className="font-semibold tracking-tight">Casinha Hub</span>
           </Link>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">

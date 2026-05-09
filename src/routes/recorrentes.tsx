@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { SkeletonRecorrentes } from "@/components/skeletons";
 
 export const Route = createFileRoute("/recorrentes")({
-  head: () => ({ meta: [{ title: "Recorrentes — Casinha Flow" }] }),
+  head: () => ({ meta: [{ title: "Recorrentes — Casinha Hub" }] }),
   component: RecorrentesPage,
 });
 

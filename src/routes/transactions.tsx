@@ -48,7 +48,7 @@ import { SkeletonTransactions } from "@/components/skeletons";
 export const Route = createFileRoute("/transactions")({
   head: () => ({
     meta: [
-      { title: "Transações — Casinha Flow" },
+      { title: "Transações — Casinha Hub" },
       { name: "description", content: "Adicione e acompanhe receitas e despesas da família." },
     ],
   }),
@@ -1309,8 +1309,8 @@ function TransactionsPage() {
               <Wallet className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="font-semibold tracking-tight">Casinha Flow</span>
-              <span className="text-[10px] text-muted-foreground hidden sm:block">controle e liberdade andando juntos</span>
+              <span className="font-semibold tracking-tight">Casinha Hub</span>
+              <span className="text-[10px] text-muted-foreground hidden sm:block">O centro de controle da sua casa</span>
             </div>
           </Link>
           <div className="flex items-center gap-2">

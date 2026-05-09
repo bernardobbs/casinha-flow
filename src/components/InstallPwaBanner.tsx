@@ -72,7 +72,7 @@ export function InstallPwaBanner() {
         <div className="text-2xl shrink-0">📱</div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium leading-tight">
-            Instale o Casinha Flow na tela inicial
+            Instale o Casinha Hub na tela inicial
           </p>
           {isIos ? (
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1 flex-wrap">
