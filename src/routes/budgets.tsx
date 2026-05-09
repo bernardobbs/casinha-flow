@@ -97,9 +97,10 @@ function BudgetsPage() {
   }, [user, authLoading, navigate]);
 
   const loadStatuses = useCallback(async (fid: string, m: string) => {
+    const mesFormatado = m.slice(0, 7); // garantir YYYY-MM
     const { data, error } = await supabase.rpc("get_budget_status", {
       _family_id: fid,
-      _mes: m,
+      _mes: mesFormatado,
     });
     if (error) {
       toast.error(error.message);
