@@ -29,14 +29,17 @@ const LOC_LABEL: Record<string, string> = {
 const UNITS = ["un", "kg", "g", "L", "ml", "pct"] as const;
 
 type StockRow = {
-  product_id: string; family_id: string;
-  nome: string; categoria: string | null; marca: string | null;
-  unidade: string; localizacao: string;
-  quantidade_atual: number; quantidade_minima: number;
-  preco_atual: number | null; data_validade: string | null;
-  consumo_diario: number; dias_restantes: number | null;
-  status: "normal" | "atencao" | "baixo" | "critico";
-  risco_ruptura: boolean; dias_para_vencer: number | null;
+  id: string; product_id?: string; family_id: string;
+  nome: string; categoria: string | null; marca?: string | null;
+  unidade: string; localizacao?: string | null;
+  // A view usa estoque_atual mas o código usava quantidade_atual
+  estoque_atual: number; estoque_minimo: number;
+  // Aliases para compatibilidade com o código existente
+  quantidade_atual?: number; quantidade_minima?: number;
+  preco_ultima_compra: number | null; data_validade: string | null;
+  consumo_medio_diario: number; dias_restantes: number | null;
+  status: "ok" | "baixo" | "critico" | "zerado" | "normal" | "atencao";
+  risco_ruptura: string | boolean; dias_para_vencer: number | null;
   variacao_preco_pct: number | null; preco_anterior: number | null;
 };
 
@@ -126,7 +129,7 @@ function EstoquePage() {
             <h2 className="font-semibold flex items-center gap-2 text-destructive"><AlertTriangle className="h-4 w-4" />Atenção</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {atencao.map(r => (
-                <Card key={r.product_id} className="border-destructive/50 bg-destructive/5">
+                <Card key={r.id ?? r.product_id} className="border-destructive/50 bg-destructive/5">
                   <CardContent className="py-4">
                     <p className="font-medium">{r.nome}</p>
                     <p className="text-xs text-muted-foreground">{r.categoria ?? "Sem categoria"} • {LOC_LABEL[r.localizacao]}</p>
@@ -153,9 +156,9 @@ function EstoquePage() {
         ) : (
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map(r => (
-              <ProductCard key={r.product_id} r={r}
-                onEntrada={() => setOpenMovement({ open: true, productId: r.product_id, tipo: "entrada" })}
-                onSaida={() => setOpenMovement({ open: true, productId: r.product_id, tipo: "saida" })}
+              <ProductCard key={r.id ?? r.product_id} r={r}
+                onEntrada={() => setOpenMovement({ open: true, productId: r.id ?? r.product_id, tipo: "entrada" })}
+                onSaida={() => setOpenMovement({ open: true, productId: r.id ?? r.product_id, tipo: "saida" })}
               />
             ))}
           </section>
@@ -176,7 +179,9 @@ function EstoquePage() {
 }
 
 function ProductCard({ r, onEntrada, onSaida }: { r: StockRow; onEntrada: () => void; onSaida: () => void }) {
-  const ratio = r.quantidade_minima > 0 ? Math.min(2, r.quantidade_atual / r.quantidade_minima) : 1;
+  const qtd = r.estoque_atual ?? r.quantidade_atual ?? 0;
+  const min = r.estoque_minimo ?? r.quantidade_minima ?? 0;
+  const ratio = min > 0 ? Math.min(2, qtd / min) : 1;
   const pct = Math.min(100, (ratio / 2) * 100);
   const barColor = r.status === "critico" ? "bg-red-500" : r.status === "baixo" ? "bg-orange-500" : r.status === "atencao" ? "bg-yellow-500" : "bg-green-500";
   const variacao = r.variacao_preco_pct;
@@ -195,7 +200,7 @@ function ProductCard({ r, onEntrada, onSaida }: { r: StockRow; onEntrada: () => 
         <div>
           <div className="flex justify-between text-sm mb-1">
             <span className="text-muted-foreground">Estoque</span>
-            <span className="font-medium">{Number(r.quantidade_atual).toLocaleString("pt-BR")} {r.unidade} <span className="text-muted-foreground text-xs">/ mín {r.quantidade_minima}</span></span>
+            <span className="font-medium">{Number(r.estoque_atual ?? r.quantidade_atual ?? 0).toLocaleString("pt-BR")} {r.unidade} <span className="text-muted-foreground text-xs">/ mín {r.estoque_minimo ?? r.quantidade_minima ?? 0}</span></span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
             <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
@@ -414,9 +419,9 @@ function ImportDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
 function ShoppingListDialog({ open, onOpenChange, rows }: { open: boolean; onOpenChange: (o: boolean) => void; rows: StockRow[] }) {
   const lista = useMemo(() => {
     return rows
-      .filter(r => r.quantidade_atual <= r.quantidade_minima || r.risco_ruptura)
+      .filter(r => (r.estoque_atual ?? r.quantidade_atual ?? 0) <= (r.estoque_minimo ?? r.quantidade_minima ?? 0) || r.risco_ruptura)
       .map(r => {
-        const faltante = Math.max(r.quantidade_minima * 2 - r.quantidade_atual, r.quantidade_minima - r.quantidade_atual);
+        const faltante = Math.max((r.estoque_minimo??0) * 2 - (r.estoque_atual??0), (r.estoque_minimo??0) - (r.estoque_atual??0));
         const qtd = Math.ceil(Math.max(faltante, 1));
         return { nome: r.nome, qtd, unidade: r.unidade, localizacao: r.localizacao };
       });
