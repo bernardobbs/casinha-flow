@@ -295,13 +295,13 @@ function Dashboard() {
           <QuickAction to="/transactions" icon={<Plus className="h-4 w-4" />} label="Lançar" />
           <QuickAction to="/transactions" icon={<Upload className="h-4 w-4" />} label="Importar" />
           <QuickAction to="/situacao" icon={<BarChart3 className="h-4 w-4" />} label="Situação" />
-          <QuickAction to="/contas-a-pagar" icon={<CalendarClock className="h-4 w-4" />} label="Contas" />
+          <QuickAction to="/contas-a-pagar" icon={<CalendarClock className="h-4 w-4" />} label="A Pagar" />
         </div>
 
         {/* Cards de acesso */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <AccessCard to="/transactions" icon={<CreditCard />} label="Transações" />
-          <AccessCard to="/contas" icon={<Banknote />} label="Contas" />
+          <AccessCard to="/contas" icon={<Banknote />} label="Contas Bancárias" />
           <AccessCard to="/budgets" icon={<Target />} label="Orçamento" />
           <AccessCard to="/recorrentes" icon={<Repeat />} label="Recorrentes" />
           <AccessCard to="/revisao-semanal" icon={<ClipboardList />} label="Revisão" />
