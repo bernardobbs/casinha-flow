@@ -2,9 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, ShoppingCart, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Loader2, ListChecks, Wallet } from "lucide-react";
+import { CalendarIcon, ShoppingCart, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Loader2, ListChecks, Wallet, CheckCircle2, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ const fmtBRL = (n: number | null | undefined) =>
 function ComprasPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId } = useFamily();
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [itemsByList, setItemsByList] = useState<Record<string, ShoppingItem[]>>({});
   const [pendingByList, setPendingByList] = useState<Record<string, { total: number; pendentes: number }>>({});
@@ -69,39 +70,46 @@ function ComprasPage() {
   const [tab, setTab] = useState<Status>("aberta");
   const [loading, setLoading] = useState(true);
   const [productNames, setProductNames] = useState<string[]>([]);
+  const [accounts, setAccounts] = useState<{ id: string; nome: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; nome: string }[]>([]);
 
   const [listDialog, setListDialog] = useState<{ open: boolean; editing?: ShoppingList }>({ open: false });
   const [itemDialog, setItemDialog] = useState<{ open: boolean; listId?: string }>({ open: false });
   const [deleteList, setDeleteList] = useState<ShoppingList | null>(null);
   const [completeAsk, setCompleteAsk] = useState<ShoppingList | null>(null);
+  // Estado para finalizar compra com integração financeira
+  const [finalizarDialog, setFinalizarDialog] = useState<{ open: boolean; list: ShoppingList | null }>({ open: false, list: null });
+  const [finalizarAccount, setFinalizarAccount] = useState<string>("");
+  const [finalizarCategory, setFinalizarCategory] = useState<string>("");
+  const [finalizarLoading, setFinalizarLoading] = useState(false);
+  const [finalizarResult, setFinalizarResult] = useState<{ total: number; estoque: number; itens: number } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
 
   const reload = async () => {
-    if (!user) return;
+    if (!familyId) return;
     setLoading(true);
-    const { data: profile } = await supabase.from("profiles").select("family_id").eq("id", user.id).maybeSingle();
-    if (!profile?.family_id) { setLoading(false); return; }
-    setFamilyId(profile.family_id);
 
-    const { data, error } = await supabase
-      .from("shopping_lists" as any)
-      .select("*")
-      .eq("family_id", profile.family_id)
-      .order("created_at", { ascending: false });
-    if (error) toast.error("Erro ao carregar listas");
+    const [{ data }, { data: prods }, { data: accs }, { data: cats }] = await Promise.all([
+      supabase.from("shopping_lists" as any).select("*")
+        .eq("family_id", familyId).order("created_at", { ascending: false }),
+      supabase.from("products").select("nome").eq("family_id", familyId).eq("ativo", true),
+      supabase.from("accounts").select("id, nome").eq("family_id", familyId).eq("ativo", true).order("nome"),
+      supabase.from("categories").select("id, nome").eq("family_id", familyId).eq("tipo", "despesa").order("nome"),
+    ]);
+
     const ls = ((data as any) ?? []) as ShoppingList[];
     setLists(ls);
+    setProductNames(((prods as any) ?? []).map((p: { nome: string }) => p.nome));
+    setAccounts((accs as any) ?? []);
+    setCategories((cats as any) ?? []);
 
-    // Carregar contagens de itens por lista (total e pendentes)
     if (ls.length) {
       const ids = ls.map(l => l.id);
       const { data: itemsAll } = await supabase
-        .from("shopping_items" as any)
-        .select("list_id, comprado")
-        .in("list_id", ids);
+        .from("shopping_items" as any).select("list_id, comprado").in("list_id", ids);
       const counts: Record<string, { total: number; pendentes: number }> = {};
       ((itemsAll as any) ?? []).forEach((it: { list_id: string; comprado: boolean }) => {
         const c = counts[it.list_id] ?? { total: 0, pendentes: 0 };
@@ -109,16 +117,10 @@ function ComprasPage() {
         counts[it.list_id] = c;
       });
       setPendingByList(counts);
-    } else {
-      setPendingByList({});
     }
-
-    const { data: prods } = await supabase.from("products").select("nome").eq("family_id", profile.family_id).eq("ativo", true);
-    setProductNames(((prods as any) ?? []).map((p: { nome: string }) => p.nome));
-
     setLoading(false);
   };
-  useEffect(() => { reload(); }, [user]);
+  useEffect(() => { reload(); }, [familyId]);
 
   const loadItems = async (listId: string) => {
     const { data, error } = await supabase
@@ -256,10 +258,45 @@ function ComprasPage() {
   };
 
   const concluirLista = async (l: ShoppingList) => {
-    await supabase.from("shopping_lists" as any).update({ status: "concluida" }).eq("id", l.id);
-    setLists(prev => prev.map(x => x.id === l.id ? { ...x, status: "concluida" } : x));
+    // Abrir dialog de finalização com integração financeira
     setCompleteAsk(null);
-    toast.success("Lista concluída");
+    setFinalizarResult(null);
+    setFinalizarAccount(accounts[0]?.id ?? "");
+    // Tentar auto-detectar categoria supermercado
+    const catSuper = categories.find(c =>
+      c.nome.toLowerCase().includes("supermercado") || c.nome.toLowerCase().includes("alimenta")
+    );
+    setFinalizarCategory(catSuper?.id ?? categories[0]?.id ?? "");
+    setFinalizarDialog({ open: true, list: l });
+  };
+
+  const handleFinalizarCompra = async () => {
+    const l = finalizarDialog.list;
+    if (!l || !familyId || !user) return;
+    if (!finalizarAccount) { toast.error("Selecione a conta"); return; }
+
+    setFinalizarLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("finalizar_compra" as any, {
+        p_list_id: l.id,
+        p_family_id: familyId,
+        p_user_id: user.id,
+        p_account_id: finalizarAccount,
+        p_category_id: finalizarCategory || null,
+        p_data: new Date().toISOString().slice(0, 10),
+      });
+      if (error) { toast.error(error.message); return; }
+      const result = data as any;
+      setFinalizarResult({
+        total: result.total,
+        estoque: result.estoque_atualizado,
+        itens: result.itens_comprados,
+      });
+      toast.success(`✅ Compra finalizada! ${result.itens_comprados} itens, R$ ${Number(result.total).toFixed(2)}`);
+      await reload();
+    } finally {
+      setFinalizarLoading(false);
+    }
   };
 
   // ── UI ────────────────────────────────────────────────
@@ -343,10 +380,19 @@ function ComprasPage() {
                       </div>
                     </div>
                     <Progress value={pct} className="h-1.5" />
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => toggleExpand(l.id)}>
-                      {isOpen ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
-                      {isOpen ? "Ocultar itens" : "Ver itens"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => toggleExpand(l.id)}>
+                        {isOpen ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
+                        {isOpen ? "Ocultar itens" : "Ver itens"}
+                      </Button>
+                      {l.status !== "concluida" && counts.total > 0 && counts.pendentes === 0 && (
+                        <Button size="sm" className="gap-1 bg-emerald-600 hover:bg-emerald-700"
+                          onClick={() => concluirLista(l)}>
+                          <CheckCircle2 className="h-4 w-4" />
+                          Finalizar
+                        </Button>
+                      )}
+                    </div>
 
                     {isOpen && (
                       <div className="space-y-2 pt-2 border-t">
@@ -409,17 +455,86 @@ function ComprasPage() {
       <AlertDialog open={!!completeAsk} onOpenChange={(o) => !o && setCompleteAsk(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Concluir lista?</AlertDialogTitle>
+            <AlertDialogTitle>Finalizar compra?</AlertDialogTitle>
             <AlertDialogDescription>
-              Todos os itens de "{completeAsk?.nome}" foram marcados como comprados. Deseja marcar a lista como concluída?
+              Todos os itens de "{completeAsk?.nome}" foram marcados. Deseja finalizar e registrar no financeiro?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Agora não</AlertDialogCancel>
-            <AlertDialogAction onClick={() => completeAsk && concluirLista(completeAsk)}>Concluir</AlertDialogAction>
+            <AlertDialogAction onClick={() => completeAsk && concluirLista(completeAsk)}>Finalizar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* DIALOG: Finalizar compra com integração financeira */}
+      <Dialog open={finalizarDialog.open} onOpenChange={(o) => { if (!finalizarLoading) setFinalizarDialog({ open: o, list: finalizarDialog.list }); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              Finalizar compra
+            </DialogTitle>
+          </DialogHeader>
+
+          {finalizarResult ? (
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 p-4 space-y-2">
+                <p className="font-semibold text-emerald-700 dark:text-emerald-400">✅ Compra finalizada com sucesso!</p>
+                <div className="text-sm space-y-1 text-emerald-600 dark:text-emerald-400">
+                  <p>💰 Transação criada: <strong>{fmtBRL(finalizarResult.total)}</strong></p>
+                  <p>📦 Estoque atualizado: <strong>{finalizarResult.estoque} produtos</strong></p>
+                  <p>🛒 Itens comprados: <strong>{finalizarResult.itens}</strong></p>
+                </div>
+              </div>
+              <Button className="w-full" onClick={() => setFinalizarDialog({ open: false, list: null })}>
+                Fechar
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Ao finalizar, o sistema irá automaticamente:
+              </p>
+              <ul className="text-sm space-y-1 text-muted-foreground list-none">
+                <li className="flex items-center gap-2"><span className="text-emerald-600">✓</span> Criar lançamento financeiro</li>
+                <li className="flex items-center gap-2"><span className="text-emerald-600">✓</span> Atualizar estoque dos produtos vinculados</li>
+                <li className="flex items-center gap-2"><span className="text-emerald-600">✓</span> Registrar movimentação de estoque</li>
+              </ul>
+
+              <div className="space-y-2">
+                <Label>Conta bancária <span className="text-destructive">*</span></Label>
+                <Select value={finalizarAccount} onValueChange={setFinalizarAccount}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Categoria financeira</Label>
+                <Select value={finalizarCategory} onValueChange={setFinalizarCategory}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setFinalizarDialog({ open: false, list: null })} disabled={finalizarLoading}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleFinalizarCompra} disabled={finalizarLoading || !finalizarAccount} className="gap-2">
+                  {finalizarLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  Finalizar compra
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
