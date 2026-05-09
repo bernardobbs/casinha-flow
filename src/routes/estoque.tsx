@@ -24,9 +24,25 @@ export const Route = createFileRoute("/estoque")({
 });
 
 const LOC_LABEL: Record<string, string> = {
-  geladeira: "❄️ Geladeira", freezer: "🧊 Freezer", despensa: "🗄️ Despensa", armario: "🗃️ Armário", outro: "📦 Outro",
+  geladeira: "❄️ Geladeira",
+  freezer: "🧊 Freezer",
+  despensa: "🗄️ Despensa",
+  armario: "🗃️ Armário",
+  banheiro: "🚿 Banheiro",
+  lavanderia: "🧺 Lavanderia",
+  outro: "📦 Outro",
 };
-const UNITS = ["un", "kg", "g", "L", "ml", "pct"] as const;
+const UNITS = [
+  { value: "un",  label: "Unidade (un)" },
+  { value: "kg",  label: "Quilograma (kg)" },
+  { value: "g",   label: "Grama (g)" },
+  { value: "L",   label: "Litro (L)" },
+  { value: "ml",  label: "Mililitro (ml)" },
+  { value: "pct", label: "Pacote (pct)" },
+  { value: "cx",  label: "Caixa (cx)" },
+  { value: "dz",  label: "Dúzia (dz)" },
+] as const;
+type UnitValue = typeof UNITS[number]["value"];
 
 type StockRow = {
   id: string; product_id?: string; family_id: string;
@@ -178,34 +194,68 @@ function EstoquePage() {
   );
 }
 
+function fmtQtd(qty: number, unidade: string): string {
+  const n = Number(qty);
+  // Formatar número sem zeros desnecessários
+  const numStr = Number.isInteger(n) ? n.toString() : n.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+  // Label da unidade por extenso
+  const unitLabel: Record<string, string> = {
+    un: n === 1 ? "unidade" : "unidades",
+    kg: "kg", g: "g", L: "L", ml: "ml",
+    pct: n === 1 ? "pacote" : "pacotes",
+    cx: n === 1 ? "caixa" : "caixas",
+    dz: n === 1 ? "dúzia" : "dúzias",
+  };
+  return `${numStr} ${unitLabel[unidade] ?? unidade}`;
+}
+
 function ProductCard({ r, onEntrada, onSaida }: { r: StockRow; onEntrada: () => void; onSaida: () => void }) {
   const qtd = r.estoque_atual ?? r.quantidade_atual ?? 0;
   const min = r.estoque_minimo ?? r.quantidade_minima ?? 0;
   const ratio = min > 0 ? Math.min(2, qtd / min) : 1;
   const pct = Math.min(100, (ratio / 2) * 100);
-  const barColor = r.status === "critico" ? "bg-red-500" : r.status === "baixo" ? "bg-orange-500" : r.status === "atencao" ? "bg-yellow-500" : "bg-green-500";
+  const barColor = r.status === "critico" || r.status === "zerado"
+    ? "bg-red-500"
+    : r.status === "baixo" ? "bg-orange-500"
+    : r.status === "atencao" ? "bg-yellow-500"
+    : "bg-green-500";
+  const statusLabel: Record<string, string> = {
+    zerado: "Zerado", critico: "Crítico", baixo: "Baixo", atencao: "Atenção",
+    normal: "Normal", ok: "Normal",
+  };
+  const statusVariant: Record<string, "destructive" | "secondary" | "outline"> = {
+    zerado: "destructive", critico: "destructive", baixo: "secondary",
+    atencao: "secondary", normal: "outline", ok: "outline",
+  };
   const variacao = r.variacao_preco_pct;
+  const preco = r.preco_ultima_compra ?? (r as any).preco_atual;
   return (
     <Card className="border-border/60">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-start justify-between gap-2">
           <span>{r.nome}</span>
-          <Badge variant={r.status === "normal" ? "secondary" : r.status === "critico" ? "destructive" : "outline"}>
-            {r.status === "critico" ? "Crítico" : r.status === "baixo" ? "Baixo" : r.status === "atencao" ? "Atenção" : "Normal"}
+          <Badge variant={statusVariant[r.status] ?? "outline"}>
+            {statusLabel[r.status] ?? r.status}
           </Badge>
         </CardTitle>
-        <p className="text-xs text-muted-foreground">{r.categoria ?? "Sem categoria"} • {LOC_LABEL[r.localizacao]}</p>
+        <p className="text-xs text-muted-foreground">
+          {r.categoria ?? "Sem categoria"}
+          {r.localizacao ? ` • ${LOC_LABEL[r.localizacao] ?? r.localizacao}` : ""}
+        </p>
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
           <div className="flex justify-between text-sm mb-1">
             <span className="text-muted-foreground">Estoque</span>
-            <span className="font-medium">{Number(r.estoque_atual ?? r.quantidade_atual ?? 0).toLocaleString("pt-BR")} {r.unidade} <span className="text-muted-foreground text-xs">/ mín {r.estoque_minimo ?? r.quantidade_minima ?? 0}</span></span>
+            <span className="font-medium">
+              {fmtQtd(qtd, r.unidade)}
+              {min > 0 && <span className="text-muted-foreground text-xs"> / mín {fmtQtd(min, r.unidade)}</span>}
+            </span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
             <div className={`h-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
           </div>
-          {r.dias_restantes !== null && (
+          {r.dias_restantes !== null && r.dias_restantes > 0 && (
             <p className="text-xs text-muted-foreground mt-1">~{r.dias_restantes} dias restantes</p>
           )}
         </div>
@@ -215,9 +265,9 @@ function ProductCard({ r, onEntrada, onSaida }: { r: StockRow; onEntrada: () => 
               {r.dias_para_vencer < 0 ? `Vencido há ${Math.abs(r.dias_para_vencer)}d` : `Vence em ${r.dias_para_vencer}d`}
             </Badge>
           )}
-          {r.preco_atual !== null && (
+          {preco != null && (
             <Badge variant="outline">
-              {fmtBRL(r.preco_atual)}
+              {fmtBRL(preco)}
               {variacao !== null && (
                 <span className={`ml-1 ${variacao > 0 ? "text-red-500" : "text-green-600"}`}>
                   {variacao > 0 ? "↑" : "↓"}{Math.abs(variacao).toFixed(1)}%
@@ -240,7 +290,7 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
   const [categoria, setCategoria] = useState("");
   const [marca, setMarca] = useState("");
   const [produtoBase, setProdutoBase] = useState("");
-  const [unidade, setUnidade] = useState<typeof UNITS[number]>("un");
+  const [unidade, setUnidade] = useState<UnitValue>("un");
   const [localizacao, setLocalizacao] = useState("despensa");
   const [qtd, setQtd] = useState("0");
   const [qtdMin, setQtdMin] = useState("1");
@@ -291,7 +341,7 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
             <div><Label>Unidade</Label>
               <Select value={unidade} onValueChange={(v: any) => setUnidade(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                <SelectContent>{UNITS.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Localização</Label>
@@ -304,9 +354,9 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div><Label>Qtd atual</Label><Input value={qtd} onChange={(e) => setQtd(e.target.value)} inputMode="decimal" /></div>
-            <div><Label>Qtd mínima</Label><Input value={qtdMin} onChange={(e) => setQtdMin(e.target.value)} inputMode="decimal" /></div>
-            <div><Label>Preço (R$)</Label><Input value={preco} onChange={(e) => setPreco(e.target.value)} inputMode="decimal" placeholder="0,00" /></div>
+            <div><Label>Quantidade atual</Label><Input value={qtd} onChange={(e) => setQtd(e.target.value)} inputMode="decimal" /></div>
+            <div><Label>Quantidade mínima</Label><Input value={qtdMin} onChange={(e) => setQtdMin(e.target.value)} inputMode="decimal" /></div>
+            <div><Label>Custo médio (R$)</Label><Input value={preco} onChange={(e) => setPreco(e.target.value)} inputMode="decimal" placeholder="0,00" /></div>
           </div>
           <div><Label>Validade (opcional)</Label><Input type="date" value={validade} onChange={(e) => setValidade(e.target.value)} /></div>
         </div>
