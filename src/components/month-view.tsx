@@ -195,6 +195,28 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Cards de totais do mês */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-lg border border-border/60 bg-card p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-1">Receitas</p>
+          <p className="text-lg font-semibold tabular-nums" style={{ color: "var(--success)" }}>
+            {fmt(totals.inc)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border/60 bg-card p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-1">Despesas</p>
+          <p className="text-lg font-semibold tabular-nums text-destructive">
+            {fmt(totals.exp)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border/60 bg-card p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-1">Saldo</p>
+          <p className="text-lg font-semibold tabular-nums" style={{ color: totals.bal >= 0 ? "var(--success)" : "var(--destructive)" }}>
+            {fmt(totals.bal)}
+          </p>
+        </div>
+      </div>
+
       {/* Month selector */}
       <div className="flex items-center justify-center gap-2">
         <Button variant="outline" size="icon" onClick={() => setCurrentMes(addMonths(currentMes, -1))}>

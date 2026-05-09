@@ -1318,45 +1318,7 @@ function TransactionsPage() {
           </div>
         </div>
 
-        {/* Totals */}
-        <div className="grid sm:grid-cols-3 gap-4">
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Receitas</CardTitle>
-              <TrendingUp className="h-4 w-4" style={{ color: "var(--success)" }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight" style={{ color: "var(--success)" }}>
-                {formatCurrency(totals.income)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Despesas</CardTitle>
-              <TrendingDown className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight text-destructive">
-                {formatCurrency(totals.expense)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 shadow-[var(--shadow-soft)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Saldo</CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div
-                className="text-2xl font-semibold tracking-tight"
-                style={{ color: totals.balance >= 0 ? "var(--success)" : "var(--destructive)" }}
-              >
-                {formatCurrency(totals.balance)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Totals — mostrados dentro do MonthView por mês */}
 
         {/* Add form */}
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
