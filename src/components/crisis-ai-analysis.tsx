@@ -113,7 +113,7 @@ Projeção de fechamento: R$${summary?.saldo_projetado ?? 0}.`;
       }
 
       // Log no banco
-      await supabase.from("ai_logs").insert({
+      await (supabase.from("ai_logs") as any).insert({
         family_id: familyId, user_id: user.id, feature: "crisis_analysis",
         tokens_input: 0, tokens_output: 0, success: true,
       });

@@ -28,6 +28,8 @@ export interface ParsedRow {
   dup_match?: { id: string; description: string; date: string; amount: number } | null;
 }
 
+export type TxSource = 'manual' | 'importado' | 'recorrente' | 'compras' | 'cartao';
+
 export const SourceIcon = ({ source }: { source: TxSource }) => {
   if (source === "cartao") return <CreditCard className="h-3.5 w-3.5" />;
   if (source === "importado") return <FileDown className="h-3.5 w-3.5" />;
@@ -104,25 +106,6 @@ export function splitCsvLine(line: string): string[] {
   return out.map((s) => s.trim());
 }
 
-interface ParsedRow {
-  date: string;
-  description: string;
-  amount: number; // signed
-  type: TxType;
-  category: string;
-  external_id: string;
-  selected: boolean;
-  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura";
-  error?: string;
-  // Sugestão da função categorize_transaction
-  suggested_category_id?: string | null;
-  suggested_origem?: "manual" | "ia" | "keyword" | null;
-  suggested_nivel?: number | null;
-  suggested_confianca?: number | null;
-  // Dedup status
-  dup_status?: "novo" | "possivel" | "existe";
-  dup_match?: { id: string; description: string; date: string; amount: number } | null;
-}
 
 export function parseBBExtrato(text: string): ParsedRow[] {
   const ignorar = ["Saldo Anterior", "Saldo do dia", "00/00/0000"];

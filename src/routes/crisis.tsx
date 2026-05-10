@@ -127,7 +127,6 @@ function CrisisPage() {
       .eq("id", user.id)
       .maybeSingle();
     const fid = familyId ?? null;
-    setFamilyId(fid);
     if (!fid) {
       setLoading(false);
       return;
@@ -136,7 +135,7 @@ function CrisisPage() {
     const { data: events } = await supabase
       .from("crisis_events")
       .select("id,data_inicio,data_fim,ativo,estagio_atual,meta_reducao_pct,modo_entrada,observacoes")
-      .eq("family_id", fid)
+      .eq("family_id", familyId!)
       .order("data_inicio", { ascending: false })
       .limit(20);
 
@@ -161,7 +160,7 @@ function CrisisPage() {
       const { count } = await supabase
         .from("transactions")
         .select("id", { count: "exact", head: true })
-        .eq("family_id", fid)
+        .eq("family_id", familyId!)
         .eq("type", "expense")
         .eq("is_essencial", false)
         .gte("date", startISO);

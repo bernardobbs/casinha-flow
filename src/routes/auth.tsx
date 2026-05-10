@@ -69,7 +69,7 @@ function AuthPage() {
 
   // Aceitar convite após autenticação
   const acceptInvite = async (token: string) => {
-    const { data, error } = await supabase.rpc("accept_invite", { p_token: token });
+    const { data, error } = await supabase.rpc("accept_invite" as any, { p_token: token });
     if (error) {
       toast.error("Convite inválido ou expirado");
       return false;

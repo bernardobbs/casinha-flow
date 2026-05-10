@@ -53,7 +53,6 @@ function RevisaoSemanalPage() {
     (async () => {
       setLoading(true);
       const fid = familyId ?? null;
-      setFamilyId(fid);
       if (!fid) { setLoading(false); return; }
 
       const today = new Date();
@@ -66,22 +65,22 @@ function RevisaoSemanalPage() {
       const [w, p, c, bw, bn, a] = await Promise.all([
         supabase.from("transactions")
           .select("id, description, amount, type, category_id, date")
-          .eq("family_id", fid).gte("date", iso(start7)).lte("date", iso(today))
+          .eq("family_id", familyId!).gte("date", iso(start7)).lte("date", iso(today))
           .eq("tipo_especial", "normal"),
         supabase.from("transactions")
           .select("id, description, amount, type, category_id, date")
-          .eq("family_id", fid).gte("date", iso(start14)).lt("date", iso(start7))
+          .eq("family_id", familyId!).gte("date", iso(start14)).lt("date", iso(start7))
           .eq("tipo_especial", "normal"),
-        supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
+        supabase.rpc("get_projecao_categorias", { p_family_id: familyId }),
         supabase.from("bills_reminders")
           .select("id, descricao, valor, data_vencimento, status, category_id")
-          .eq("family_id", fid).gte("data_vencimento", iso(start7)).lte("data_vencimento", iso(today)),
+          .eq("family_id", familyId!).gte("data_vencimento", iso(start7)).lte("data_vencimento", iso(today)),
         supabase.from("bills_reminders")
           .select("id, descricao, valor, data_vencimento, status, category_id")
-          .eq("family_id", fid).neq("status", "pago")
+          .eq("family_id", familyId!).neq("status", "pago")
           .gt("data_vencimento", iso(today)).lte("data_vencimento", iso(in7))
           .order("data_vencimento", { ascending: true }),
-        supabase.from("accounts").select("id, nome").eq("family_id", fid).eq("ativo", true).order("nome"),
+        supabase.from("accounts").select("id, nome").eq("family_id", familyId!).eq("ativo", true).order("nome"),
       ]);
 
       setTxWeek((w.data ?? []) as Tx[]);

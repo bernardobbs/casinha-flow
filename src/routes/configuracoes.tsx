@@ -145,7 +145,6 @@ function ConfigPage() {
     (async () => {
       setLoading(true);
       const fid = familyId ?? null;
-      setFamilyId(fid);
       if (!fid) {
         setLoading(false);
         return;
@@ -156,7 +155,7 @@ function ConfigPage() {
       const { data: settings } = await supabase
         .from("family_settings")
         .select("chave, valor")
-        .eq("family_id", fid);
+        .eq("family_id", familyId!);
 
       const map = new Map((settings ?? []).map((s) => [s.chave, s.valor ?? ""]));
       setValues((prev) => ({
@@ -174,7 +173,7 @@ function ConfigPage() {
         notif_contas: map.get("notif_contas") ?? "true",
       }));
 
-      const { data: count } = await supabase.rpc("count_ai_runs_today", { _family_id: fid });
+      const { data: count } = await supabase.rpc("count_ai_runs_today", { _family_id: familyId! });
       setAiToday(Number(count ?? 0));
 
       await loadRules(fid);
@@ -188,7 +187,7 @@ function ConfigPage() {
     const { data: rows } = await supabase
       .from("family_members")
       .select("id, user_id, nome, icone, cor, role, tipo")
-      .eq("family_id", fid)
+      .eq("family_id", familyId!)
       .order("nome");
     setMembers((rows ?? []).map((r: any) => ({
       user_id: r.user_id,
@@ -232,7 +231,7 @@ function ConfigPage() {
     const { data } = await supabase
       .from("categorization_rules")
       .select("id, termo, category_id, origem, confianca, usos, categories(nome)")
-      .eq("family_id", fid)
+      .eq("family_id", familyId!)
       .order("usos", { ascending: false })
       .limit(500);
     const rs: Rule[] = (data ?? []).map((r) => {

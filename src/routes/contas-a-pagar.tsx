@@ -61,13 +61,12 @@ function ContasAPagarPage() {
     (async () => {
       setLoading(true);
       const fid = familyId ?? null;
-      setFamilyId(fid);
       if (!fid) { setLoading(false); return; }
-      try { await supabase.rpc("check_bills_alerts", { p_family_id: fid }); } catch { /* */ }
+      try { await supabase.rpc("check_bills_alerts", { p_family_id: familyId }); } catch { /* */ }
 
       const [b, a] = await Promise.all([
-        supabase.rpc("get_previsao_mes", { p_family_id: fid }),
-        supabase.from("accounts").select("id, nome").eq("family_id", fid).eq("ativo", true).order("nome"),
+        supabase.rpc("get_previsao_mes", { p_family_id: familyId }),
+        supabase.from("accounts").select("id, nome").eq("family_id", familyId!).eq("ativo", true).order("nome"),
       ]);
       setRows(((b.data ?? []) as BillRow[]));
       setAccounts((a.data ?? []) as Acc[]);

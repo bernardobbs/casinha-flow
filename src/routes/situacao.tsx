@@ -87,7 +87,6 @@ function SituacaoPage() {
     (async () => {
       setLoading(true);
       const fid = familyId ?? null;
-      setFamilyId(fid);
       if (!fid) { setLoading(false); return; }
 
       const today = new Date();
@@ -96,15 +95,15 @@ function SituacaoPage() {
       const iso7 = in7.toISOString().slice(0, 10);
 
       const [s, c, sa, al, bl] = await Promise.all([
-        supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
-        supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
-        supabase.rpc("get_saldo_total", { p_family_id: fid }),
+        supabase.rpc("get_dashboard_summary", { p_family_id: familyId }),
+        supabase.rpc("get_projecao_categorias", { p_family_id: familyId }),
+        supabase.rpc("get_saldo_total", { p_family_id: familyId }),
         supabase.from("alerts").select("id,tipo,mensagem,severidade,created_at")
-          .eq("family_id", fid).eq("lido", false)
+          .eq("family_id", familyId!).eq("lido", false)
           .order("created_at", { ascending: false }).limit(5),
         supabase.from("bills_reminders")
           .select("id,descricao,valor,data_vencimento,status")
-          .eq("family_id", fid).eq("status", "pendente")
+          .eq("family_id", familyId!).eq("status", "pendente")
           .gte("data_vencimento", isoToday.slice(0, 8) + "01")
           .lte("data_vencimento", iso7)
           .order("data_vencimento", { ascending: true }),
