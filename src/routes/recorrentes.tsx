@@ -32,6 +32,7 @@ type RecRow = {
 type Acc = { id: string; nome: string };
 type Cat = { id: string; nome: string; tipo: "despesa" | "receita" };
 
+function RecorrentesPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { familyId, loading: familyLoading } = useFamily();
@@ -250,3 +251,4 @@ type Cat = { id: string; nome: string; tipo: "despesa" | "receita" };
       </main>
     </div>
   );
+}
