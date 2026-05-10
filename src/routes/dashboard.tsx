@@ -76,17 +76,20 @@ function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
+    if (familyLoading) return;        // aguardar familyId carregar
+    if (!familyId) {                  // usuário sem família
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const fid = familyId ?? null;
-      if (!fid) { setLoading(false); return; }
 
       const [s, sa, c, prev] = await Promise.all([
-        supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
-        supabase.rpc("get_saldo_total", { p_family_id: fid }),
-        supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
-        supabase.rpc("get_previsao_mes", { p_family_id: fid }),
+        supabase.rpc("get_dashboard_summary", { p_family_id: familyId }),
+        supabase.rpc("get_saldo_total", { p_family_id: familyId }),
+        supabase.rpc("get_projecao_categorias", { p_family_id: familyId }),
+        supabase.rpc("get_previsao_mes", { p_family_id: familyId }),
       ]);
 
       if (cancelled) return;
@@ -95,7 +98,7 @@ function Dashboard() {
       if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 6));
       if (prev.data) {
-        const pendentes = (prev.data as ContaPendente[]).filter((p: ContaPendente) => p.status !== 'pago');
+        const pendentes = (prev.data as ContaPendente[]).filter((p: ContaPendente) => (p as unknown as Record<string,string>).status !== 'pago');
         setContasPendentes(pendentes.slice(0, 3));
         setTotalPendente(pendentes.reduce((acc, p) => acc + Number(p.valor), 0));
       }
@@ -103,7 +106,7 @@ function Dashboard() {
       // Badge estoque
       const { data: lastRev } = await supabase
         .from("weekly_reviews").select("created_at, checklist")
-        .eq("family_id", fid).order("created_at", { ascending: false }).limit(20);
+        .eq("family_id", familyId).order("created_at", { ascending: false }).limit(5);
       if (cancelled) return;
       const stockRev = (lastRev ?? []).find((r: Record<string,unknown>) => (r?.checklist as Record<string,unknown>)?.tipo === "estoque");
       if (!stockRev) setStockReviewOk(false);
@@ -114,7 +117,7 @@ function Dashboard() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [user, familyId]);
+  }, [user, familyId, familyLoading]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -122,7 +125,7 @@ function Dashboard() {
     navigate({ to: "/auth" });
   };
 
-  if (authLoading || loading) {
+  if (authLoading || familyLoading || loading) {
     return <SkeletonDashboard />;
   }
   if (!user) return null;
