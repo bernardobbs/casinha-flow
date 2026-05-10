@@ -81,18 +81,18 @@ function EstoquePage() {
   }, [user, authLoading, navigate]);
 
   const reload = async () => {
-    if (!user) return;
+    if (!user || !familyId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("v_stock_status" as any)
       .select("*")
-      .eq("family_id", familyId!)
+      .eq("family_id", familyId)
       .order("nome");
     if (error) toast.error("Erro ao carregar estoque");
     setRows(((data as any) ?? []) as StockRow[]);
     setLoading(false);
   };
-  useEffect(() => { reload(); }, [user]);
+  useEffect(() => { reload(); }, [user, familyId]);
 
   const filtered = useMemo(() => {
     return rows.filter(r => {
