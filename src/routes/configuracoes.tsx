@@ -208,14 +208,14 @@ function ConfigPage() {
 
     // Criar convite no banco
     const { data: invite, error } = await supabase
-      .from("family_invites" as any)
+      .from("family_invites")
       .insert({ family_id: familyId, invited_by: user?.id, email: nome })
       .select("token")
       .single();
 
     if (error) { toast.error("Erro ao criar convite"); return; }
 
-    const token = (invite as any)?.token;
+    const token = (invite as Record<string,string>)?.token;
     const link = `${window.location.origin}/auth?invite=${token}`;
 
     // Copiar para clipboard

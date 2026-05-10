@@ -314,7 +314,7 @@ function BudgetsPage() {
               onClick={async () => {
                 if (!familyId) return;
                 const { data, error } = await supabase.rpc(
-                  "copy_budget_from_previous_month" as any,
+                  "copy_budget_from_previous_month",
                   { p_family_id: familyId, p_mes_destino: mes.slice(0, 7) }
                 );
                 if (error) { toast.error(error.message); return; }

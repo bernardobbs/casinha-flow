@@ -37,10 +37,10 @@ async function buildContext(familyId: string): Promise<string> {
   const mesInicio = hoje.slice(0, 7) + "-01";
 
   const [summary, previsao, estoque, manutencao] = await Promise.all([
-    supabase.rpc("get_dashboard_summary" as any, { p_family_id: familyId }),
-    supabase.rpc("get_previsao_mes" as any, { p_family_id: familyId }),
-    supabase.rpc("get_previsao_estoque" as any, { p_family_id: familyId }),
-    supabase.rpc("get_manutencao_pendente" as any, { p_family_id: familyId }),
+    supabase.rpc("get_dashboard_summary", { p_family_id: familyId }),
+    supabase.rpc("get_previsao_mes", { p_family_id: familyId }),
+    supabase.rpc("get_previsao_estoque", { p_family_id: familyId }),
+    supabase.rpc("get_manutencao_pendente", { p_family_id: familyId }),
   ]);
 
   const s = (summary.data as any)?.[0];
@@ -141,7 +141,7 @@ ${context}`;
   const latency = Date.now() - t0;
 
   // Log no banco
-  await supabase.from("ai_logs" as any).insert({
+  await supabase.from("ai_logs").insert({
     family_id: familyId,
     feature: "assistente",
     prompt: messages[messages.length - 1]?.content,

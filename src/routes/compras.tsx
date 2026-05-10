@@ -93,25 +93,25 @@ function ComprasPage() {
     setLoading(true);
 
     const [{ data }, { data: prods }, { data: accs }, { data: cats }] = await Promise.all([
-      supabase.from("shopping_lists" as any).select("*")
+      supabase.from("shopping_lists").select("*")
         .eq("family_id", familyId).order("created_at", { ascending: false }),
       supabase.from("products").select("nome").eq("family_id", familyId).eq("ativo", true),
       supabase.from("accounts").select("id, nome").eq("family_id", familyId).eq("ativo", true).order("nome"),
       supabase.from("categories").select("id, nome").eq("family_id", familyId).eq("tipo", "despesa").order("nome"),
     ]);
 
-    const ls = ((data as any) ?? []) as ShoppingList[];
+    const ls = (data ?? []) as unknown as ShoppingList[];
     setLists(ls);
-    setProductNames(((prods as any) ?? []).map((p: { nome: string }) => p.nome));
-    setAccounts((accs as any) ?? []);
-    setCategories((cats as any) ?? []);
+    setProductNames(((prods ?? []) as {nome:string}[]).map(p => p.nome));
+    setAccounts((accs ?? []) as typeof accounts);
+    setCategories((cats ?? []) as typeof categories);
 
     if (ls.length) {
       const ids = ls.map(l => l.id);
       const { data: itemsAll } = await supabase
-        .from("shopping_items" as any).select("list_id, comprado").in("list_id", ids);
+        .from("shopping_items").select("list_id, comprado").in("list_id", ids);
       const counts: Record<string, { total: number; pendentes: number }> = {};
-      ((itemsAll as any) ?? []).forEach((it: { list_id: string; comprado: boolean }) => {
+      ((itemsAll ?? []) as {list_id:string;comprado:boolean}[]).forEach((it) => {
         const c = counts[it.list_id] ?? { total: 0, pendentes: 0 };
         c.total++; if (!it.comprado) c.pendentes++;
         counts[it.list_id] = c;
@@ -124,13 +124,13 @@ function ComprasPage() {
 
   const loadItems = async (listId: string) => {
     const { data, error } = await supabase
-      .from("shopping_items" as any)
+      .from("shopping_items")
       .select("*")
       .eq("list_id", listId)
       .order("comprado")
       .order("nome");
     if (error) { toast.error("Erro ao carregar itens"); return; }
-    setItemsByList(prev => ({ ...prev, [listId]: ((data as any) ?? []) as ShoppingItem[] }));
+    setItemsByList(prev => ({ ...prev, [listId]: (data ?? []) as unknown as ShoppingItem[] }));
   };
 
   const toggleExpand = async (listId: string) => {
@@ -142,16 +142,16 @@ function ComprasPage() {
 
   const recalcTotals = async (listId: string) => {
     const { data } = await supabase
-      .from("shopping_items" as any)
+      .from("shopping_items")
       .select("preco_estimado, preco_real, quantidade, comprado")
       .eq("list_id", listId);
     let est = 0, real = 0;
-    ((data as any) ?? []).forEach((it: any) => {
+    ((data ?? []) as Record<string,unknown>[]).forEach((it) => {
       const q = Number(it.quantidade) || 0;
       est += (Number(it.preco_estimado) || 0) * q;
       if (it.comprado) real += (Number(it.preco_real) || Number(it.preco_estimado) || 0) * q;
     });
-    await supabase.from("shopping_lists" as any).update({ total_estimado: est, total_real: real }).eq("id", listId);
+    await supabase.from("shopping_lists").update({ total_estimado: est, total_real: real }).eq("id", listId);
     setLists(prev => prev.map(l => l.id === listId ? { ...l, total_estimado: est, total_real: real } : l));
   };
 
@@ -173,11 +173,11 @@ function ComprasPage() {
       local_preferido: form.local_preferido || null,
     };
     if (listDialog.editing) {
-      const { error } = await supabase.from("shopping_lists" as any).update(payload).eq("id", listDialog.editing.id);
+      const { error } = await supabase.from("shopping_lists").update(payload).eq("id", listDialog.editing.id);
       if (error) { toast.error("Erro ao salvar"); return; }
       toast.success("Lista atualizada");
     } else {
-      const { error } = await supabase.from("shopping_lists" as any).insert({ ...payload, family_id: familyId, status: "aberta" });
+      const { error } = await supabase.from("shopping_lists").insert({ ...payload, family_id: familyId, status: "aberta" });
       if (error) { toast.error("Erro ao criar lista"); return; }
       toast.success("Lista criada");
     }
@@ -186,8 +186,8 @@ function ComprasPage() {
   };
 
   const removeList = async (l: ShoppingList) => {
-    await supabase.from("shopping_items" as any).delete().eq("list_id", l.id);
-    const { error } = await supabase.from("shopping_lists" as any).delete().eq("id", l.id);
+    await supabase.from("shopping_items").delete().eq("list_id", l.id);
+    const { error } = await supabase.from("shopping_lists").delete().eq("id", l.id);
     if (error) toast.error("Erro ao excluir"); else toast.success("Lista excluída");
     setDeleteList(null);
     await reload();
@@ -196,7 +196,7 @@ function ComprasPage() {
   const saveItem = async (form: { nome: string; quantidade: number; unidade: string; preco_estimado: number | null }) => {
     if (!familyId || !itemDialog.listId) return;
     if (!form.nome.trim()) { toast.error("Informe o nome do item"); return; }
-    const { error } = await supabase.from("shopping_items" as any).insert({
+    const { error } = await supabase.from("shopping_items").insert({
       list_id: itemDialog.listId,
       family_id: familyId,
       nome: form.nome.trim(),
@@ -214,14 +214,14 @@ function ComprasPage() {
   };
 
   const refreshCounts = async (listId: string) => {
-    const { data } = await supabase.from("shopping_items" as any).select("comprado").eq("list_id", listId);
-    const arr = (data as any) ?? [];
+    const { data } = await supabase.from("shopping_items").select("comprado").eq("list_id", listId);
+    const arr = (data ?? []) as Record<string,unknown>[];
     setPendingByList(prev => ({ ...prev, [listId]: { total: arr.length, pendentes: arr.filter((i: any) => !i.comprado).length } }));
   };
 
   const toggleItem = async (item: ShoppingItem) => {
     const novo = !item.comprado;
-    const { error } = await supabase.from("shopping_items" as any).update({
+    const { error } = await supabase.from("shopping_items").update({
       comprado: novo,
       comprado_em: novo ? new Date().toISOString() : null,
     }).eq("id", item.id);
@@ -242,7 +242,7 @@ function ComprasPage() {
   };
 
   const updateItemPrice = async (item: ShoppingItem, preco: number) => {
-    await supabase.from("shopping_items" as any).update({ preco_real: preco }).eq("id", item.id);
+    await supabase.from("shopping_items").update({ preco_real: preco }).eq("id", item.id);
     setItemsByList(prev => ({
       ...prev,
       [item.list_id]: (prev[item.list_id] ?? []).map(i => i.id === item.id ? { ...i, preco_real: preco } : i),
@@ -251,7 +251,7 @@ function ComprasPage() {
   };
 
   const removeItem = async (item: ShoppingItem) => {
-    await supabase.from("shopping_items" as any).delete().eq("id", item.id);
+    await supabase.from("shopping_items").delete().eq("id", item.id);
     setItemsByList(prev => ({ ...prev, [item.list_id]: (prev[item.list_id] ?? []).filter(i => i.id !== item.id) }));
     await recalcTotals(item.list_id);
     await refreshCounts(item.list_id);
@@ -277,7 +277,7 @@ function ComprasPage() {
 
     setFinalizarLoading(true);
     try {
-      const { data, error } = await supabase.rpc("finalizar_compra" as any, {
+      const { data, error } = await supabase.rpc("finalizar_compra", {
         p_list_id: l.id,
         p_family_id: familyId,
         p_user_id: user.id,
@@ -286,7 +286,7 @@ function ComprasPage() {
         p_data: new Date().toISOString().slice(0, 10),
       });
       if (error) { toast.error(error.message); return; }
-      const result = data as any;
+      const result = data as Record<string,unknown>;
       setFinalizarResult({
         total: result.total,
         estoque: result.estoque_atualizado,

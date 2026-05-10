@@ -74,46 +74,45 @@ function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     (async () => {
       setLoading(true);
       const fid = familyId ?? null;
-      setFamilyId(fid);
-      setFamilyName((profile as any)?.families?.name ?? "");
       if (!fid) { setLoading(false); return; }
 
-      const [s, sa, c, al, prev] = await Promise.all([
+      const [s, sa, c, prev] = await Promise.all([
         supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
         supabase.rpc("get_saldo_total", { p_family_id: fid }),
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
-        supabase.from("alerts").select("id,mensagem,severidade,created_at")
-          .eq("family_id", fid).eq("lido", false).eq("severidade", "critical")
-          .order("created_at", { ascending: false }).limit(3),
-        supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
+        supabase.rpc("get_previsao_mes", { p_family_id: fid }),
       ]);
+
+      if (cancelled) return;
 
       if (s.data && Array.isArray(s.data) && s.data[0]) setSummary(s.data[0] as DashSummary);
       if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 6));
-      if (al.data) setAlerts(al.data as AlertRow[]);
       if (prev.data) {
-        const pendentes = (prev.data as ContaPendente[]).filter((p: any) => p.status !== 'pago');
+        const pendentes = (prev.data as ContaPendente[]).filter((p: ContaPendente) => p.status !== 'pago');
         setContasPendentes(pendentes.slice(0, 3));
-        setTotalPendente(pendentes.reduce((acc: number, p: any) => acc + Number(p.valor), 0));
+        setTotalPendente(pendentes.reduce((acc, p) => acc + Number(p.valor), 0));
       }
 
       // Badge estoque
       const { data: lastRev } = await supabase
         .from("weekly_reviews").select("created_at, checklist")
         .eq("family_id", fid).order("created_at", { ascending: false }).limit(20);
-      const stockRev = (lastRev ?? []).find((r: any) => r?.checklist?.tipo === "estoque");
+      if (cancelled) return;
+      const stockRev = (lastRev ?? []).find((r: Record<string,unknown>) => (r?.checklist as Record<string,unknown>)?.tipo === "estoque");
       if (!stockRev) setStockReviewOk(false);
       else {
-        const ageDays = (Date.now() - new Date((stockRev as any).created_at).getTime()) / 86400000;
+        const ageDays = (Date.now() - new Date((stockRev as Record<string,string>).created_at).getTime()) / 86400000;
         setStockReviewOk(ageDays <= 7);
       }
       setLoading(false);
     })();
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user, familyId]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

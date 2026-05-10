@@ -107,7 +107,7 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
     if (patch.category_id) {
       const tx = items.find(t => t.id === id);
       if (tx?.description && familyId) {
-        void supabase.rpc("learn_categorization_rule" as any, {
+        void supabase.rpc("learn_categorization_rule", {
           _family_id: familyId,
           _termo: tx.description.toLowerCase().slice(0, 60),
           _category_id: patch.category_id,

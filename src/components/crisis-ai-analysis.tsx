@@ -71,7 +71,7 @@ export function CrisisAiAnalysis({ hasCrisis }: Props) {
 
       // Buscar dados para a IA
       const [{ data: sumData }, { data: txData }] = await Promise.all([
-        supabase.rpc("get_dashboard_summary" as any, { p_family_id: familyId }),
+        supabase.rpc("get_dashboard_summary", { p_family_id: familyId }),
         supabase.from("transactions").select("date, amount, type, category").eq("family_id", familyId).order("date", { ascending: false }).limit(200),
       ]);
       const summary = (sumData as any)?.[0];
@@ -113,7 +113,7 @@ Projeção de fechamento: R$${summary?.saldo_projetado ?? 0}.`;
       }
 
       // Log no banco
-      await supabase.from("ai_logs" as any).insert({
+      await supabase.from("ai_logs").insert({
         family_id: familyId, user_id: user.id, feature: "crisis_analysis",
         tokens_input: 0, tokens_output: 0, success: true,
       });

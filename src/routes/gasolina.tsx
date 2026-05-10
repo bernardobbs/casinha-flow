@@ -69,7 +69,7 @@ function GasolinaPage() {
 
   const deactivateVehicle = async (id: string, nome: string) => {
     if (!confirm(`Desativar veículo "${nome}"? Ele ficará oculto mas o histórico será preservado.`)) return;
-    const { error } = await supabase.from("vehicles" as any).update({ ativo: false }).eq("id", id);
+    const { error } = await supabase.from("vehicles").update({ ativo: false }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Veículo desativado");
     reload();
@@ -83,7 +83,7 @@ function GasolinaPage() {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
-      .from("v_vehicle_status" as any)
+      .from("v_vehicle_status")
       .select("*")
       .eq("family_id", familyId!)
       .eq("ativo", true)
@@ -397,7 +397,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
       }).select("id").single();
       if (txErr) throw txErr;
 
-      const { error: fillErr } = await supabase.from("fuel_fills" as any).insert({
+      const { error: fillErr } = await supabase.from("fuel_fills").insert({
         family_id: familyId, user_id: userId, vehicle_id: vehicleId,
         combustivel, valor_pago: v, preco_litro: p, litros: Number(litros.toFixed(3)),
         hodometro: h, posto: posto || null, tanque_cheio: tanqueCheio,
@@ -405,7 +405,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
       });
       if (fillErr) throw fillErr;
 
-      await supabase.from("vehicles" as any).update({ odometro_atual: h }).eq("id", vehicleId);
+      await supabase.from("vehicles").update({ odometro_atual: h }).eq("id", vehicleId);
       if (acc?.id) await supabase.rpc("recalc_account_balance", { _account_id: acc.id });
       toast.success("✅ Abastecimento registrado");
       onOpenChange(false);
@@ -495,8 +495,8 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
       odometro_atual: parseFloat(odometro.replace(",", ".")) || 0,
     };
     const { error } = isEdit
-      ? await supabase.from("vehicles" as any).update(payload).eq("id", editing.vehicle_id)
-      : await supabase.from("vehicles" as any).insert({ ...payload, family_id: familyId, user_id: userId });
+      ? await supabase.from("vehicles").update(payload).eq("id", editing.vehicle_id)
+      : await supabase.from("vehicles").insert({ ...payload, family_id: familyId, user_id: userId });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success(isEdit ? "✅ Veículo atualizado" : "✅ Veículo cadastrado");
@@ -556,11 +556,11 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
   useEffect(() => {
     if (!open || !vehicleId) return;
     (async () => {
-      const { data: t } = await supabase.from("vehicle_maintenance_types" as any)
+      const { data: t } = await supabase.from("vehicle_maintenance_types")
         .select("id, nome").eq("vehicle_id", vehicleId).eq("ativo", true);
       setTypes((t as any) ?? []);
       if (t && t.length) setTypeId((t as any)[0].id);
-      const { data: vRow } = await supabase.from("vehicles" as any).select("odometro_atual").eq("id", vehicleId).maybeSingle();
+      const { data: vRow } = await supabase.from("vehicles").select("odometro_atual").eq("id", vehicleId).maybeSingle();
       if (vRow) setHodometro(String((vRow as any).odometro_atual ?? ""));
     })();
     if (!open) { setValor(""); setLocal(""); setTipoOleo(""); }
@@ -593,14 +593,14 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
         txId = tx?.id ?? null;
         if (acc?.id) await supabase.rpc("recalc_account_balance", { _account_id: acc.id });
       }
-      const { error } = await supabase.from("vehicle_maintenance_log" as any).insert({
+      const { error } = await supabase.from("vehicle_maintenance_log").insert({
         family_id: familyId, user_id: userId, vehicle_id: vehicleId,
         maintenance_type_id: typeId, nome: selectedType?.nome ?? "Manutenção",
         data, hodometro: h, valor: v, local: local || null,
         tipo_oleo: isOleo ? (tipoOleo || null) : null, transaction_id: txId,
       });
       if (error) throw error;
-      await supabase.from("vehicles" as any).update({ odometro_atual: h }).eq("id", vehicleId);
+      await supabase.from("vehicles").update({ odometro_atual: h }).eq("id", vehicleId);
       toast.success("✅ Manutenção registrada");
       onOpenChange(false); onSaved();
     } catch (e: any) {

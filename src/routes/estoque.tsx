@@ -83,7 +83,7 @@ function EstoquePage() {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
-      .from("v_stock_status" as any)
+      .from("v_stock_status")
       .select("*")
       .eq("family_id", familyId!)
       .order("nome");
@@ -302,7 +302,7 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
   const submit = async () => {
     if (!familyId || !userId || !nome) { toast.error("Informe o nome"); return; }
     setSaving(true);
-    const { error } = await supabase.from("products" as any).insert({
+    const { error } = await supabase.from("products").insert({
       family_id: familyId, user_id: userId, nome,
       categoria: categoria || null, marca: marca || null,
       produto_base: produtoBase || nome || null,
@@ -378,7 +378,7 @@ function MovementDialog({ open, onOpenChange, familyId, userId, productId, tipo,
     const q = parseFloat(qtd.replace(",", "."));
     if (!q || q <= 0) { toast.error("Quantidade inválida"); return; }
     setSaving(true);
-    const { error } = await supabase.from("stock_movements" as any).insert({
+    const { error } = await supabase.from("stock_movements").insert({
       family_id: familyId, user_id: userId, product_id: productId,
       tipo, quantidade: q,
       preco_unitario: preco ? parseFloat(preco.replace(",", ".")) : null,
@@ -436,7 +436,7 @@ function ImportDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
         preco_atual: idx("preco_atual") >= 0 && c[idx("preco_atual")] ? parseFloat(c[idx("preco_atual")]) : null,
       };
     });
-    const { error } = await supabase.from("products" as any).insert(rows);
+    const { error } = await supabase.from("products").insert(rows);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`✅ ${rows.length} produtos importados`);

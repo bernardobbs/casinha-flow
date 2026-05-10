@@ -74,7 +74,7 @@ function MembrosPage() {
     if (!convidandoNome.trim() || !familyId) return;
     setSalvando(true);
     const { data, error } = await supabase
-      .from("family_invites" as any)
+      .from("family_invites")
       .insert({ family_id: familyId, invited_by: user?.id, email: convidandoNome })
       .select("token").single();
     setSalvando(false);

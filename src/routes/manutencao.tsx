@@ -56,7 +56,7 @@ function ManutencaoPage() {
     if (!familyId) return;
     (async () => {
       setLoading(true);
-      const { data } = await supabase.rpc("get_manutencao_pendente" as any, {
+      const { data } = await supabase.rpc("get_manutencao_pendente", {
         p_family_id: familyId,
       });
       setTasks((data as any) ?? []);
@@ -65,7 +65,7 @@ function ManutencaoPage() {
   }, [familyId]);
 
   const concluir = async (id: string) => {
-    const { error } = await supabase.from("maintenance_tasks" as any)
+    const { error } = await supabase.from("maintenance_tasks")
       .update({ status: "concluida", data_conclusao: new Date().toISOString().slice(0, 10) })
       .eq("id", id);
     if (error) { toast.error(error.message); return; }

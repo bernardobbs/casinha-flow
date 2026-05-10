@@ -69,12 +69,12 @@ function AuthPage() {
 
   // Aceitar convite após autenticação
   const acceptInvite = async (token: string) => {
-    const { data, error } = await supabase.rpc("accept_invite" as any, { p_token: token });
+    const { data, error } = await supabase.rpc("accept_invite", { p_token: token });
     if (error) {
       toast.error("Convite inválido ou expirado");
       return false;
     }
-    const result = data as any;
+    const result = data as Record<string, unknown>;
     toast.success(`✅ Bem-vindo à família ${result.family_name}!`);
     setInviteAccepted(true);
     return true;
