@@ -51,7 +51,8 @@ type VehicleStatus = {
 
 const TIPO_ICON: Record<string, string> = { carro: "🚗", moto: "🏍️", caminhao: "🚛", outro: "🚙" };
 const FUEL_LABEL: Record<string, string> = {
-  gasolina: "⛽ Gasolina", aditivada: "⛽ Aditivada", etanol: "🌿 Etanol", diesel: "🚛 Diesel", gnv: "💨 GNV",
+  flex: "🔄 Flex (Gasolina/Etanol)", gasolina: "⛽ Gasolina", aditivada: "⛽ Aditivada",
+  etanol: "🌿 Etanol", diesel: "🚛 Diesel", gnv: "💨 GNV", eletrico: "⚡ Elétrico",
 };
 const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -462,8 +463,8 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
 function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved }: any) {
   const [nome, setNome] = useState("");
   const [tipo, setTipo] = useState<"carro" | "moto" | "caminhao" | "outro">("carro");
-  const [combustivel, setCombustivel] = useState<string>("gasolina");
-  const [flex, setFlex] = useState(true);
+  const [combustivel, setCombustivel] = useState<string>("flex");
+  const [flex, setFlex] = useState(true); // flex é controlado pelo combustivel selecionado
   const [tanque, setTanque] = useState("50");
   const [consumo, setConsumo] = useState("10");
   const [odometro, setOdometro] = useState("0");
@@ -487,9 +488,10 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
     if (!familyId || !userId || !nome) { toast.error("Informe o nome"); return; }
     setSaving(true);
     const payload = {
-      nome, tipo, combustivel_principal: combustivel, flex,
-      capacidade_tanque: parseFloat(tanque.replace(",", ".")) || 50,
-      consumo_medio_kml: parseFloat(consumo.replace(",", ".")) || 10,
+      nome, tipo,
+      combustivel: combustivel,
+      tanque_capacidade: parseFloat(tanque.replace(",", ".")) || 50,
+      consumo_medio_km_l: parseFloat(consumo.replace(",", ".")) || 10,
       odometro_atual: parseFloat(odometro.replace(",", ".")) || 0,
     };
     const { error } = isEdit
@@ -525,9 +527,6 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
                 <SelectContent>{Object.entries(FUEL_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="flex items-center justify-between border rounded-md p-2">
-            <Label>Flex (gasolina + etanol)</Label><Switch checked={flex} onCheckedChange={setFlex} />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div><Label>Tanque (L)</Label><Input value={tanque} onChange={(e) => setTanque(e.target.value)} inputMode="decimal" /></div>
