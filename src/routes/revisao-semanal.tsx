@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -33,7 +34,7 @@ const diasAte = (d: string) => Math.floor((new Date(d + "T00:00:00").getTime() -
 function RevisaoSemanalPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [loading, setLoading] = useState(true);
   const [txWeek, setTxWeek] = useState<Tx[]>([]);
   const [txPrev, setTxPrev] = useState<Tx[]>([]);
@@ -141,7 +142,7 @@ function RevisaoSemanalPage() {
     setPayOpen(null); setPayAccount("");
   };
 
-  if (authLoading || loading) return <SkeletonPage />;
+  if (authLoading || familyLoading || loading) return <SkeletonPage />;
 
   return (
     <div className="min-h-screen bg-background">

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,7 +58,7 @@ const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", cur
 function GasolinaPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [vehicles, setVehicles] = useState<VehicleStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,13 +81,10 @@ function GasolinaPage() {
   const reload = async () => {
     if (!user) return;
     setLoading(true);
-    const { data: profile } = await supabase.from("profiles").select("family_id").eq("id", user.id).maybeSingle();
-    if (!profile?.family_id) { setLoading(false); return; }
-    setFamilyId(profile.family_id);
     const { data, error } = await supabase
       .from("v_vehicle_status" as any)
       .select("*")
-      .eq("family_id", profile.family_id)
+      .eq("family_id", familyId!)
       .eq("ativo", true)
       .order("nome");
     if (error) toast.error("Erro ao carregar veículos");
@@ -96,7 +94,7 @@ function GasolinaPage() {
 
   useEffect(() => { reload(); }, [user]);
 
-  if (authLoading || loading) return <SkeletonGasolina />;
+  if (authLoading || familyLoading || loading) return <SkeletonGasolina />;
 
   return (
     <div className="min-h-screen bg-background">

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -101,7 +102,7 @@ const formatDate = (iso: string) =>
 function CrisisPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<CrisisEvent | null>(null);
   const [history, setHistory] = useState<CrisisEvent[]>([]);
@@ -223,7 +224,7 @@ function CrisisPage() {
     loadAll();
   };
 
-  if (authLoading || loading) return <SkeletonPage />;
+  if (authLoading || familyLoading || loading) return <SkeletonPage />;
   if (!user) return null;
 
   const days = active

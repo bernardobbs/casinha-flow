@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ const diasAte = (d: string) => Math.floor((new Date(d + "T00:00:00").getTime() -
 function ContasAPagarPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [rows, setRows] = useState<BillRow[]>([]);
   const [accounts, setAccounts] = useState<Acc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,7 +170,7 @@ function ContasAPagarPage() {
     reload();
   };
 
-  if (authLoading || loading) return <SkeletonContasAPagar />;
+  if (authLoading || familyLoading || loading) return <SkeletonContasAPagar />;
 
   const Section = ({ titulo, items, urgencia }: { titulo: string; items: BillRow[]; urgencia: "danger" | "warn" | "info" | "muted" }) => {
     if (items.length === 0) return null;

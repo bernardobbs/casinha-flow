@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,7 +93,7 @@ const TYPE_ICON: Record<AccountType, string> = {
 function ContasPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [openForm, setOpenForm] = useState(false);
@@ -119,17 +120,7 @@ function ContasPage() {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [user, authLoading, navigate]);
 
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("family_id")
-        .eq("id", user.id)
-        .maybeSingle();
-      setFamilyId(profile?.family_id ?? null);
-    })();
-  }, [user]);
+
 
   const loadAccounts = async () => {
     if (!familyId) return;
@@ -243,7 +234,7 @@ function ContasPage() {
     await loadAccounts();
   };
 
-  if (authLoading || loading) return <SkeletonContas />;
+  if (authLoading || familyLoading || loading) return <SkeletonContas />;
   if (!user) return null;
 
   const totalConsolidado = accounts

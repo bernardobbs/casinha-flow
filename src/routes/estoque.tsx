@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +66,7 @@ const fmtBRL = (n: number | null | undefined) =>
 function EstoquePage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [rows, setRows] = useState<StockRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("todos");
@@ -82,13 +83,10 @@ function EstoquePage() {
   const reload = async () => {
     if (!user) return;
     setLoading(true);
-    const { data: profile } = await supabase.from("profiles").select("family_id").eq("id", user.id).maybeSingle();
-    if (!profile?.family_id) { setLoading(false); return; }
-    setFamilyId(profile.family_id);
     const { data, error } = await supabase
       .from("v_stock_status" as any)
       .select("*")
-      .eq("family_id", profile.family_id)
+      .eq("family_id", familyId!)
       .order("nome");
     if (error) toast.error("Erro ao carregar estoque");
     setRows(((data as any) ?? []) as StockRow[]);
@@ -109,7 +107,7 @@ function EstoquePage() {
     [filtered]
   );
 
-  if (authLoading || loading) return <SkeletonEstoque />;
+  if (authLoading || familyLoading || loading) return <SkeletonEstoque />;
 
   return (
     <div className="min-h-screen bg-background">

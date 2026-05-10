@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,7 +75,7 @@ function firstOfMonth(d = new Date()) {
 function FinancialStatePage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [loading, setLoading] = useState(true);
   const [recalcing, setRecalcing] = useState(false);
   const [savingRenda, setSavingRenda] = useState(false);
@@ -89,17 +90,7 @@ function FinancialStatePage() {
   }, [user, authLoading, navigate]);
 
   // Resolve family id
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("family_id")
-        .eq("id", user.id)
-        .maybeSingle();
-      setFamilyId(profile?.family_id ?? null);
-    })();
-  }, [user]);
+
 
   // Load + auto-recalc state for selected month
   const loadState = async (opts?: { renda?: number }) => {
@@ -247,7 +238,7 @@ function FinancialStatePage() {
     return Math.min(100, Math.round((v / meta) * 100));
   };
 
-  if (authLoading || (loading && !state)) return <SkeletonPage />;
+  if (authLoading || familyLoading || (loading && !state)) return <SkeletonPage />;
   if (!user) return null;
 
   const e = state?.total_essenciais ?? 0;

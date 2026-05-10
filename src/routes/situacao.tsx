@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +71,7 @@ function ScoreGauge({ score, label }: { score: number; label: string }) {
 function SituacaoPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashSummary | null>(null);
   const [cats, setCats] = useState<CatProj[]>([]);
@@ -144,7 +145,7 @@ function SituacaoPage() {
     return acoes;
   }, [summary, cats, bills]);
 
-  if (authLoading || loading) return <SkeletonSituacao />;
+  if (authLoading || familyLoading || loading) return <SkeletonSituacao />;
 
   if (!familyId) {
     return (

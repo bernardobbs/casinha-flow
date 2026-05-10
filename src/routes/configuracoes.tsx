@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,7 +87,7 @@ interface MemberRow {
 function ConfigPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
+  const { familyId, loading: familyLoading } = useFamily();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [aiToday, setAiToday] = useState(0);
@@ -306,7 +307,7 @@ function ConfigPage() {
     return Number.isFinite(n) && n > 0 ? n : 5;
   }, [values.ai_daily_limit]);
 
-  if (authLoading || loading) return <SkeletonPage />;
+  if (authLoading || familyLoading || loading) return <SkeletonPage />;
   if (!user) return null;
 
   return (
