@@ -17,6 +17,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { SkeletonPage } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
+const formatCurrency = fmtBRL;
 import {
   Wallet,
   ArrowLeft,

@@ -20,6 +20,8 @@ import { Wallet, ArrowLeft, Loader2, Target, Plus, Trash2, Copy } from "lucide-r
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 import { SkeletonBudgets } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
+const formatCurrency = fmtBRL;
 
 export const Route = createFileRoute("/budgets")({
   head: () => ({

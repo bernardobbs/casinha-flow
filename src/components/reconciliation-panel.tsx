@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Trash2, Search } from "lucide-react";
+import { fmtBRL as fmt } from '@/lib/format';
 
 interface Cat {
   id: string;

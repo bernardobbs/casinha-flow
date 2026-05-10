@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
+import { fmtBRL as fmt } from '@/lib/format';
 
 export const Route = createFileRoute("/conciliacao")({
   head: () => ({

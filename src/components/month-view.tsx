@@ -28,6 +28,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { fmtBRL as fmt } from '@/lib/format';
 import {
   ChevronLeft,
   ChevronRight,

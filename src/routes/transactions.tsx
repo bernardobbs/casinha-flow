@@ -132,6 +132,8 @@ import {
   parseBBExtrato, parseBBCSV, parseNubank, parseInter, parseCaixaExtrato, parseCsv,
 } from '@/lib/import-parsers.tsx';
 import type { ParsedRow, ImportFormat } from '@/lib/import-parsers.tsx';
+import { fmtBRL } from '@/lib/format';
+const formatCurrency = fmtBRL;
 
 function TransactionsPage() {
   const { user, loading: authLoading } = useAuth();
