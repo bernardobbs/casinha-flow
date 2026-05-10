@@ -28,7 +28,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { fmtBRL as fmt } from '@/lib/format';
 import {
   ChevronLeft,
   ChevronRight,
@@ -81,6 +80,8 @@ const MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+const fmt = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const fmtMonthLabel = (iso: string) => {
   const d = new Date(iso + (iso.length === 7 ? "-01" : "") + "T00:00:00");

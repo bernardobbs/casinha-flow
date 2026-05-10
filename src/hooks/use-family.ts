@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -7,25 +7,11 @@ interface FamilyData {
   familyName: string | null;
   loading: boolean;
   error: string | null;
-  refetch: () => void;
 }
 
-// Cache em memória com suporte a invalidação seletiva
+// Cache simples em memória para evitar múltiplas queries
 const cache = new Map<string, { familyId: string; familyName: string; ts: number }>();
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutos (era 5)
-
-async function fetchFamily(userId: string) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('family_id, families(nome)')
-    .eq('id', userId)
-    .maybeSingle();
-  if (error) throw error;
-  const fid = data?.family_id ?? null;
-  const fname = (data as Record<string, unknown> & { families?: { nome?: string } })?.families?.nome ?? null;
-  if (fid) cache.set(userId, { familyId: fid, familyName: fname ?? '', ts: Date.now() });
-  return { familyId: fid, familyName: fname };
-}
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 export function useFamily(): FamilyData {
   const { user, loading: authLoading } = useAuth();
@@ -34,43 +20,52 @@ export function useFamily(): FamilyData {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (force = false) => {
+  useEffect(() => {
+    if (authLoading) return;
     if (!user) { setLoading(false); return; }
+
+    // Verificar cache
     const cached = cache.get(user.id);
-    if (!force && cached && Date.now() - cached.ts < CACHE_TTL) {
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
       setFamilyId(cached.familyId);
       setFamilyName(cached.familyName);
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchFamily(user.id);
-      setFamilyId(result.familyId);
-      setFamilyName(result.familyName);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro ao carregar família');
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
 
-  useEffect(() => {
-    if (authLoading) return;
-    void load();
-  }, [user, authLoading, load]);
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error: err } = await supabase
+          .from('profiles')
+          .select('family_id, families(nome)')
+          .eq('id', user.id)
+          .maybeSingle();
 
-  return { familyId, familyName, loading, error, refetch: () => load(true) };
+        if (err) throw err;
+
+        const fid = data?.family_id ?? null;
+        const fname = (data as any)?.families?.nome ?? null;
+
+        setFamilyId(fid);
+        setFamilyName(fname);
+
+        if (fid) {
+          cache.set(user.id, { familyId: fid, familyName: fname, ts: Date.now() });
+        }
+      } catch (e: any) {
+        setError(e?.message ?? 'Erro ao carregar família');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [user, authLoading]);
+
+  return { familyId, familyName, loading, error };
 }
 
-/** Limpar todo o cache (ex: logout) */
-export function clearFamilyCache() { cache.clear(); }
-
-/** Pré-carregar família em background */
-export function prefetchFamily(userId: string) {
-  const cached = cache.get(userId);
-  if (!cached || Date.now() - cached.ts >= CACHE_TTL) {
-    void fetchFamily(userId);
-  }
+// Limpar cache quando necessário (ex: após trocar de família)
+export function clearFamilyCache() {
+  cache.clear();
 }

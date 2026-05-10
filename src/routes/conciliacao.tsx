@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
-import { useFamilyData } from '@/hooks/use-family-data';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +20,6 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
-import { fmtBRL as fmt } from '@/lib/format';
 
 export const Route = createFileRoute("/conciliacao")({
   head: () => ({
@@ -49,6 +47,8 @@ interface Tx {
 interface Cat { id: string; nome: string; tipo: "despesa" | "receita"; icone: string }
 interface Acc { id: string; nome: string; icone: string }
 
+const fmt = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function ConciliacaoPage() {
   const { user, loading: authLoading } = useAuth();

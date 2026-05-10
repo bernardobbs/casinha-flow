@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Trash2, Search } from "lucide-react";
-import { fmtBRL as fmt } from '@/lib/format';
 
 interface Cat {
   id: string;
@@ -36,6 +35,7 @@ interface PendingTx {
 
 type FilterMode = "todos" | "sem_categoria" | "sem_conta";
 
+const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDate = (iso: string) =>
   new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
@@ -108,7 +108,7 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
     if (patch.category_id) {
       const tx = items.find(t => t.id === id);
       if (tx?.description && familyId) {
-        void supabase.rpc("learn_categorization_rule", {
+        void supabase.rpc("learn_categorization_rule" as any, {
           _family_id: familyId,
           _termo: tx.description.toLowerCase().slice(0, 60),
           _category_id: patch.category_id,

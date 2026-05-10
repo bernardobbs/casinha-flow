@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +14,6 @@ import {
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 import { SkeletonDashboard } from "@/components/skeletons";
-import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -43,6 +41,8 @@ type CatProj = {
 type AlertRow = { id: string; mensagem: string; severidade: string; created_at: string };
 type ContaPendente = { descricao: string; valor: number; data_vencimento: string; origem: string };
 
+const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 function MiniGauge({ score }: { score: number }) {
   const pct = Math.max(0, Math.min(100, score));
   const r = 38, c = 2 * Math.PI * r, off = c - (pct / 100) * c;
@@ -60,8 +60,8 @@ function MiniGauge({ score }: { score: number }) {
 
 function Dashboard() {
   const { user, loading: authLoading } = useAuth();
-  const { familyId, loading: familyLoading } = useFamily();
   const navigate = useNavigate();
+  const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyName, setFamilyName] = useState("");
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashSummary | null>(null);
@@ -76,48 +76,49 @@ function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
-    if (familyLoading) return;        // aguardar familyId carregar
-    if (!familyId) {                  // usuário sem família
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
     (async () => {
       setLoading(true);
+      const { data: profile } = await supabase
+        .from("profiles").select("family_id, families(name)")
+        .eq("id", user.id).maybeSingle();
+      const fid = profile?.family_id ?? null;
+      setFamilyId(fid);
+      setFamilyName((profile as any)?.families?.name ?? "");
+      if (!fid) { setLoading(false); return; }
 
-      const [s, sa, c, prev] = await Promise.all([
-        supabase.rpc("get_dashboard_summary", { p_family_id: familyId }),
-        supabase.rpc("get_saldo_total", { p_family_id: familyId }),
-        supabase.rpc("get_projecao_categorias", { p_family_id: familyId }),
-        supabase.rpc("get_previsao_mes", { p_family_id: familyId }),
+      const [s, sa, c, al, prev] = await Promise.all([
+        supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
+        supabase.rpc("get_saldo_total", { p_family_id: fid }),
+        supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
+        supabase.from("alerts").select("id,mensagem,severidade,created_at")
+          .eq("family_id", fid).eq("lido", false).eq("severidade", "critical")
+          .order("created_at", { ascending: false }).limit(3),
+        supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
       ]);
-
-      if (cancelled) return;
 
       if (s.data && Array.isArray(s.data) && s.data[0]) setSummary(s.data[0] as DashSummary);
       if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 6));
+      if (al.data) setAlerts(al.data as AlertRow[]);
       if (prev.data) {
-        const pendentes = (prev.data as ContaPendente[]).filter((p: ContaPendente) => (p as unknown as Record<string,string>).status !== 'pago');
+        const pendentes = (prev.data as ContaPendente[]).filter((p: any) => p.status !== 'pago');
         setContasPendentes(pendentes.slice(0, 3));
-        setTotalPendente(pendentes.reduce((acc, p) => acc + Number(p.valor), 0));
+        setTotalPendente(pendentes.reduce((acc: number, p: any) => acc + Number(p.valor), 0));
       }
 
       // Badge estoque
       const { data: lastRev } = await supabase
         .from("weekly_reviews").select("created_at, checklist")
-        .eq("family_id", familyId).order("created_at", { ascending: false }).limit(5);
-      if (cancelled) return;
-      const stockRev = (lastRev ?? []).find((r: Record<string,unknown>) => (r?.checklist as Record<string,unknown>)?.tipo === "estoque");
+        .eq("family_id", fid).order("created_at", { ascending: false }).limit(20);
+      const stockRev = (lastRev ?? []).find((r: any) => r?.checklist?.tipo === "estoque");
       if (!stockRev) setStockReviewOk(false);
       else {
-        const ageDays = (Date.now() - new Date((stockRev as Record<string,string>).created_at).getTime()) / 86400000;
+        const ageDays = (Date.now() - new Date((stockRev as any).created_at).getTime()) / 86400000;
         setStockReviewOk(ageDays <= 7);
       }
       setLoading(false);
     })();
-    return () => { cancelled = true; };
-  }, [user, familyId, familyLoading]);
+  }, [user]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -125,7 +126,7 @@ function Dashboard() {
     navigate({ to: "/auth" });
   };
 
-  if (authLoading || familyLoading || loading) {
+  if (authLoading || loading) {
     return <SkeletonDashboard />;
   }
   if (!user) return null;

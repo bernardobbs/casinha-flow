@@ -17,8 +17,6 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { SkeletonPage } from "@/components/skeletons";
-import { fmtBRL } from '@/lib/format';
-const formatCurrency = fmtBRL;
 import {
   Wallet,
   ArrowLeft,
@@ -61,6 +59,8 @@ interface FinancialState {
   modo_crise: boolean;
 }
 
+const formatCurrency = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const monthLabel = (iso: string) =>
   new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", {
@@ -531,7 +531,9 @@ interface BucketRowProps {
 }
 
 function BucketRow({ icon, color, title, subtitle, value, meta, over }: BucketRowProps) {
-    const pct = meta > 0 ? Math.min(100, Math.round((value / meta) * 100)) : 0;
+  const formatCurrency = (n: number) =>
+    n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const pct = meta > 0 ? Math.min(100, Math.round((value / meta) * 100)) : 0;
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">

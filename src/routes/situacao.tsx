@@ -10,7 +10,6 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonSituacao } from "@/components/skeletons";
-import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/situacao")({
   head: () => ({
@@ -38,6 +37,8 @@ type SaldoTotal = { saldo_total: number; saldo_contas: number; divida_cartoes: n
 type AlertRow = { id: string; tipo: string; mensagem: string; severidade: string; created_at: string };
 type BillRow = { id: string; descricao: string; valor: number; data_vencimento: string; status: string };
 
+const fmtBRL = (n: number) =>
+  (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function ScoreGauge({ score, label }: { score: number; label: string }) {
   const pct = Math.max(0, Math.min(100, score));
@@ -86,7 +87,10 @@ function SituacaoPage() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const fid = familyId ?? null;
+      const { data: profile } = await supabase
+        .from("profiles").select("family_id").eq("id", user.id).maybeSingle();
+      const fid = profile?.family_id ?? null;
+      setFamilyId(fid);
       if (!fid) { setLoading(false); return; }
 
       const today = new Date();
@@ -95,15 +99,15 @@ function SituacaoPage() {
       const iso7 = in7.toISOString().slice(0, 10);
 
       const [s, c, sa, al, bl] = await Promise.all([
-        supabase.rpc("get_dashboard_summary", { p_family_id: familyId }),
-        supabase.rpc("get_projecao_categorias", { p_family_id: familyId }),
-        supabase.rpc("get_saldo_total", { p_family_id: familyId }),
+        supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
+        supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
+        supabase.rpc("get_saldo_total", { p_family_id: fid }),
         supabase.from("alerts").select("id,tipo,mensagem,severidade,created_at")
-          .eq("family_id", familyId!).eq("lido", false)
+          .eq("family_id", fid).eq("lido", false)
           .order("created_at", { ascending: false }).limit(5),
         supabase.from("bills_reminders")
           .select("id,descricao,valor,data_vencimento,status")
-          .eq("family_id", familyId!).eq("status", "pendente")
+          .eq("family_id", fid).eq("status", "pendente")
           .gte("data_vencimento", isoToday.slice(0, 8) + "01")
           .lte("data_vencimento", iso7)
           .order("data_vencimento", { ascending: true }),

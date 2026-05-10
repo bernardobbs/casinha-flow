@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonPage } from "@/components/skeletons";
-import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/revisao-semanal")({
   head: () => ({ meta: [{ title: "Revisão semanal — Casinha Hub" }] }),
@@ -29,6 +28,7 @@ type CatProj = {
 type BillRow = { id: string; descricao: string; valor: number; data_vencimento: string; status: string; category_id: string | null };
 type Acc = { id: string; nome: string };
 
+const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const diasAte = (d: string) => Math.floor((new Date(d + "T00:00:00").getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
 
 function RevisaoSemanalPage() {
@@ -52,7 +52,9 @@ function RevisaoSemanalPage() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const fid = familyId ?? null;
+      const { data: profile } = await supabase.from("profiles").select("family_id").eq("id", user.id).maybeSingle();
+      const fid = profile?.family_id ?? null;
+      setFamilyId(fid);
       if (!fid) { setLoading(false); return; }
 
       const today = new Date();
@@ -65,22 +67,22 @@ function RevisaoSemanalPage() {
       const [w, p, c, bw, bn, a] = await Promise.all([
         supabase.from("transactions")
           .select("id, description, amount, type, category_id, date")
-          .eq("family_id", familyId!).gte("date", iso(start7)).lte("date", iso(today))
+          .eq("family_id", fid).gte("date", iso(start7)).lte("date", iso(today))
           .eq("tipo_especial", "normal"),
         supabase.from("transactions")
           .select("id, description, amount, type, category_id, date")
-          .eq("family_id", familyId!).gte("date", iso(start14)).lt("date", iso(start7))
+          .eq("family_id", fid).gte("date", iso(start14)).lt("date", iso(start7))
           .eq("tipo_especial", "normal"),
-        supabase.rpc("get_projecao_categorias", { p_family_id: familyId }),
+        supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
         supabase.from("bills_reminders")
           .select("id, descricao, valor, data_vencimento, status, category_id")
-          .eq("family_id", familyId!).gte("data_vencimento", iso(start7)).lte("data_vencimento", iso(today)),
+          .eq("family_id", fid).gte("data_vencimento", iso(start7)).lte("data_vencimento", iso(today)),
         supabase.from("bills_reminders")
           .select("id, descricao, valor, data_vencimento, status, category_id")
-          .eq("family_id", familyId!).neq("status", "pago")
+          .eq("family_id", fid).neq("status", "pago")
           .gt("data_vencimento", iso(today)).lte("data_vencimento", iso(in7))
           .order("data_vencimento", { ascending: true }),
-        supabase.from("accounts").select("id, nome").eq("family_id", familyId!).eq("ativo", true).order("nome"),
+        supabase.from("accounts").select("id, nome").eq("family_id", fid).eq("ativo", true).order("nome"),
       ]);
 
       setTxWeek((w.data ?? []) as Tx[]);

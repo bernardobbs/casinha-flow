@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Wrench, Plus, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
-import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/manutencao")({
   head: () => ({ meta: [{ title: "Manutenção — Casinha Hub" }] }),
@@ -38,6 +37,8 @@ const CAT_EMOJI: Record<string, string> = {
   limpeza: "🧹", jardim: "🌿", eletrodomestico: "🔌",
   geral: "🔧", outros: "📦",
 };
+const fmtBRL = (n: number | null) =>
+  n == null ? "" : n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDate = (d: string | null) =>
   d ? new Date(d + "T12:00").toLocaleDateString("pt-BR") : "—";
 
@@ -56,7 +57,7 @@ function ManutencaoPage() {
     if (!familyId) return;
     (async () => {
       setLoading(true);
-      const { data } = await supabase.rpc("get_manutencao_pendente", {
+      const { data } = await supabase.rpc("get_manutencao_pendente" as any, {
         p_family_id: familyId,
       });
       setTasks((data as any) ?? []);
@@ -65,7 +66,7 @@ function ManutencaoPage() {
   }, [familyId]);
 
   const concluir = async (id: string) => {
-    const { error } = await supabase.from("maintenance_tasks")
+    const { error } = await supabase.from("maintenance_tasks" as any)
       .update({ status: "concluida", data_conclusao: new Date().toISOString().slice(0, 10) })
       .eq("id", id);
     if (error) { toast.error(error.message); return; }

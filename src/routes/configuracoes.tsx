@@ -144,7 +144,13 @@ function ConfigPage() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const fid = familyId ?? null;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("family_id, families(name)")
+        .eq("id", user.id)
+        .maybeSingle();
+      const fid = profile?.family_id ?? null;
+      setFamilyId(fid);
       if (!fid) {
         setLoading(false);
         return;
@@ -155,7 +161,7 @@ function ConfigPage() {
       const { data: settings } = await supabase
         .from("family_settings")
         .select("chave, valor")
-        .eq("family_id", familyId!);
+        .eq("family_id", fid);
 
       const map = new Map((settings ?? []).map((s) => [s.chave, s.valor ?? ""]));
       setValues((prev) => ({
@@ -173,7 +179,7 @@ function ConfigPage() {
         notif_contas: map.get("notif_contas") ?? "true",
       }));
 
-      const { data: count } = await supabase.rpc("count_ai_runs_today", { _family_id: familyId! });
+      const { data: count } = await supabase.rpc("count_ai_runs_today", { _family_id: fid });
       setAiToday(Number(count ?? 0));
 
       await loadRules(fid);
@@ -187,7 +193,7 @@ function ConfigPage() {
     const { data: rows } = await supabase
       .from("family_members")
       .select("id, user_id, nome, icone, cor, role, tipo")
-      .eq("family_id", familyId!)
+      .eq("family_id", fid)
       .order("nome");
     setMembers((rows ?? []).map((r: any) => ({
       user_id: r.user_id,
@@ -207,14 +213,14 @@ function ConfigPage() {
 
     // Criar convite no banco
     const { data: invite, error } = await supabase
-      .from("family_invites")
+      .from("family_invites" as any)
       .insert({ family_id: familyId, invited_by: user?.id, email: nome })
       .select("token")
       .single();
 
     if (error) { toast.error("Erro ao criar convite"); return; }
 
-    const token = (invite as Record<string,string>)?.token;
+    const token = (invite as any)?.token;
     const link = `${window.location.origin}/auth?invite=${token}`;
 
     // Copiar para clipboard
@@ -231,7 +237,7 @@ function ConfigPage() {
     const { data } = await supabase
       .from("categorization_rules")
       .select("id, termo, category_id, origem, confianca, usos, categories(nome)")
-      .eq("family_id", familyId!)
+      .eq("family_id", fid)
       .order("usos", { ascending: false })
       .limit(500);
     const rs: Rule[] = (data ?? []).map((r) => {

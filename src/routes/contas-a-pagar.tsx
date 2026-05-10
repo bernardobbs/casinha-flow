@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Plus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonContasAPagar } from "@/components/skeletons";
-import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/contas-a-pagar")({
   head: () => ({ meta: [{ title: "Contas a pagar — Casinha Hub" }] }),
@@ -34,6 +33,7 @@ type BillRow = {
 };
 type Acc = { id: string; nome: string };
 
+const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const diasAte = (d: string) => Math.floor((new Date(d + "T00:00:00").getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
 
 function ContasAPagarPage() {
@@ -60,13 +60,15 @@ function ContasAPagarPage() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const fid = familyId ?? null;
+      const { data: profile } = await supabase.from("profiles").select("family_id").eq("id", user.id).maybeSingle();
+      const fid = profile?.family_id ?? null;
+      setFamilyId(fid);
       if (!fid) { setLoading(false); return; }
-      try { await supabase.rpc("check_bills_alerts", { p_family_id: familyId }); } catch { /* */ }
+      try { await supabase.rpc("check_bills_alerts", { p_family_id: fid }); } catch { /* */ }
 
       const [b, a] = await Promise.all([
-        supabase.rpc("get_previsao_mes", { p_family_id: familyId }),
-        supabase.from("accounts").select("id, nome").eq("family_id", familyId!).eq("ativo", true).order("nome"),
+        supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
+        supabase.from("accounts").select("id, nome").eq("family_id", fid).eq("ativo", true).order("nome"),
       ]);
       setRows(((b.data ?? []) as BillRow[]));
       setAccounts((a.data ?? []) as Acc[]);
@@ -76,7 +78,7 @@ function ContasAPagarPage() {
 
   const reload = async () => {
     if (!familyId) return;
-    const { data } = await supabase.rpc("get_previsao_mes", { p_family_id: familyId });
+    const { data } = await supabase.rpc("get_previsao_mes" as any, { p_family_id: familyId });
     setRows((data ?? []) as BillRow[]);
   };
 

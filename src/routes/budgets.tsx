@@ -20,8 +20,6 @@ import { Wallet, ArrowLeft, Loader2, Target, Plus, Trash2, Copy } from "lucide-r
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 import { SkeletonBudgets } from "@/components/skeletons";
-import { fmtBRL } from '@/lib/format';
-const formatCurrency = fmtBRL;
 
 export const Route = createFileRoute("/budgets")({
   head: () => ({
@@ -57,6 +55,8 @@ interface BudgetStatus {
   responsavel?: string | null;
 }
 
+const formatCurrency = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const monthLabel = (firstDay: string) =>
   new Date(firstDay + "T00:00:00").toLocaleDateString("pt-BR", {
@@ -316,7 +316,7 @@ function BudgetsPage() {
               onClick={async () => {
                 if (!familyId) return;
                 const { data, error } = await supabase.rpc(
-                  "copy_budget_from_previous_month",
+                  "copy_budget_from_previous_month" as any,
                   { p_family_id: familyId, p_mes_destino: mes.slice(0, 7) }
                 );
                 if (error) { toast.error(error.message); return; }

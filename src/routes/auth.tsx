@@ -74,7 +74,7 @@ function AuthPage() {
       toast.error("Convite inválido ou expirado");
       return false;
     }
-    const result = data as Record<string, unknown>;
+    const result = data as any;
     toast.success(`✅ Bem-vindo à família ${result.family_name}!`);
     setInviteAccepted(true);
     return true;

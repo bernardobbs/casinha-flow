@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, Package, Plus, Upload, ListChecks, Loader2, Minus, AlertTriangle } from "lucide-react";
 import { SkeletonEstoque } from "@/components/skeletons";
-import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/estoque")({
   head: () => ({
@@ -61,6 +60,8 @@ type StockRow = {
   variacao_preco_pct: number | null; preco_anterior: number | null;
 };
 
+const fmtBRL = (n: number | null | undefined) =>
+  (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function EstoquePage() {
   const { user, loading: authLoading } = useAuth();
@@ -83,7 +84,7 @@ function EstoquePage() {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
-      .from("v_stock_status")
+      .from("v_stock_status" as any)
       .select("*")
       .eq("family_id", familyId!)
       .order("nome");
@@ -302,7 +303,7 @@ function ProductDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
   const submit = async () => {
     if (!familyId || !userId || !nome) { toast.error("Informe o nome"); return; }
     setSaving(true);
-    const { error } = await supabase.from("products").insert({
+    const { error } = await supabase.from("products" as any).insert({
       family_id: familyId, user_id: userId, nome,
       categoria: categoria || null, marca: marca || null,
       produto_base: produtoBase || nome || null,
@@ -378,7 +379,7 @@ function MovementDialog({ open, onOpenChange, familyId, userId, productId, tipo,
     const q = parseFloat(qtd.replace(",", "."));
     if (!q || q <= 0) { toast.error("Quantidade inválida"); return; }
     setSaving(true);
-    const { error } = await supabase.from("stock_movements").insert({
+    const { error } = await supabase.from("stock_movements" as any).insert({
       family_id: familyId, user_id: userId, product_id: productId,
       tipo, quantidade: q,
       preco_unitario: preco ? parseFloat(preco.replace(",", ".")) : null,
@@ -436,7 +437,7 @@ function ImportDialog({ open, onOpenChange, familyId, userId, onSaved }: any) {
         preco_atual: idx("preco_atual") >= 0 && c[idx("preco_atual")] ? parseFloat(c[idx("preco_atual")]) : null,
       };
     });
-    const { error } = await supabase.from("products").insert(rows);
+    const { error } = await supabase.from("products" as any).insert(rows);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success(`✅ ${rows.length} produtos importados`);
