@@ -496,7 +496,7 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
     };
     const { error } = isEdit
       ? await supabase.from("vehicles" as any).update(payload).eq("id", editing.vehicle_id)
-      : await supabase.from("vehicles" as any).insert({ ...payload, family_id: familyId, user_id: userId });
+      : await supabase.from("vehicles" as any).insert({ ...payload, family_id: familyId });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success(isEdit ? "✅ Veículo atualizado" : "✅ Veículo cadastrado");
