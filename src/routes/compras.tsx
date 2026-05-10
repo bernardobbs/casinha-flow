@@ -6,6 +6,7 @@ import { CalendarIcon, ShoppingCart, Plus, Trash2, Pencil, ChevronDown, ChevronU
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
+import { useFamilyData } from '@/hooks/use-family-data';
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";

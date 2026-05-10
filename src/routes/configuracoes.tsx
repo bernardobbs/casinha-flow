@@ -144,12 +144,7 @@ function ConfigPage() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("family_id, families(name)")
-        .eq("id", user.id)
-        .maybeSingle();
-      const fid = profile?.family_id ?? null;
+      const fid = familyId ?? null;
       setFamilyId(fid);
       if (!fid) {
         setLoading(false);

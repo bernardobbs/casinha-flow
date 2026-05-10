@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,8 +58,8 @@ type ContaPendente = { descricao: string; valor: number; data_vencimento: string
 
 function Dashboard() {
   const { user, loading: authLoading } = useAuth();
+  const { familyId, loading: familyLoading } = useFamily();
   const navigate = useNavigate();
-  const [familyId, setFamilyId] = useState<string | null>(null);
   const [familyName, setFamilyName] = useState("");
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashSummary | null>(null);
@@ -75,10 +76,7 @@ function Dashboard() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data: profile } = await supabase
-        .from("profiles").select("family_id, families(name)")
-        .eq("id", user.id).maybeSingle();
-      const fid = profile?.family_id ?? null;
+      const fid = familyId ?? null;
       setFamilyId(fid);
       setFamilyName((profile as any)?.families?.name ?? "");
       if (!fid) { setLoading(false); return; }
