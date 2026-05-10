@@ -130,8 +130,8 @@ const sourceLabel: Record<TxSource, string> = {
 import {
   SourceIcon, classifyCategory, detectFormat, detectTipoEspecial,
   parseBBExtrato, parseBBCSV, parseNubank, parseInter, parseCaixaExtrato, parseCsv,
-} from '@/lib/import-parsers.tsx';
-import type { ParsedRow, ImportFormat } from '@/lib/import-parsers.tsx';
+} from '@/lib/import-parsers';
+import type { ParsedRow, ImportFormat } from '@/lib/import-parsers';
 import { fmtBRL } from '@/lib/format';
 const formatCurrency = fmtBRL;
 
