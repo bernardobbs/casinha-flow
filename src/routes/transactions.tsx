@@ -236,13 +236,20 @@ function TransactionsPage() {
     const load = async () => {
       setLoading(true);
 
+      // Carregar apenas últimos 3 meses para performance
+      const dataLimite = new Date();
+      dataLimite.setMonth(dataLimite.getMonth() - 3);
+      const dataLimiteStr = dataLimite.toISOString().slice(0, 10);
+
       const [{ data: txs, error: txErr }, { data: cats, error: catErr }, { data: crisis }, { data: accs }] = await Promise.all([
         supabase
           .from("transactions")
-          .select("*")
+          .select("id,date,description,amount,type,source,scope,category,category_id,account_id,external_id,is_essencial,tipo_especial,conciliado,created_at")
           .eq("family_id", familyId)
+          .gte("date", dataLimiteStr)
           .order("date", { ascending: false })
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(500),
         supabase
           .from("categories")
           .select("*")

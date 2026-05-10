@@ -135,9 +135,10 @@ function CrisisPage() {
 
     const { data: events } = await supabase
       .from("crisis_events")
-      .select("*")
+      .select("id,data_inicio,data_fim,ativo,estagio_atual,meta_reducao_pct,modo_entrada,observacoes")
       .eq("family_id", fid)
-      .order("data_inicio", { ascending: false });
+      .order("data_inicio", { ascending: false })
+      .limit(20);
 
     const all = (events ?? []) as CrisisEvent[];
     const cur = all.find((e) => e.ativo) ?? null;
@@ -147,9 +148,10 @@ function CrisisPage() {
     if (cur) {
       const { data: hs } = await supabase
         .from("crisis_stage_history")
-        .select("*")
+        .select("id,crisis_id,estagio,data_entrada,observacoes")
         .eq("crisis_id", cur.id)
-        .order("data_entrada", { ascending: true });
+        .order("data_entrada", { ascending: true })
+        .limit(50);
       setStages((hs ?? []) as StageHistory[]);
 
       // Alertar gastos não-essenciais detectados no mês durante crise

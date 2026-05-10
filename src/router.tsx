@@ -59,7 +59,11 @@ export const getRouter = () => {
     routeTree,
     context: {},
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    // Pré-carregar rota ao hover no link (100ms de antecipação)
+    defaultPreload: 'intent',
+    defaultPreloadDelay: 100,
+    // Cache de rota por 30s (evita re-fetch ao voltar)
+    defaultPreloadStaleTime: 30_000,
     defaultErrorComponent: DefaultErrorComponent,
   });
 
