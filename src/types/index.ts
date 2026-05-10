@@ -266,3 +266,56 @@ export const mesLabel = (mes: string): string => {
   const d = new Date(mes + '-15');
   return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 };
+
+// ============================================================
+// TIPOS CONSOLIDADOS — evitar duplicação entre rotas
+// ============================================================
+
+export type TxType = 'income' | 'expense';
+export type TxSource = 'manual' | 'importado' | 'recorrente' | 'compras';
+export type TxScope = 'family' | 'personal';
+export type TipoEspecial = 'normal' | 'transferencia' | 'pagamento_fatura';
+
+export interface TransactionBase {
+  id: string;
+  family_id: string;
+  user_id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: TxType;
+  source: TxSource;
+  scope: TxScope;
+  category?: string | null;
+  category_id?: string | null;
+  account_id?: string | null;
+  external_id?: string | null;
+  is_essencial?: boolean;
+  tipo_especial?: TipoEspecial;
+  conciliado?: boolean;
+}
+
+export interface FamilyMember {
+  id: string;
+  user_id: string;
+  family_id: string;
+  nome: string;
+  icone?: string;
+  cor?: string;
+  role: 'admin' | 'member';
+  tipo: 'auth' | 'local';
+}
+
+export interface BudgetStatus {
+  budget_id: string;
+  category_id: string;
+  category_nome: string;
+  category_icone?: string;
+  category_cor?: string;
+  is_essencial: boolean;
+  valor_planejado: number;
+  valor_gasto: number;
+  pct_atingido: number;
+  status_cor: 'green' | 'yellow' | 'red';
+  responsavel?: string;
+}

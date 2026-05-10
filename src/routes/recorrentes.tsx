@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonRecorrentes } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/recorrentes")({
   head: () => ({ meta: [{ title: "Recorrentes — Casinha Hub" }] }),
@@ -30,9 +31,6 @@ type RecRow = {
 type Acc = { id: string; nome: string };
 type Cat = { id: string; nome: string; tipo: "despesa" | "receita" };
 
-const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-function RecorrentesPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { familyId, loading: familyLoading } = useFamily();
@@ -251,4 +249,3 @@ function RecorrentesPage() {
       </main>
     </div>
   );
-}

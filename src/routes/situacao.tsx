@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonSituacao } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/situacao")({
   head: () => ({
@@ -37,8 +38,6 @@ type SaldoTotal = { saldo_total: number; saldo_contas: number; divida_cartoes: n
 type AlertRow = { id: string; tipo: string; mensagem: string; severidade: string; created_at: string };
 type BillRow = { id: string; descricao: string; valor: number; data_vencimento: string; status: string };
 
-const fmtBRL = (n: number) =>
-  (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function ScoreGauge({ score, label }: { score: number; label: string }) {
   const pct = Math.max(0, Math.min(100, score));

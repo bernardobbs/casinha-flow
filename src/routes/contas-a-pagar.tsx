@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Plus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonContasAPagar } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/contas-a-pagar")({
   head: () => ({ meta: [{ title: "Contas a pagar — Casinha Hub" }] }),
@@ -33,7 +34,6 @@ type BillRow = {
 };
 type Acc = { id: string; nome: string };
 
-const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const diasAte = (d: string) => Math.floor((new Date(d + "T00:00:00").getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
 
 function ContasAPagarPage() {

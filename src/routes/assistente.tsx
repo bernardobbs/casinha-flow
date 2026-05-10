@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Bot, Send, Loader2, User, RefreshCw, Lightbulb } from "lucide-react";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/assistente")({
   head: () => ({ meta: [{ title: "Assistente IA — Casinha Hub" }] }),
@@ -30,8 +31,6 @@ const SUGESTOES = [
   "Quando preciso repor o estoque?",
 ];
 
-const fmtBRL = (n: number) =>
-  (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 async function buildContext(familyId: string): Promise<string> {
   const hoje = new Date().toISOString().slice(0, 10);

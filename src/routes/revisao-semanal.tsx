@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonPage } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/revisao-semanal")({
   head: () => ({ meta: [{ title: "Revisão semanal — Casinha Hub" }] }),
@@ -28,7 +29,6 @@ type CatProj = {
 type BillRow = { id: string; descricao: string; valor: number; data_vencimento: string; status: string; category_id: string | null };
 type Acc = { id: string; nome: string };
 
-const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const diasAte = (d: string) => Math.floor((new Date(d + "T00:00:00").getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
 
 function RevisaoSemanalPage() {

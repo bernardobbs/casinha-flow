@@ -25,6 +25,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/compras")({
   head: () => ({ meta: [{ title: "Compras — Casinha Hub" }] }),
@@ -56,8 +57,6 @@ const STATUS_VARIANT: Record<Status, string> = {
   concluida: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
 };
 
-const fmtBRL = (n: number | null | undefined) =>
-  (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function ComprasPage() {
   const { user, loading: authLoading } = useAuth();

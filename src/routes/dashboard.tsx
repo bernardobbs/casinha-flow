@@ -14,6 +14,7 @@ import {
 import { CrisisBanner } from "@/components/crisis-banner";
 import { AlertsBell } from "@/components/alerts-bell";
 import { SkeletonDashboard } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -41,9 +42,6 @@ type CatProj = {
 type AlertRow = { id: string; mensagem: string; severidade: string; created_at: string };
 type ContaPendente = { descricao: string; valor: number; data_vencimento: string; origem: string };
 
-const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-function MiniGauge({ score }: { score: number }) {
   const pct = Math.max(0, Math.min(100, score));
   const r = 38, c = 2 * Math.PI * r, off = c - (pct / 100) * c;
   const color = pct >= 71 ? "hsl(142 71% 45%)" : pct >= 41 ? "hsl(38 92% 50%)" : "hsl(0 84% 60%)";
@@ -56,7 +54,6 @@ function MiniGauge({ score }: { score: number }) {
       <text x="50" y="56" textAnchor="middle" fontSize="22" fontWeight="700" fill="currentColor">{pct}</text>
     </svg>
   );
-}
 
 function Dashboard() {
   const { user, loading: authLoading } = useAuth();

@@ -35,7 +35,6 @@ interface PendingTx {
 
 type FilterMode = "todos" | "sem_categoria" | "sem_conta";
 
-const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDate = (iso: string) =>
   new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 

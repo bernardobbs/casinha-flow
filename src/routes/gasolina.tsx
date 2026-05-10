@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Fuel, Plus, Wrench, Loader2, Pencil, Trash2 } from "lucide-react";
 import { SkeletonGasolina } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/gasolina")({
   head: () => ({
@@ -54,7 +55,6 @@ const FUEL_LABEL: Record<string, string> = {
   flex: "🔄 Flex (Gasolina/Etanol)", gasolina: "⛽ Gasolina", aditivada: "⛽ Aditivada",
   etanol: "🌿 Etanol", diesel: "🚛 Diesel", gnv: "💨 GNV", eletrico: "⚡ Elétrico",
 };
-const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function GasolinaPage() {
   const { user, loading: authLoading } = useAuth();

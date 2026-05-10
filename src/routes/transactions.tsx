@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import type { TransactionBase, TxType, TxSource, TxScope, TipoEspecial } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
 import { importLog, clearImportLogs, getImportLogs } from "@/lib/import-logger";
@@ -71,6 +72,7 @@ interface Category {
   parent_id: string | null;
 }
 
+// Tipo local — ver TransactionBase em @/types para o centralizado
 interface Transaction {
   id: string;
   family_id: string;
@@ -111,8 +113,6 @@ const txSchema = z.object({
   account_id: z.string().uuid().nullable(),
 });
 
-const formatCurrency = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const formatDate = (iso: string) =>
   new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", {

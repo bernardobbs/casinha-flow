@@ -47,8 +47,6 @@ interface Tx {
 interface Cat { id: string; nome: string; tipo: "despesa" | "receita"; icone: string }
 interface Acc { id: string; nome: string; icone: string }
 
-const fmt = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function ConciliacaoPage() {
   const { user, loading: authLoading } = useAuth();

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, Package, Plus, Upload, ListChecks, Loader2, Minus, AlertTriangle } from "lucide-react";
 import { SkeletonEstoque } from "@/components/skeletons";
+import { fmtBRL } from '@/lib/format';
 
 export const Route = createFileRoute("/estoque")({
   head: () => ({
@@ -60,8 +61,6 @@ type StockRow = {
   variacao_preco_pct: number | null; preco_anterior: number | null;
 };
 
-const fmtBRL = (n: number | null | undefined) =>
-  (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function EstoquePage() {
   const { user, loading: authLoading } = useAuth();

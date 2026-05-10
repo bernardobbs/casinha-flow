@@ -55,8 +55,6 @@ interface BudgetStatus {
   responsavel?: string | null;
 }
 
-const formatCurrency = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const monthLabel = (firstDay: string) =>
   new Date(firstDay + "T00:00:00").toLocaleDateString("pt-BR", {

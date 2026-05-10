@@ -59,8 +59,6 @@ interface FinancialState {
   modo_crise: boolean;
 }
 
-const formatCurrency = (n: number) =>
-  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const monthLabel = (iso: string) =>
   new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", {
@@ -531,9 +529,7 @@ interface BucketRowProps {
 }
 
 function BucketRow({ icon, color, title, subtitle, value, meta, over }: BucketRowProps) {
-  const formatCurrency = (n: number) =>
-    n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const pct = meta > 0 ? Math.min(100, Math.round((value / meta) * 100)) : 0;
+    const pct = meta > 0 ? Math.min(100, Math.round((value / meta) * 100)) : 0;
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
