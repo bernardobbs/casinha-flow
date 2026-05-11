@@ -80,12 +80,12 @@ function GasolinaPage() {
   }, [user, authLoading, navigate]);
 
   const reload = async () => {
-    if (!user) return;
+    if (!user || !familyId) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("v_vehicle_status" as any)
       .select("*")
-      .eq("family_id", familyId!)
+      .eq("family_id", familyId)
       .eq("ativo", true)
       .order("nome");
     if (error) toast.error("Erro ao carregar veículos");
@@ -93,7 +93,7 @@ function GasolinaPage() {
     setLoading(false);
   };
 
-  useEffect(() => { reload(); }, [user]);
+  useEffect(() => { reload(); }, [user, familyId]);
 
   if (authLoading || familyLoading || loading) return <SkeletonGasolina />;
 
