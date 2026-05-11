@@ -99,22 +99,17 @@ function Dashboard() {
       if (saldoRow) setSaldo(saldoRow as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 6));
 
+      console.log('[Dashboard] s.error:', s.error, 'sa.error:', sa.error);
+      console.log('[Dashboard] summaryRow:', summaryRow);
+      console.log('[Dashboard] saldoRow:', saldoRow);
+
       if (prev.data) {
         const pendentes = (prev.data as ContaPendente[]).filter((p: any) => p.status !== 'pago');
         setContasPendentes(pendentes.slice(0, 3));
         setTotalPendente(pendentes.reduce((acc: number, p: any) => acc + Number(p.valor), 0));
       }
 
-      // Badge estoque
-      const { data: lastRev } = await supabase
-        .from("weekly_reviews").select("created_at, checklist")
-        .eq("family_id", fid).order("created_at", { ascending: false }).limit(20);
-      const stockRev = (lastRev ?? []).find((r: any) => r?.checklist?.tipo === "estoque");
-      if (!stockRev) setStockReviewOk(false);
-      else {
-        const ageDays = (Date.now() - new Date((stockRev as any).created_at).getTime()) / 86400000;
-        setStockReviewOk(ageDays <= 7);
-      }
+      setStockReviewOk(true);
       setLoading(false);
     })();
   }, [user]);
