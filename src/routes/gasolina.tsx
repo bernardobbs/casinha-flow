@@ -28,25 +28,23 @@ export const Route = createFileRoute("/gasolina")({
 });
 
 type VehicleStatus = {
+  id: string;
   vehicle_id: string;
   family_id: string;
-  nome: string;
-  tipo: "carro" | "moto" | "caminhao" | "outro";
-  cor: string;
-  flex: boolean;
-  capacidade_tanque: number;
-  consumo_medio_kml: number;
+  apelido: string;
+  nome?: string; // alias para compatibilidade
+  tipo: string;
+  combustivel: string;
+  tanque_capacidade: number;
+  consumo_medio_km_l: number;
   odometro_atual: number;
-  ativo: boolean;
-  ultimo_abastec_data: string | null;
-  ultimo_abastec_combustivel: string | null;
-  ultimo_abastec_preco_litro: number | null;
-  ultimo_abastec_litros: number | null;
-  ultimo_abastec_hodometro: number | null;
-  ultimo_abastec_tanque_cheio: boolean | null;
-  tanque_pct: number | null;
-  km_restantes: number | null;
-  gasto_mes: number;
+  data_ultimo_abastecimento: string | null;
+  ultimo_preco_litro: number | null;
+  ultimo_posto: string | null;
+  ultimo_combustivel: string | null;
+  litros_estimados_restantes: number | null;
+  km_estimados_restantes: number | null;
+  pct_tanque_estimado: number | null;
 };
 
 const TIPO_ICON: Record<string, string> = { carro: "🚗", moto: "🏍️", caminhao: "🚛", outro: "🚙" };
