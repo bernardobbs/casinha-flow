@@ -205,7 +205,7 @@ function VehicleCard({ v, onMaint, onEdit, onDeactivate }: { v: VehicleStatus; o
               <div className="flex justify-between"><span className="text-muted-foreground">Preço/L</span><span>{fmtBRL(v.ultimo_preco_litro ?? 0)}</span></div>
             </>
           ) : <p className="text-muted-foreground text-xs">Sem abastecimentos registrados</p>}
-          <div className="flex justify-between font-medium"><span>Gasto do mês</span><span>{fmtBRL(v.gasto_mes)}</span></div>
+          <div className="flex justify-between font-medium"><span>Gasto do mês</span><span>{"—"}</span></div>
         </div>
         <Button variant="outline" size="sm" onClick={onMaint} className="w-full">
           <Wrench className="h-4 w-4 mr-1" /> Manutenção
