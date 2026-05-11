@@ -170,7 +170,7 @@ function GasolinaPage() {
 }
 
 function VehicleCard({ v, onMaint, onEdit, onDeactivate }: { v: VehicleStatus; onMaint: () => void; onEdit: () => void; onDeactivate: () => void }) {
-  const pct = v.tanque_pct ?? 0;
+  const pct = v.pct_tanque_estimado ?? 0;
   const tankColor = pct > 50 ? "bg-green-500" : pct > 20 ? "bg-yellow-500" : "bg-red-500";
   return (
     <Card className="border-border/60">
@@ -178,7 +178,7 @@ function VehicleCard({ v, onMaint, onEdit, onDeactivate }: { v: VehicleStatus; o
         <CardTitle className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-2 min-w-0 truncate">{TIPO_ICON[v.tipo]} {v.apelido}</span>
           <div className="flex items-center gap-1 shrink-0">
-            {v.flex && <Badge variant="outline">Flex</Badge>}
+            {false && <Badge variant="outline">Flex</Badge>}
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={onDeactivate} title="Desativar"><Trash2 className="h-3.5 w-3.5" /></Button>
           </div>
@@ -188,21 +188,21 @@ function VehicleCard({ v, onMaint, onEdit, onDeactivate }: { v: VehicleStatus; o
         <div>
           <div className="flex justify-between text-sm mb-1">
             <span className="text-muted-foreground">Tanque estimado</span>
-            <span className="font-medium">{v.tanque_pct !== null ? `${v.tanque_pct}%` : "—"}</span>
+            <span className="font-medium">{v.pct_tanque_estimado !== null ? `${v.pct_tanque_estimado}%` : "—"}</span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
             <div className={`h-full ${tankColor} transition-all`} style={{ width: `${pct}%` }} />
           </div>
-          {v.km_restantes !== null && <p className="text-xs text-muted-foreground mt-1">~{v.km_restantes} km restantes</p>}
+          {v.km_estimados_restantes !== null && <p className="text-xs text-muted-foreground mt-1">~{v.km_estimados_restantes} km restantes</p>}
         </div>
         <div className="text-sm space-y-1 border-t pt-3">
           <div className="flex justify-between"><span className="text-muted-foreground">Hodômetro</span><span>{v.odometro_atual.toLocaleString("pt-BR")} km</span></div>
-          {v.ultimo_abastec_data ? (
+          {v.data_ultimo_abastecimento ? (
             <>
               <div className="flex justify-between"><span className="text-muted-foreground">Último abast.</span>
-                <span>{new Date(v.ultimo_abastec_data + "T12:00").toLocaleDateString("pt-BR")} • {FUEL_LABEL[v.ultimo_abastec_combustivel ?? ""] ?? ""}</span>
+                <span>{new Date(v.data_ultimo_abastecimento + "T12:00").toLocaleDateString("pt-BR")} • {FUEL_LABEL[v.ultimo_combustivel ?? ""] ?? ""}</span>
               </div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Preço/L</span><span>{fmtBRL(v.ultimo_abastec_preco_litro ?? 0)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Preço/L</span><span>{fmtBRL(v.ultimo_preco_litro ?? 0)}</span></div>
             </>
           ) : <p className="text-muted-foreground text-xs">Sem abastecimentos registrados</p>}
           <div className="flex justify-between font-medium"><span>Gasto do mês</span><span>{fmtBRL(v.gasto_mes)}</span></div>
