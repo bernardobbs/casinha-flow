@@ -79,27 +79,24 @@ function Dashboard() {
     (async () => {
       setLoading(true);
       const { data: profile } = await supabase
-        .from("profiles").select("family_id, families(name)")
+        .from("profiles").select("family_id, families(nome)")
         .eq("id", user.id).maybeSingle();
       const fid = profile?.family_id ?? null;
       setFamilyId(fid);
-      setFamilyName((profile as any)?.families?.name ?? "");
+      setFamilyName((profile as any)?.families?.nome ?? "");
       if (!fid) { setLoading(false); return; }
 
-      const [s, sa, c, al, prev] = await Promise.all([
+      const [s, sa, c, prev] = await Promise.all([
         supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
         supabase.rpc("get_saldo_total", { p_family_id: fid }),
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
-        supabase.from("alerts").select("id,mensagem,severidade,created_at")
-          .eq("family_id", fid).eq("lido", false).eq("severidade", "critical")
-          .order("created_at", { ascending: false }).limit(3),
         supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
       ]);
 
       if (s.data && Array.isArray(s.data) && s.data[0]) setSummary(s.data[0] as DashSummary);
       if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 6));
-      if (al.data) setAlerts(al.data as AlertRow[]);
+
       if (prev.data) {
         const pendentes = (prev.data as ContaPendente[]).filter((p: any) => p.status !== 'pago');
         setContasPendentes(pendentes.slice(0, 3));
