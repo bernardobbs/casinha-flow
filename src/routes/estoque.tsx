@@ -146,7 +146,7 @@ function EstoquePage() {
                 <Card key={r.id ?? r.product_id} className="border-destructive/50 bg-destructive/5">
                   <CardContent className="py-4">
                     <p className="font-medium">{r.nome}</p>
-                    <p className="text-xs text-muted-foreground">{r.categoria ?? "Sem categoria"} • {LOC_LABEL[r.localizacao]}</p>
+                    <p className="text-xs text-muted-foreground">{r.categoria ?? "Sem categoria"} • {LOC_LABEL[r.localizacao ?? ""]}</p>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       {r.risco_ruptura && <Badge variant="destructive">Risco ruptura</Badge>}
                       {r.dias_para_vencer !== null && r.dias_para_vencer < 0 && <Badge variant="destructive">Vencido</Badge>}
@@ -238,7 +238,7 @@ function ProductCard({ r, onEntrada, onSaida }: { r: StockRow; onEntrada: () => 
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           {r.categoria ?? "Sem categoria"}
-          {r.localizacao ? ` • ${LOC_LABEL[r.localizacao] ?? r.localizacao}` : ""}
+          {r.localizacao ? ` • ${LOC_LABEL[r.localizacao ?? ""] ?? r.localizacao}` : ""}
         </p>
       </CardHeader>
       <CardContent className="space-y-3">

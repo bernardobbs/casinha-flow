@@ -127,7 +127,6 @@ function CrisisPage() {
       .eq("id", user.id)
       .maybeSingle();
     const fid = profile?.family_id ?? null;
-    setFamilyId(fid);
     if (!fid) {
       setLoading(false);
       return;

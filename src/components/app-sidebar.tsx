@@ -41,9 +41,7 @@ const groups = [
     label: "📊 Planejamento",
     items: [
       { title: "Revisão Semanal", url: "/revisao-semanal", icon: ClipboardList },
-      { title: "Situação", url: "/situacao", icon: BarChart3 },
-      { title: "Estado Financeiro", url: "/financial-state", icon: TrendingUp },
-      { title: "Crise", url: "/crisis", icon: AlertTriangle },
+      { title: "Situação Financeira", url: "/situacao", icon: BarChart3 },
     ],
   },
   {

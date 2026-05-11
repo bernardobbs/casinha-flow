@@ -62,7 +62,6 @@ function ContasAPagarPage() {
       setLoading(true);
       const { data: profile } = await supabase.from("profiles").select("family_id").eq("id", user.id).maybeSingle();
       const fid = profile?.family_id ?? null;
-      setFamilyId(fid);
       if (!fid) { setLoading(false); return; }
       try { await supabase.rpc("check_bills_alerts", { p_family_id: fid }); } catch { /* */ }
 
