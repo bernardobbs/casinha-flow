@@ -128,7 +128,7 @@ function GasolinaPage() {
                 v={v}
                 onMaint={() => setOpenMaint({ open: true, vehicleId: v.vehicle_id })}
                 onEdit={() => setOpenVehicle({ open: true, editing: v })}
-                onDeactivate={() => deactivateVehicle(v.vehicle_id, v.nome)}
+                onDeactivate={() => deactivateVehicle(v.vehicle_id, v.apelido)}
               />
             ))}
           </div>
@@ -139,7 +139,7 @@ function GasolinaPage() {
         {vehicles.length > 0 && (
           <Tabs defaultValue={vehicles[0].vehicle_id} className="w-full">
             <TabsList className="flex flex-wrap h-auto">
-              {vehicles.map(v => <TabsTrigger key={v.vehicle_id} value={v.vehicle_id}>{TIPO_ICON[v.tipo]} {v.nome}</TabsTrigger>)}
+              {vehicles.map(v => <TabsTrigger key={v.vehicle_id} value={v.vehicle_id}>{TIPO_ICON[v.tipo]} {v.apelido}</TabsTrigger>)}
             </TabsList>
             {vehicles.map(v => (
               <TabsContent key={v.vehicle_id} value={v.vehicle_id} className="space-y-4">
@@ -179,7 +179,7 @@ function VehicleCard({ v, onMaint, onEdit, onDeactivate }: { v: VehicleStatus; o
     <Card className="border-border/60">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-2 min-w-0 truncate">{TIPO_ICON[v.tipo]} {v.nome}</span>
+          <span className="flex items-center gap-2 min-w-0 truncate">{TIPO_ICON[v.tipo]} {v.apelido}</span>
           <div className="flex items-center gap-1 shrink-0">
             {v.flex && <Badge variant="outline">Flex</Badge>}
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
@@ -427,7 +427,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
               if (v) setHodometro(String(v.odometro_atual ?? ""));
             }}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>{vehicles.map((v: any) => <SelectItem key={v.vehicle_id} value={v.vehicle_id}>{TIPO_ICON[v.tipo]} {v.nome}</SelectItem>)}</SelectContent>
+              <SelectContent>{vehicles.map((v: any) => <SelectItem key={v.vehicle_id} value={v.vehicle_id}>{TIPO_ICON[v.tipo]} {v.apelido}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div><Label>Combustível</Label>
@@ -474,7 +474,7 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
   useEffect(() => {
     if (!open) { setNome(""); setTanque("50"); setConsumo("10"); setOdometro("0"); setFlex(true); setTipo("carro"); setCombustivel("gasolina"); return; }
     if (editing) {
-      setNome(editing.nome ?? "");
+      setNome(editing.apelido ?? "");
       setTipo(editing.tipo ?? "carro");
       setCombustivel(editing.ultimo_abastec_combustivel ?? "gasolina");
       setFlex(!!editing.flex);
@@ -488,7 +488,7 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
     if (!familyId || !userId || !nome) { toast.error("Informe o nome"); return; }
     setSaving(true);
     const payload = {
-      nome, tipo,
+      apelido: nome, tipo,
       combustivel: combustivel,
       tanque_capacidade: parseFloat(tanque.replace(",", ".")) || 50,
       consumo_medio_km_l: parseFloat(consumo.replace(",", ".")) || 10,
