@@ -34,7 +34,7 @@ const groups = [
       { title: "Estoque", url: "/estoque", icon: Package },
       { title: "Revisão Estoque", url: "/estoque/revisao-semanal", icon: ListChecks },
       { title: "Manutenção", url: "/manutencao", icon: Wrench },
-      { title: "Gasolina", url: "/gasolina", icon: Fuel },
+      { title: "Combustível", url: "/gasolina", icon: Fuel },
     ],
   },
   {

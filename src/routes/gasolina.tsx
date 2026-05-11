@@ -20,7 +20,7 @@ import { SkeletonGasolina } from "@/components/skeletons";
 export const Route = createFileRoute("/gasolina")({
   head: () => ({
     meta: [
-      { title: "Gasolina — Casinha Hub" },
+      { title: "Combustível — Casinha Hub" },
       { name: "description", content: "Controle de combustível, abastecimentos e manutenção dos veículos da família." },
     ],
   }),
@@ -84,8 +84,7 @@ function GasolinaPage() {
       .from("v_vehicle_status" as any)
       .select("*")
       .eq("family_id", familyId)
-      .eq("ativo", true)
-      .order("nome");
+      .order("apelido");
     if (error) toast.error("Erro ao carregar veículos");
     setVehicles((data ?? []) as any);
     setLoading(false);
@@ -101,7 +100,7 @@ function GasolinaPage() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
             <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Painel</Button></Link>
-            <h1 className="text-lg sm:text-xl font-semibold flex items-center gap-2 truncate"><Fuel className="h-5 w-5" /> Gasolina</h1>
+            <h1 className="text-lg sm:text-xl font-semibold flex items-center gap-2 truncate"><Fuel className="h-5 w-5" /> Combustível</h1>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpenVehicle({ open: true, editing: null })}>+ Veículo</Button>
@@ -122,11 +121,11 @@ function GasolinaPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {vehicles.map((v) => (
               <VehicleCard
-                key={v.vehicle_id}
+                key={v.id}
                 v={v}
-                onMaint={() => setOpenMaint({ open: true, vehicleId: v.vehicle_id })}
+                onMaint={() => setOpenMaint({ open: true, vehicleId: v.id })}
                 onEdit={() => setOpenVehicle({ open: true, editing: v })}
-                onDeactivate={() => deactivateVehicle(v.vehicle_id, v.apelido)}
+                onDeactivate={() => deactivateVehicle(v.id, v.apelido)}
               />
             ))}
           </div>
@@ -137,12 +136,12 @@ function GasolinaPage() {
         {vehicles.length > 0 && (
           <Tabs defaultValue={vehicles[0].vehicle_id} className="w-full">
             <TabsList className="flex flex-wrap h-auto">
-              {vehicles.map(v => <TabsTrigger key={v.vehicle_id} value={v.vehicle_id}>{TIPO_ICON[v.tipo]} {v.apelido}</TabsTrigger>)}
+              {vehicles.map(v => <TabsTrigger key={v.id} value={v.id}>{TIPO_ICON[v.tipo]} {v.apelido}</TabsTrigger>)}
             </TabsList>
             {vehicles.map(v => (
-              <TabsContent key={v.vehicle_id} value={v.vehicle_id} className="space-y-4">
-                <FuelHistory vehicleId={v.vehicle_id} />
-                <MaintenanceList vehicleId={v.vehicle_id} onRegister={() => setOpenMaint({ open: true, vehicleId: v.vehicle_id })} />
+              <TabsContent key={v.id} value={v.id} className="space-y-4">
+                <FuelHistory vehicleId={v.id} />
+                <MaintenanceList vehicleId={v.id} onRegister={() => setOpenMaint({ open: true, vehicleId: v.id })} />
               </TabsContent>
             ))}
           </Tabs>
@@ -384,7 +383,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
       const { data: acc } = await supabase.from("accounts").select("id")
         .eq("family_id", familyId).eq("ativo", true).neq("tipo", "cartao").limit(1).maybeSingle();
 
-      const veiculo = vehicles.find((vv: any) => vv.vehicle_id === vehicleId);
+      const veiculo = vehicles.find((vv: any) => vv.id === vehicleId);
       const desc = `Abastecimento ${veiculo?.nome ?? ""} (${FUEL_LABEL[combustivel] ?? combustivel})`;
       const { data: tx, error: txErr } = await supabase.from("transactions").insert({
         family_id: familyId, user_id: userId,
@@ -421,11 +420,11 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
           <div><Label>Veículo</Label>
             <Select value={vehicleId} onValueChange={(id) => {
               setVehicleId(id);
-              const v = vehicles.find((vv: any) => vv.vehicle_id === id);
+              const v = vehicles.find((vv: any) => vv.id === id);
               if (v) setHodometro(String(v.odometro_atual ?? ""));
             }}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>{vehicles.map((v: any) => <SelectItem key={v.vehicle_id} value={v.vehicle_id}>{TIPO_ICON[v.tipo]} {v.apelido}</SelectItem>)}</SelectContent>
+              <SelectContent>{vehicles.map((v: any) => <SelectItem key={v.id} value={v.id}>{TIPO_ICON[v.tipo]} {v.apelido}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div><Label>Combustível</Label>
@@ -493,7 +492,7 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
       odometro_atual: parseFloat(odometro.replace(",", ".")) || 0,
     };
     const { error } = isEdit
-      ? await supabase.from("vehicles" as any).update(payload).eq("id", editing.vehicle_id)
+      ? await supabase.from("vehicles" as any).update(payload).eq("id", editing.id)
       : await supabase.from("vehicles" as any).insert({ ...payload, family_id: familyId });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
