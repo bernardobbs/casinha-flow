@@ -93,8 +93,10 @@ function Dashboard() {
         supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
       ]);
 
-      if (s.data && Array.isArray(s.data) && s.data[0]) setSummary(s.data[0] as DashSummary);
-      if (sa.data && Array.isArray(sa.data) && sa.data[0]) setSaldo(sa.data[0] as Saldo);
+      const summaryRow = Array.isArray(s.data) ? s.data[0] : s.data;
+      if (summaryRow) setSummary(summaryRow as DashSummary);
+      const saldoRow = Array.isArray(sa.data) ? sa.data[0] : sa.data;
+      if (saldoRow) setSaldo(saldoRow as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 6));
 
       if (prev.data) {
