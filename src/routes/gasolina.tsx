@@ -49,8 +49,8 @@ type VehicleStatus = {
 
 const TIPO_ICON: Record<string, string> = { carro: "🚗", moto: "🏍️", caminhao: "🚛", outro: "🚙" };
 const FUEL_LABEL: Record<string, string> = {
-  flex: "🔄 Flex (Gasolina/Etanol)", gasolina: "⛽ Gasolina", aditivada: "⛽ Aditivada",
-  etanol: "🌿 Etanol", diesel: "🚛 Diesel", gnv: "💨 GNV", eletrico: "⚡ Elétrico",
+  gasolina: "⛽ Gasolina", gasolina_aditivada: "⛽ Aditivada",
+  etanol: "🌿 Etanol", diesel: "🚛 Diesel", gnv: "💨 GNV",
 };
 const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -359,7 +359,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
     if (open && vehicles.length && !vehicleId) {
       setVehicleId(vehicles[0].id ?? "");
       setHodometro(String(vehicles[0].odometro_atual ?? ""));
-      setCombustivel(vehicles[0].ultimo_combustivel ?? "flex");
+      setCombustivel(vehicles[0].ultimo_combustivel ?? "gasolina");
     }
     if (open && familyId) {
       supabase.from("accounts").select("id, nome, tipo")
@@ -473,7 +473,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
 function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved }: any) {
   const [nome, setNome] = useState("");
   const [tipo, setTipo] = useState<"carro" | "moto" | "caminhao" | "outro">("carro");
-  const [combustivel, setCombustivel] = useState<string>("flex");
+  const [combustivel, setCombustivel] = useState<string>("gasolina");
   const [flex, setFlex] = useState(true); // flex é controlado pelo combustivel selecionado
   const [tanque, setTanque] = useState("50");
   const [consumo, setConsumo] = useState("10");
