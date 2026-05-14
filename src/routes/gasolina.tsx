@@ -29,7 +29,7 @@ export const Route = createFileRoute("/gasolina")({
 
 type VehicleStatus = {
   id: string;
-  vehicle_id: string;
+  vehicle_id?: string; // alias de id
   family_id: string;
   apelido: string;
   nome?: string; // alias para compatibilidade
@@ -134,7 +134,7 @@ function GasolinaPage() {
         <FlexCalculator />
 
         {vehicles.length > 0 && (
-          <Tabs defaultValue={vehicles[0].vehicle_id} className="w-full">
+          <Tabs defaultValue={vehicles[0].id ?? ""} className="w-full">
             <TabsList className="flex flex-wrap h-auto">
               {vehicles.map(v => <TabsTrigger key={v.id} value={v.id}>{TIPO_ICON[v.tipo]} {v.apelido}</TabsTrigger>)}
             </TabsList>
@@ -354,12 +354,13 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
 
   useEffect(() => {
     if (open && vehicles.length && !vehicleId) {
-      setVehicleId(vehicles[0].vehicle_id);
+      setVehicleId(vehicles[0].id ?? vehicles[0].id ?? "" ?? "");
       setHodometro(String(vehicles[0].odometro_atual ?? ""));
-      setCombustivel(vehicles[0].ultimo_abastec_combustivel ?? "gasolina");
+      setCombustivel(vehicles[0].ultimo_combustivel ?? "flex");
     }
     if (!open) {
       setValor(""); setPreco(""); setPosto(""); setVehicleId("");
+      setData(new Date().toISOString().slice(0, 10));
     }
   }, [open]);
 
