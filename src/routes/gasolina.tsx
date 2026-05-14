@@ -622,21 +622,37 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
 
+  const [proximoKm, setProximoKm] = useState("");
+  const [proximaData, setProximaData] = useState("");
+
   useEffect(() => {
     if (!open || !vehicleId) return;
     (async () => {
       const { data: t } = await supabase.from("vehicle_maintenance_types" as any)
-        .select("id, nome").eq("vehicle_id", vehicleId).eq("ativo", true);
+        .select("id, nome, intervalo_km, intervalo_meses").eq("vehicle_id", vehicleId).eq("ativo", true).order("nome");
       setTypes((t as any) ?? []);
-      if (t && t.length) setTypeId((t as any)[0].id);
+      if (t && (t as any).length) setTypeId((t as any)[0].id);
       const { data: vRow } = await supabase.from("vehicles" as any).select("odometro_atual").eq("id", vehicleId).maybeSingle();
       if (vRow) setHodometro(String((vRow as any).odometro_atual ?? ""));
     })();
-    if (!open) { setValor(""); setLocal(""); setTipoOleo(""); }
+    if (!open) { setValor(""); setLocal(""); setTipoOleo(""); setProximoKm(""); setProximaData(""); }
   }, [open, vehicleId]);
 
-  const selectedType = types.find(t => t.id === typeId);
+  const selectedType = types.find((t: any) => t.id === typeId) as any;
   const isOleo = (selectedType?.nome ?? "").toLowerCase().includes("óleo") || (selectedType?.nome ?? "").toLowerCase().includes("oleo");
+
+  // Auto-calcular próxima manutenção ao trocar tipo ou hodômetro
+  useEffect(() => {
+    if (!selectedType || !hodometro) return;
+    const h = parseFloat(hodometro.replace(",", "."));
+    if (isNaN(h)) return;
+    if (selectedType.intervalo_km) setProximoKm(String(h + selectedType.intervalo_km));
+    if (selectedType.intervalo_meses) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + selectedType.intervalo_meses);
+      setProximaData(d.toISOString().slice(0, 10));
+    }
+  }, [typeId, hodometro]);
 
   const submit = async () => {
     if (!familyId || !userId || !vehicleId || !typeId) return;
@@ -667,6 +683,8 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
         maintenance_type_id: typeId, nome: selectedType?.nome ?? "Manutenção",
         data, hodometro: h, valor: v, local: local || null,
         tipo_oleo: isOleo ? (tipoOleo || null) : null, transaction_id: txId,
+        proximo_km: proximoKm ? parseFloat(proximoKm) : null,
+        proxima_data: proximaData || null,
       });
       if (error) throw error;
       await supabase.from("vehicles" as any).update({ odometro_atual: h }).eq("id", vehicleId);
@@ -697,6 +715,13 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
             <div><Label>Local</Label><Input value={local} onChange={(e) => setLocal(e.target.value)} /></div>
           </div>
           {isOleo && <div><Label>Tipo de óleo</Label><Input value={tipoOleo} onChange={(e) => setTipoOleo(e.target.value)} placeholder="5W30 sintético..." /></div>}
+          <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Próxima manutenção (calculado automaticamente)</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label className="text-xs">Próximo km</Label><Input value={proximoKm} onChange={(e) => setProximoKm(e.target.value)} placeholder="82.850" /></div>
+              <div><Label className="text-xs">Próxima data</Label><Input type="date" value={proximaData} onChange={(e) => setProximaData(e.target.value)} /></div>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
