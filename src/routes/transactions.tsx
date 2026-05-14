@@ -465,6 +465,38 @@ function parseBBCSV(text: string): ParsedRow[] {
   }
   return rows;
 }
+// Parser para extrato de cartão BB (positivo=despesa, negativo=pagamento→ignorar)
+function parseCartaoCsv(text: string): ParsedRow[] {
+  const IGNORAR = ['PGTO', 'PAGTO', 'PAGAMENTO', 'ESTORNO'];
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  const startIdx = /data/i.test(lines[0] ?? '') ? 1 : 0;
+  const rows: ParsedRow[] = [];
+  for (let i = startIdx; i < lines.length; i++) {
+    const cols = splitCsvLine(lines[i]);
+    if (cols.length < 3) continue;
+    const date = parseDate(cols[0]);
+    const description = cols[1]?.trim() ?? '';
+    const rawAmount = parseAmount(cols[2]);
+    if (!date || !description || rawAmount === null) continue;
+    // Negativo = pagamento de fatura → não importar
+    if (rawAmount < 0) continue;
+    // Palavras que indicam pagamento/estorno → ignorar
+    if (IGNORAR.some(p => description.toUpperCase().includes(p))) continue;
+    // No cartão, positivo = compra = despesa
+    const amount = -Math.abs(rawAmount);
+    const tipoEspecial = detectTipoEspecial(description);
+    rows.push({
+      date, description, amount,
+      type: 'expense',
+      tipo_especial: tipoEspecial,
+      category: classifyCategory(description),
+      external_id: `${date}|${description.toLowerCase().trim().slice(0,40)}|${rawAmount.toFixed(2)}|${rows.length}`,
+      selected: tipoEspecial === 'normal',
+    });
+  }
+  return rows;
+}
+
 function detectFormat(text: string, filename: string): 'bb' | 'bb_csv' | 'nubank' | 'inter' | 'caixa' | 'csv' {
   const lower = text.toLowerCase().slice(0, 500);
   const fname = filename.toLowerCase();
@@ -482,6 +514,8 @@ function detectFormat(text: string, filename: string): 'bb' | 'bb_csv' | 'nubank
   if (/data.*valor.*ident|identificador/i.test(text.slice(0, 200))) return 'nubank';
   if (/data.*tipo.*descri.*valor/i.test(text.slice(0, 200))) return 'inter';
 
+  // Cartão BB: 3 colunas, valores positivos = despesa
+  if (/^data[,;]descri/i.test(text.slice(0, 50)) || (fname.includes('cartao') || fname.includes('cartão') || fname.includes('fatura'))) return 'cartao_csv';
   return 'csv';
 }
 

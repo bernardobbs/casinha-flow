@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as SituacaoRouteImport } from './routes/situacao'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as RevisaoSemanalRouteImport } from './routes/revisao-semanal'
 import { Route as RecorrentesRouteImport } from './routes/recorrentes'
 import { Route as MembrosRouteImport } from './routes/membros'
@@ -42,6 +43,24 @@ const SituacaoRoute = SituacaoRouteImport.update({
   path: '/situacao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const RevisaoSemanalRoute = RevisaoSemanalRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const RevisaoSemanalRoute = RevisaoSemanalRouteImport.update({
   id: '/revisao-semanal',
   path: '/revisao-semanal',
@@ -133,6 +152,18 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const EstoqueRevisaoSemanalRoute = EstoqueRevisaoSemanalRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const RevisaoSemanalRoute = RevisaoSemanalRouteImport.update({
   id: '/revisao-semanal',
   path: '/revisao-semanal',
   getParentRoute: () => EstoqueRoute,
@@ -488,7 +519,8 @@ interface EstoqueRouteChildren {
 }
 
 const EstoqueRouteChildren: EstoqueRouteChildren = {
-  EstoqueRevisaoSemanalRoute: EstoqueRevisaoSemanalRoute,
+  EstoqueRevisaoSemanalRoute: EstoqueRelatoriosRoute,
+    RevisaoSemanalRoute,
 }
 
 const EstoqueRouteWithChildren =
@@ -512,7 +544,8 @@ const rootRouteChildren: RootRouteChildren = {
   ManutencaoRoute: ManutencaoRoute,
   MembrosRoute: MembrosRoute,
   RecorrentesRoute: RecorrentesRoute,
-  RevisaoSemanalRoute: RevisaoSemanalRoute,
+  RevisaoSemanalRoute: RelatoriosRoute,
+    RevisaoSemanalRoute,
   SituacaoRoute: SituacaoRoute,
   TransactionsRoute: TransactionsRoute,
 }

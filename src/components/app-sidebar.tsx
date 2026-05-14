@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Wallet, Banknote, Target, Repeat,
   CalendarClock, Package, Wrench, Users, Bot,
   BarChart3, AlertTriangle, Zap, ShoppingCart,
-  ListChecks, RefreshCw, ClipboardList, Fuel, TrendingUp,
+  ListChecks, RefreshCw, ClipboardList, Fuel, TrendingUp, FileText,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -25,6 +25,7 @@ const groups = [
       { title: "Orçamento", url: "/budgets", icon: Target },
       { title: "Recorrentes", url: "/recorrentes", icon: Repeat },
       { title: "A Pagar", url: "/contas-a-pagar", icon: CalendarClock },
+      { title: "Relatórios", url: "/relatorios", icon: FileText },
     ],
   },
   {
