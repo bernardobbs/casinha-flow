@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
 
-export const Route = createFileRoute("/relatorios")({
+export const Route = createFileRoute("/relatorios" as any)({
   head: () => ({ meta: [{ title: "Relatórios — Casinha Hub" }] }),
   component: RelatoriosPage,
 });

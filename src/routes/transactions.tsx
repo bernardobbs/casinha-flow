@@ -497,7 +497,7 @@ function parseCartaoCsv(text: string): ParsedRow[] {
   return rows;
 }
 
-function detectFormat(text: string, filename: string): 'bb' | 'bb_csv' | 'nubank' | 'inter' | 'caixa' | 'csv' {
+function detectFormat(text: string, filename: string): ImportFormat {
   const lower = text.toLowerCase().slice(0, 500);
   const fname = filename.toLowerCase();
 
