@@ -62,6 +62,7 @@ function GasolinaPage() {
   const [loading, setLoading] = useState(true);
 
   const [openFill, setOpenFill] = useState(false);
+  const [editingFill, setEditingFill] = useState<any>(null);
   const [openVehicle, setOpenVehicle] = useState<{ open: boolean; editing?: VehicleStatus | null }>({ open: false });
   const [openMaint, setOpenMaint] = useState<{ open: boolean; vehicleId?: string }>({ open: false });
 
@@ -140,7 +141,7 @@ function GasolinaPage() {
             </TabsList>
             {vehicles.map(v => (
               <TabsContent key={v.id} value={v.id} className="space-y-4">
-                <FuelHistory vehicleId={v.id} />
+                <FuelHistory vehicleId={v.id} onEditFill={(row) => { setEditingFill(row); setOpenFill(true); }} />
                 <MaintenanceList vehicleId={v.id} onRegister={() => setOpenMaint({ open: true, vehicleId: v.id })} />
               </TabsContent>
             ))}
@@ -148,7 +149,7 @@ function GasolinaPage() {
         )}
       </main>
 
-      <FillDialog open={openFill} onOpenChange={setOpenFill} familyId={familyId} userId={user?.id ?? ""} vehicles={vehicles} onSaved={reload} />
+      <FillDialog open={openFill} onOpenChange={(o) => { setOpenFill(o); if (!o) setEditingFill(null); }} familyId={familyId} userId={user?.id ?? ""} vehicles={vehicles} editing={editingFill} onSaved={reload} />
       <VehicleDialog
         open={openVehicle.open}
         onOpenChange={(o: boolean) => setOpenVehicle({ open: o, editing: o ? openVehicle.editing : null })}
@@ -245,7 +246,7 @@ function FlexCalculator() {
   );
 }
 
-function FuelHistory({ vehicleId }: { vehicleId: string }) {
+function FuelHistory({ vehicleId, onEditFill }: { vehicleId: string; onEditFill?: (row: any) => void }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -270,16 +271,18 @@ function FuelHistory({ vehicleId }: { vehicleId: string }) {
                 <th className="text-left py-2">Data</th><th className="text-left">Combustível</th>
                 <th className="text-right">Litros</th><th className="text-right">R$/L</th>
                 <th className="text-right">Total</th><th className="text-right">km/L</th>
+                {onEditFill && <th />}
               </tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className="border-b last:border-0">
                     <td className="py-2">{new Date(r.data + "T12:00").toLocaleDateString("pt-BR")}</td>
-                    <td>{FUEL_LABEL[r.combustivel] ?? r.combustivel}</td>
+                    <td>{FUEL_LABEL[r.combustivel_usado] ?? r.combustivel_usado ?? "—"}</td>
                     <td className="text-right">{Number(r.litros).toFixed(2)}</td>
                     <td className="text-right">{fmtBRL(Number(r.preco_litro))}</td>
                     <td className="text-right">{fmtBRL(Number(r.valor_pago))}</td>
                     <td className="text-right">{r.kml ? Number(r.kml).toFixed(1) : "—"}</td>
+                    {onEditFill && <td className="text-right"><Button variant="ghost" size="sm" onClick={() => onEditFill(r)}><Pencil className="h-3.5 w-3.5" /></Button></td>}
                   </tr>
                 ))}
               </tbody>
@@ -342,7 +345,7 @@ function MaintenanceList({ vehicleId, onRegister }: { vehicleId: string; onRegis
 }
 
 // -------- Dialogs --------
-function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }: any) {
+function FillDialog({ open, onOpenChange, familyId, userId, vehicles, editing, onSaved }: any) {
   const [vehicleId, setVehicleId] = useState<string>("");
   const [combustivel, setCombustivel] = useState<string>("gasolina");
   const [valor, setValor] = useState("");
@@ -356,7 +359,16 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
   const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
-    if (open && vehicles.length && !vehicleId) {
+    if (open && editing) {
+      setVehicleId(editing.vehicle_id ?? editing.id ?? "");
+      setCombustivel(editing.combustivel_usado ?? "gasolina");
+      setValor(String(editing.valor_pago ?? ""));
+      setPreco(String(editing.preco_litro ?? ""));
+      setHodometro(String(editing.hodometro ?? ""));
+      setPosto(editing.posto ?? "");
+      setTanqueCheio(editing.tanque_cheio ?? true);
+      setData(editing.data ?? new Date().toISOString().slice(0, 10));
+    } else if (open && vehicles.length && !vehicleId) {
       setVehicleId(vehicles[0].id ?? "");
       setHodometro(String(vehicles[0].odometro_atual ?? ""));
       setCombustivel(vehicles[0].ultimo_combustivel ?? "gasolina");
@@ -364,8 +376,8 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
     if (open && familyId) {
       supabase.from("accounts").select("id, nome, tipo")
         .eq("family_id", familyId).eq("ativo", true).order("nome")
-        .then(({ data }) => {
-          const accs = (data ?? []) as { id: string; nome: string; tipo: string }[];
+        .then(({ data: accsData }) => {
+          const accs = (accsData ?? []) as { id: string; nome: string; tipo: string }[];
           setAccounts(accs);
           if (!accountId && accs.length) setAccountId(accs[0].id);
         });
@@ -394,17 +406,27 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
           .eq("family_id", familyId).ilike("nome", "%gasolina%").maybeSingle(),
       ]);
 
-      const { data: result, error } = await supabase.rpc("registrar_abastecimento" as any, {
-        p_family_id: familyId, p_user_id: userId, p_vehicle_id: vehicleId,
-        p_account_id: accountId || null,
-        p_category_id: cat?.id ?? null,
-        p_data: data,
-        p_valor_pago: v, p_preco_litro: p, p_litros: Number(litros.toFixed(3)),
-        p_hodometro: h, p_combustivel_usado: combustivel,
-        p_posto: posto || null, p_tanque_cheio: tanqueCheio,
-      });
-      if (error) throw error;
-      toast.success(`✅ Abastecimento registrado — ${(result as any).valor?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`);
+      if (editing?.id) {
+        const { error } = await supabase.from("fuel_fills" as any).update({
+          data, combustivel_usado: combustivel, valor_pago: v, preco_litro: p,
+          litros: Number(litros.toFixed(3)), hodometro: h,
+          posto: posto || null, tanque_cheio: tanqueCheio,
+        }).eq("id", editing.id);
+        if (error) throw error;
+        if (editing.transaction_id)
+          await supabase.from("transactions").update({ amount: v, date: data }).eq("id", editing.transaction_id);
+        toast.success("✅ Abastecimento atualizado");
+      } else {
+        const { data: result, error } = await supabase.rpc("registrar_abastecimento" as any, {
+          p_family_id: familyId, p_user_id: userId, p_vehicle_id: vehicleId,
+          p_account_id: accountId || null, p_category_id: cat?.id ?? null,
+          p_data: data, p_valor_pago: v, p_preco_litro: p,
+          p_litros: Number(litros.toFixed(3)), p_hodometro: h,
+          p_combustivel_usado: combustivel, p_posto: posto || null, p_tanque_cheio: tanqueCheio,
+        });
+        if (error) throw error;
+        toast.success(`✅ Abastecimento registrado — ${(result as any).valor?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`);
+      }
       onOpenChange(false);
       onSaved();
     } catch (e: any) {
@@ -415,7 +437,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>⛽ Novo abastecimento</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>⛽ {editing?.id ? "Editar" : "Novo"} abastecimento</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><Label>Veículo</Label>
             <Select value={vehicleId} onValueChange={(id) => {
@@ -442,6 +464,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
           <p className="text-sm text-muted-foreground">✨ Litros: <span className="font-semibold text-foreground">{litros.toFixed(2)} L</span></p>
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Hodômetro (km)</Label><Input value={hodometro} onChange={(e) => setHodometro(e.target.value)} inputMode="decimal" /></div>
+            <div><Label>Data</Label><Input type="date" value={data} onChange={(e) => setData(e.target.value)} /></div>
             <div><Label>Posto (opcional)</Label><Input value={posto} onChange={(e) => setPosto(e.target.value)} /></div>
             <div>
               <Label>Pagamento <span className="text-destructive">*</span></Label>
