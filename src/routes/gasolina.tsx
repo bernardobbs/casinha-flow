@@ -396,6 +396,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
 
       const { error: fillErr } = await supabase.from("fuel_fills" as any).insert({
         family_id: familyId, vehicle_id: vehicleId,
+        data: data,
         combustivel_usado: combustivel, valor_pago: v, preco_litro: p, litros: Number(litros.toFixed(3)),
         hodometro: h, posto: posto || null, tanque_cheio: tanqueCheio,
         transaction_id: tx?.id ?? null,
