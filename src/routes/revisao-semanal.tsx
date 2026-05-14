@@ -49,13 +49,10 @@ function RevisaoSemanalPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !familyId) return;
     (async () => {
       setLoading(true);
-      const { data: profile } = await supabase.from("profiles").select("family_id").eq("id", user.id).maybeSingle();
-      const fid = profile?.family_id ?? null;
-      setFamilyId(fid);
-      if (!fid) { setLoading(false); return; }
+      const fid = familyId;
 
       const today = new Date();
       const start7 = new Date(today); start7.setDate(start7.getDate() - 7);

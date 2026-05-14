@@ -25,7 +25,6 @@ const groups = [
       { title: "Orçamento", url: "/budgets", icon: Target },
       { title: "Recorrentes", url: "/recorrentes", icon: Repeat },
       { title: "A Pagar", url: "/contas-a-pagar", icon: CalendarClock },
-      { title: "Relatórios", url: "/relatorios", icon: FileText },
     ],
   },
   {
@@ -43,6 +42,7 @@ const groups = [
     items: [
       { title: "Revisão Semanal", url: "/revisao-semanal", icon: ClipboardList },
       { title: "Situação Financeira", url: "/situacao", icon: BarChart3 },
+      { title: "Relatórios", url: "/relatorios", icon: FileText },
     ],
   },
   {
