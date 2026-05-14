@@ -76,6 +76,7 @@ function AuthPage() {
     }
     const result = data as any;
     toast.success(`✅ Bem-vindo à família ${result.family_name}!`);
+    localStorage.removeItem("pendingInviteToken");
     setInviteAccepted(true);
     return true;
   };
@@ -91,7 +92,15 @@ function AuthPage() {
     // Detectar token de convite na URL
     const params = new URLSearchParams(window.location.search);
     const token = params.get("invite");
-    if (token) setInviteToken(token);
+    if (token) {
+      setInviteToken(token);
+      // Persistir no localStorage para sobreviver ao redirect de confirmação de email
+      localStorage.setItem("pendingInviteToken", token);
+    } else {
+      // Verificar se há token pendente de cadastro anterior
+      const pending = localStorage.getItem("pendingInviteToken");
+      if (pending) setInviteToken(pending);
+    }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
@@ -105,7 +114,15 @@ function AuthPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY") { setView("new-password"); return; }
       if (session) {
-        if (inviteToken) await acceptInvite(inviteToken);
+        // Verificar token no state ou no localStorage (sobrevive ao redirect de email)
+        const tokenToUse = inviteToken ?? localStorage.getItem("pendingInviteToken");
+        if (tokenToUse) {
+          const ok = await acceptInvite(tokenToUse);
+          if (!ok) {
+            // Token inválido/expirado — limpar e continuar
+            localStorage.removeItem("pendingInviteToken");
+          }
+        }
         navigate({ to: "/dashboard" });
       }
     });
@@ -367,11 +384,13 @@ function AuthPage() {
             {/* Banner de convite */}
             {inviteToken && (
               <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-3 flex items-start gap-2">
-                <span className="text-lg">🎉</span>
+                <span className="text-lg">🏠</span>
                 <div>
-                  <p className="text-sm font-medium">Você foi convidado!</p>
+                  <p className="text-sm font-medium">Você foi convidado para uma família!</p>
                   <p className="text-xs text-muted-foreground">
-                    Crie sua conta ou entre para se juntar à família.
+                    {inviteAccepted
+                      ? "✅ Convite aceito! Redirecionando..."
+                      : "Crie sua conta com nome e email — você entrará automaticamente na família após confirmar o email."}
                   </p>
                 </div>
               </div>
@@ -391,7 +410,7 @@ function AuthPage() {
             </div>
 
             {/* Tabs Email/Cadastro */}
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs defaultValue={inviteToken ? "signup" : "signin"} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Entrar</TabsTrigger>
                 <TabsTrigger value="signup">Criar conta</TabsTrigger>
@@ -431,11 +450,13 @@ function AuthPage() {
                       <Input id="signup-name" name="fullName" type="text"
                         placeholder="Bernardo" required maxLength={80} />
                     </div>
+                    {!inviteToken && (
                     <div className="space-y-2">
                       <Label htmlFor="signup-family">Nome da família</Label>
                       <Input id="signup-family" name="familyName" type="text"
-                        placeholder="Família Silva" required maxLength={80} />
+                        placeholder="Família Silva" required={!inviteToken} maxLength={80} />
                     </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
