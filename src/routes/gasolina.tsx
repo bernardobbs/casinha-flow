@@ -377,36 +377,24 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
     if (!v || !p || !h) { toast.error("Preencha valor, preço/L e hodômetro"); return; }
     setSaving(true);
     try {
-      // Categoria Transporte
-      const { data: cat } = await supabase.from("categories").select("id")
-        .eq("family_id", familyId).eq("nome", "Transporte").maybeSingle();
-      // Conta padrão (primeira ativa não-cartão)
-      const { data: acc } = await supabase.from("accounts").select("id")
-        .eq("family_id", familyId).eq("ativo", true).neq("tipo", "cartao").limit(1).maybeSingle();
+      const [{ data: cat }, { data: acc }] = await Promise.all([
+        supabase.from("categories").select("id")
+          .eq("family_id", familyId).ilike("nome", "%gasolina%").maybeSingle(),
+        supabase.from("accounts").select("id")
+          .eq("family_id", familyId).eq("ativo", true).limit(1).maybeSingle(),
+      ]);
 
-      const veiculo = vehicles.find((vv: any) => vv.id === vehicleId);
-      const desc = `Abastecimento ${veiculo?.nome ?? ""} (${FUEL_LABEL[combustivel] ?? combustivel})`;
-      const { data: tx, error: txErr } = await supabase.from("transactions").insert({
-        family_id: familyId, user_id: userId,
-        account_id: acc?.id ?? null, category_id: cat?.id ?? null,
-        type: "expense", amount: v, description: desc,
-        date: new Date().toISOString().slice(0, 10),
-        is_essencial: true, source: "manual", tipo_especial: "normal",
-      }).select("id").single();
-      if (txErr) throw txErr;
-
-      const { error: fillErr } = await supabase.from("fuel_fills" as any).insert({
-        family_id: familyId, vehicle_id: vehicleId,
-        data: data,
-        combustivel_usado: combustivel, valor_pago: v, preco_litro: p, litros: Number(litros.toFixed(3)),
-        hodometro: h, posto: posto || null, tanque_cheio: tanqueCheio,
-        transaction_id: tx?.id ?? null,
+      const { data: result, error } = await supabase.rpc("registrar_abastecimento" as any, {
+        p_family_id: familyId, p_user_id: userId, p_vehicle_id: vehicleId,
+        p_account_id: acc?.id ?? null,
+        p_category_id: cat?.id ?? null,
+        p_data: data,
+        p_valor_pago: v, p_preco_litro: p, p_litros: Number(litros.toFixed(3)),
+        p_hodometro: h, p_combustivel_usado: combustivel,
+        p_posto: posto || null, p_tanque_cheio: tanqueCheio,
       });
-      if (fillErr) throw fillErr;
-
-      await supabase.from("vehicles" as any).update({ odometro_atual: h }).eq("id", vehicleId);
-      if (acc?.id) await supabase.rpc("recalc_account_balance", { _account_id: acc.id });
-      toast.success("✅ Abastecimento registrado");
+      if (error) throw error;
+      toast.success(`✅ Abastecimento registrado — ${(result as any).valor?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`);
       onOpenChange(false);
       onSaved();
     } catch (e: any) {
