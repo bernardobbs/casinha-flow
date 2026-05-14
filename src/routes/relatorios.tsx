@@ -115,7 +115,7 @@ function RelatoriosPage() {
       .select("id, date, description, amount, type, category, tipo_especial")
       .eq("family_id", familyId)
       .gte("date", inicio).lte("date", fim)
-      .neq("tipo_especial", "transferencia")
+      .or("tipo_especial.is.null,tipo_especial.neq.transferencia")
       .order("date", { ascending: true });
     if (accountId !== "todas") q = q.eq("account_id", accountId);
     const { data } = await q;
