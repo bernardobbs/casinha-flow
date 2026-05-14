@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
+
+const PRINT_STYLE = `@media print { .no-print { display: none !important; } body { background: white; } }`;
 import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/relatorios" as any)({
@@ -71,34 +73,7 @@ function RelatoriosPage() {
     setLoading(false);
   };
 
-  const handlePrint = () => {
-    const printContent = printRef.current?.innerHTML;
-    if (!printContent) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`
-      <!DOCTYPE html><html><head>
-      <meta charset="UTF-8">
-      <title>Extrato — ${mesLabel} — ${contaNome}</title>
-      <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; color: #000; }
-        h1 { font-size: 16px; margin-bottom: 4px; }
-        h2 { font-size: 13px; color: #555; margin-bottom: 16px; font-weight: normal; }
-        table { width: 100%; border-collapse: collapse; }
-        th { border-bottom: 2px solid #000; text-align: left; padding: 4px 6px; font-size: 11px; }
-        td { border-bottom: 1px solid #ddd; padding: 4px 6px; }
-        .right { text-align: right; }
-        .receita { color: #166534; }
-        .despesa { color: #991b1b; }
-        .total { font-weight: bold; border-top: 2px solid #000; }
-        @media print { body { margin: 10px; } }
-      </style>
-      </head><body>${printContent}</body></html>
-    `);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 300);
-  };
+  const handlePrint = () => { window.print(); };
 
   const mesLabel = getMonthOptions().find(o => o.value === mes)?.label ?? mes;
   const contaNome = accountId === "todas" ? "Todas as contas" : accounts.find(a => a.id === accountId)?.nome ?? "";
@@ -111,8 +86,10 @@ function RelatoriosPage() {
   if (authLoading || familyLoading) return <SkeletonPage />;
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--gradient-subtle)" }}>
-      <header className="border-b border-border/60 bg-card/60 backdrop-blur-sm sticky top-0 z-10">
+    <>
+      <style>{PRINT_STYLE}</style>
+      <div className="min-h-screen" style={{ background: "var(--gradient-subtle)" }}>
+      <header className="border-b border-border/60 bg-card/60 backdrop-blur-sm sticky top-0 z-10 no-print">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Link to="/dashboard"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Painel</Button></Link>
@@ -128,7 +105,7 @@ function RelatoriosPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-5 space-y-4">
         {/* Filtros */}
-        <Card className="border-border/60">
+        <Card className="border-border/60 no-print">
           <CardContent className="py-4">
             <div className="flex flex-wrap gap-3 items-end">
               <div className="flex-1 min-w-[160px]">
@@ -215,5 +192,6 @@ function RelatoriosPage() {
         )}
       </main>
     </div>
+    </>
   );
 }
