@@ -353,6 +353,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
   const [saving, setSaving] = useState(false);
   const [accounts, setAccounts] = useState<{ id: string; nome: string; tipo: string }[]>([]);
   const [accountId, setAccountId] = useState("");
+  const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
     if (open && vehicles.length && !vehicleId) {
@@ -555,7 +556,6 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
 function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved }: any) {
   const [types, setTypes] = useState<any[]>([]);
   const [typeId, setTypeId] = useState<string>("");
-  const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
   const [hodometro, setHodometro] = useState("");
   const [valor, setValor] = useState("");
   const [local, setLocal] = useState("");
