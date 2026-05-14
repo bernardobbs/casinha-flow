@@ -561,6 +561,7 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
   const [local, setLocal] = useState("");
   const [tipoOleo, setTipoOleo] = useState("");
   const [saving, setSaving] = useState(false);
+  const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
 
   useEffect(() => {
     if (!open || !vehicleId) return;
