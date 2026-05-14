@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -63,6 +64,19 @@ function GasolinaPage() {
 
   const [openFill, setOpenFill] = useState(false);
   const [editingFill, setEditingFill] = useState<any>(null);
+  const [deletingFill, setDeletingFill] = useState<any>(null);
+
+  const handleDeleteFill = async () => {
+    if (!deletingFill) return;
+    const { error } = await supabase.from("fuel_fills" as any).delete().eq("id", deletingFill.id);
+    if (error) { toast.error(error.message); return; }
+    if (deletingFill.transaction_id) {
+      await supabase.from("transactions").delete().eq("id", deletingFill.transaction_id);
+    }
+    toast.success("Abastecimento apagado");
+    setDeletingFill(null);
+    reload();
+  };
   const [openVehicle, setOpenVehicle] = useState<{ open: boolean; editing?: VehicleStatus | null }>({ open: false });
   const [openMaint, setOpenMaint] = useState<{ open: boolean; vehicleId?: string }>({ open: false });
 
@@ -141,7 +155,7 @@ function GasolinaPage() {
             </TabsList>
             {vehicles.map(v => (
               <TabsContent key={v.id} value={v.id} className="space-y-4">
-                <FuelHistory vehicleId={v.id} onEditFill={(row) => { setEditingFill(row); setOpenFill(true); }} />
+                <FuelHistory vehicleId={v.id} onEditFill={(row) => { setEditingFill(row); setOpenFill(true); }} onDeleteFill={setDeletingFill} />
                 <MaintenanceList vehicleId={v.id} onRegister={() => setOpenMaint({ open: true, vehicleId: v.id })} />
               </TabsContent>
             ))}
@@ -150,6 +164,22 @@ function GasolinaPage() {
       </main>
 
       <FillDialog open={openFill} onOpenChange={(o) => { setOpenFill(o); if (!o) setEditingFill(null); }} familyId={familyId} userId={user?.id ?? ""} vehicles={vehicles} editing={editingFill} onSaved={reload} />
+
+      <AlertDialog open={!!deletingFill} onOpenChange={(o) => !o && setDeletingFill(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar abastecimento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Abastecimento de {deletingFill && fmtBRL(deletingFill.valor_pago)} em {deletingFill && new Date(deletingFill.data + "T12:00").toLocaleDateString("pt-BR")}.
+              {deletingFill?.transaction_id && " A transação financeira vinculada também será apagada."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteFill} className="bg-destructive hover:bg-destructive/90">Apagar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <VehicleDialog
         open={openVehicle.open}
         onOpenChange={(o: boolean) => setOpenVehicle({ open: o, editing: o ? openVehicle.editing : null })}
@@ -246,7 +276,7 @@ function FlexCalculator() {
   );
 }
 
-function FuelHistory({ vehicleId, onEditFill }: { vehicleId: string; onEditFill?: (row: any) => void }) {
+function FuelHistory({ vehicleId, onEditFill, onDeleteFill }: { vehicleId: string; onEditFill?: (row: any) => void; onDeleteFill?: (row: any) => void }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -271,7 +301,7 @@ function FuelHistory({ vehicleId, onEditFill }: { vehicleId: string; onEditFill?
                 <th className="text-left py-2">Data</th><th className="text-left">Combustível</th>
                 <th className="text-right">Litros</th><th className="text-right">R$/L</th>
                 <th className="text-right">Total</th><th className="text-right">km/L</th>
-                {onEditFill && <th />}
+                {(onEditFill || onDeleteFill) && <th />}
               </tr></thead>
               <tbody>
                 {rows.map((r) => (
@@ -282,7 +312,12 @@ function FuelHistory({ vehicleId, onEditFill }: { vehicleId: string; onEditFill?
                     <td className="text-right">{fmtBRL(Number(r.preco_litro))}</td>
                     <td className="text-right">{fmtBRL(Number(r.valor_pago))}</td>
                     <td className="text-right">{r.kml ? Number(r.kml).toFixed(1) : "—"}</td>
-                    {onEditFill && <td className="text-right"><Button variant="ghost" size="sm" onClick={() => onEditFill(r)}><Pencil className="h-3.5 w-3.5" /></Button></td>}
+                    {(onEditFill || onDeleteFill) && (
+                      <td className="text-right flex gap-1 justify-end">
+                        {onEditFill && <Button variant="ghost" size="sm" onClick={() => onEditFill(r)}><Pencil className="h-3.5 w-3.5" /></Button>}
+                        {onDeleteFill && <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => onDeleteFill(r)}><Trash2 className="h-3.5 w-3.5" /></Button>}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
