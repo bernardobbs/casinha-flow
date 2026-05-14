@@ -351,15 +351,26 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
   const [posto, setPosto] = useState("");
   const [tanqueCheio, setTanqueCheio] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [accounts, setAccounts] = useState<{ id: string; nome: string; tipo: string }[]>([]);
+  const [accountId, setAccountId] = useState("");
 
   useEffect(() => {
     if (open && vehicles.length && !vehicleId) {
-      setVehicleId(vehicles[0].id ?? vehicles[0].id ?? "" ?? "");
+      setVehicleId(vehicles[0].id ?? "");
       setHodometro(String(vehicles[0].odometro_atual ?? ""));
       setCombustivel(vehicles[0].ultimo_combustivel ?? "flex");
     }
+    if (open && familyId) {
+      supabase.from("accounts").select("id, nome, tipo")
+        .eq("family_id", familyId).eq("ativo", true).order("nome")
+        .then(({ data }) => {
+          const accs = (data ?? []) as { id: string; nome: string; tipo: string }[];
+          setAccounts(accs);
+          if (!accountId && accs.length) setAccountId(accs[0].id);
+        });
+    }
     if (!open) {
-      setValor(""); setPreco(""); setPosto(""); setVehicleId("");
+      setValor(""); setPreco(""); setPosto(""); setVehicleId(""); setAccountId("");
       setData(new Date().toISOString().slice(0, 10));
     }
   }, [open]);
@@ -377,16 +388,14 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
     if (!v || !p || !h) { toast.error("Preencha valor, preço/L e hodômetro"); return; }
     setSaving(true);
     try {
-      const [{ data: cat }, { data: acc }] = await Promise.all([
+      const [{ data: cat }] = await Promise.all([
         supabase.from("categories").select("id")
           .eq("family_id", familyId).ilike("nome", "%gasolina%").maybeSingle(),
-        supabase.from("accounts").select("id")
-          .eq("family_id", familyId).eq("ativo", true).limit(1).maybeSingle(),
       ]);
 
       const { data: result, error } = await supabase.rpc("registrar_abastecimento" as any, {
         p_family_id: familyId, p_user_id: userId, p_vehicle_id: vehicleId,
-        p_account_id: acc?.id ?? null,
+        p_account_id: accountId || null,
         p_category_id: cat?.id ?? null,
         p_data: data,
         p_valor_pago: v, p_preco_litro: p, p_litros: Number(litros.toFixed(3)),
@@ -433,6 +442,19 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, onSaved }:
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Hodômetro (km)</Label><Input value={hodometro} onChange={(e) => setHodometro(e.target.value)} inputMode="decimal" /></div>
             <div><Label>Posto (opcional)</Label><Input value={posto} onChange={(e) => setPosto(e.target.value)} /></div>
+            <div>
+              <Label>Pagamento <span className="text-destructive">*</span></Label>
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+                <SelectContent>
+                  {accounts.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.nome} {a.tipo === "cartao" ? "💳" : "🏦"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center justify-between border rounded-md p-2">
             <Label>Tanque cheio?</Label><Switch checked={tanqueCheio} onCheckedChange={setTanqueCheio} />
