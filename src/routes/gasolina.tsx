@@ -680,9 +680,9 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
       }
       const { error } = await supabase.from("vehicle_maintenance_log" as any).insert({
         family_id: familyId, user_id: userId, vehicle_id: vehicleId,
-        maintenance_type_id: typeId, nome: selectedType?.nome ?? "Manutenção",
-        data, hodometro: h, valor: v, local: local || null,
-        tipo_oleo: isOleo ? (tipoOleo || null) : null, transaction_id: txId,
+        tipo_id: typeId, descricao: selectedType?.nome ?? "Manutenção",
+        data_realizado: data, km_realizado: h, custo: v, oficina: local || null,
+        observacao: isOleo ? (tipoOleo || null) : null,
         proximo_km: proximoKm ? parseFloat(proximoKm) : null,
         proxima_data: proximaData || null,
       });
