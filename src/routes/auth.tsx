@@ -376,8 +376,8 @@ function AuthPage() {
 
         <Card className="border-border/60 shadow-[var(--shadow-elevated)]">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl tracking-tight">Acesse o Casinha Hub</CardTitle>
-            <CardDescription>Finanças, compras, estoque e rotina da casa em um único lugar.</CardDescription>
+            <CardTitle className="text-2xl tracking-tight">Casinha Hub</CardTitle>
+            <CardDescription>Finanças, compras, estoque e rotina da casa.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
 
@@ -411,9 +411,9 @@ function AuthPage() {
 
             {/* Tabs Email/Cadastro */}
             <Tabs defaultValue={inviteToken ? "signup" : "signin"} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className={`grid w-full ${inviteToken ? "grid-cols-2" : "grid-cols-1"}`}>
                 <TabsTrigger value="signin">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar conta</TabsTrigger>
+                {inviteToken && <TabsTrigger value="signup">Criar conta</TabsTrigger>}
               </TabsList>
 
               {/* LOGIN */}
