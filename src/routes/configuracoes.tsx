@@ -576,44 +576,32 @@ function ConfigPage() {
           <TabsContent value="ia" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Inteligência artificial</CardTitle>
+                <CardTitle>Inteligência Artificial</CardTitle>
                 <CardDescription>
-                  Provedor e limite diário de execuções da IA do Módulo Crise.
+                  O assistente usa <strong>Gemini 2.0 Flash</strong> via servidor seguro — a chave não fica no browser.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Provedor</Label>
-                    <Input value="Gemini (via Lovable AI Gateway)" disabled />
-                    <p className="text-xs text-muted-foreground">
-                      Modelo atual: <code>google/gemini-3-flash-preview</code>
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Limite diário de análises</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={values.ai_daily_limit}
-                      onChange={(e) => setVal("ai_daily_limit", e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="rounded-lg border border-border/60 p-4 bg-card/40">
-                  <p className="text-sm">
-                    Uso de hoje:{" "}
-                    <span className="font-semibold tabular-nums">
-                      {aiToday}/{aiLimit}
-                    </span>{" "}
-                    análises usadas
+                <div className="rounded-lg border border-border/60 p-4 bg-card/40 space-y-2">
+                  <p className="text-sm flex justify-between">
+                    <span className="text-muted-foreground">Modelo</span>
+                    <code className="text-xs">gemini-2.0-flash</code>
+                  </p>
+                  <p className="text-sm flex justify-between">
+                    <span className="text-muted-foreground">Uso hoje</span>
+                    <span className="font-semibold tabular-nums">{aiToday} / {aiLimit} mensagens</span>
                   </p>
                 </div>
-                <Button
-                  disabled={saving}
-                  onClick={() => handleSave(["ai_provider", "ai_daily_limit"])}
-                >
+                <div className="space-y-2">
+                  <Label>Limite diário de mensagens</Label>
+                  <Input
+                    type="number" min={1} max={50}
+                    value={values.ai_daily_limit}
+                    onChange={(e) => setVal("ai_daily_limit", e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Padrão: 20 mensagens/dia</p>
+                </div>
+                <Button disabled={saving} onClick={() => handleSave(["ai_daily_limit"])}>
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
                 </Button>
               </CardContent>
