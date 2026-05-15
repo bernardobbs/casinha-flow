@@ -318,7 +318,7 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
           />
         </div>
         {(() => {
-          const semCat = filteredTxs.filter(t => !t.category_id && t.tipo_especial === "normal");
+          const semCat = filtered.filter(t => !t.category_id && t.tipo_especial !== "transferencia" && t.tipo_especial !== "pagamento_fatura");
           return semCat.length > 0 ? (
             <Button size="sm" variant="outline" className="gap-1.5 shrink-0"
               onClick={categorizarTodas} disabled={categorizando}>
@@ -386,7 +386,7 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
                             )}
                           </div>
                         </div>
-                        {!t.category_id && t.tipo_especial === "normal" && (
+                        {!t.category_id && t.tipo_especial !== "transferencia" && t.tipo_especial !== "pagamento_fatura" && (
                           <button
                             onClick={(e) => categorizarUma(t, e)}
                             disabled={categorizandoId === t.id}
@@ -544,7 +544,7 @@ Categorias: ${JSON.stringify(categories.map(c => ({ id: c.id, nome: c.nome, tipo
 
   const categorizarTodas = async () => {
     setCategorizando(true);
-    const semCat = filteredTxs.filter(t => !t.category_id && t.tipo_especial === "normal");
+    const semCat = filtered.filter(t => !t.category_id && t.tipo_especial !== "transferencia" && t.tipo_especial !== "pagamento_fatura");
     await categorizarComIA(semCat);
     setCategorizando(false);
   };
