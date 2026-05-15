@@ -167,7 +167,7 @@ function AssistentePage() {
     setLoading(true);
 
     try {
-      const resposta = await askAI(msgs, familyId);
+      const resposta = await askAI(history, familyId);
       setMessages(prev => [...prev, { role: "assistant", content: resposta, ts: Date.now() }]);
     } catch (e: any) {
       toast.error("Erro ao consultar IA: " + (e?.message ?? ""));
