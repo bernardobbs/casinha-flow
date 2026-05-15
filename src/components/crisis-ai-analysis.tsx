@@ -86,18 +86,25 @@ Projeção de fechamento: R$${summary?.saldo_projetado ?? 0}.`;
       const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
       let result: CrisisAnalysis;
 
-      if (apiKey) {
-        const resp = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 1000,
-            system: "Você é um analista financeiro. Responda APENAS em JSON válido, sem markdown.",
-            messages: [{ role: "user", content: `Analise esta situação financeira e retorne JSON com os campos: modo_crise (bool), estagio (1|2|3|null), prazo_estimado_meses (int), acoes_prioritarias (array 3-5 strings), alertas (array strings), previsao_retorno_5030020 (string mês/ano), distribuicao_recomendada ({essenciais,dividas,reserva,estilo_vida} somando 100).\n\n${context}` }],
-          }),
-        });
-        const data = await resp.json();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const resp = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${session.access_token}`,
+              "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              feature: "crisis_analysis",
+              messages: [{ role: "user", content: `Analise esta situacao financeira e retorne APENAS JSON valido sem markdown, com os campos: modo_crise (bool), estagio (1|2|3|null), prazo_estimado_meses (int), acoes_prioritarias (array 3-5 strings), alertas (array strings), previsao_retorno_5030020 (string mes/ano), distribuicao_recomendada ({essenciais,dividas,reserva,estilo_vida} somando 100).\n\n${context}` }]
+            }),
+          }
+        );
+        const rawData = await resp.json();
+        const data = { content: [{ text: rawData.text ?? '' }] };
         const text = data.content?.[0]?.text ?? "{}";
         result = JSON.parse(text.replace(/```json|```/g, "").trim());
       } else {

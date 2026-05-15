@@ -97,64 +97,34 @@ ${manut.length === 0
   return ctx;
 }
 
-async function askClaude(
+async function askAI(
   messages: Message[],
-  context: string,
   familyId: string
 ): Promise<string> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Sessão inválida");
 
-  if (!apiKey) {
-    // Modo demo sem chave
-    return gerarRespostaDemo(messages[messages.length - 1]?.content ?? "", context);
+  const resp = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.access_token}`,
+        "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ messages, feature: "assistente" }),
+    }
+  );
+
+  if (resp.status === 429) {
+    const d = await resp.json();
+    throw new Error(d.error ?? "Limite diário atingido");
   }
-
-  const t0 = Date.now();
-  const system = `Você é o Assistente Doméstico do Casinha Hub, o hub completo de gestão doméstica.
-Você tem acesso aos dados REAIS da família. Responda em português brasileiro.
-Seja conciso, direto e útil. Use emojis moderadamente.
-Quando mencionar valores, use formato brasileiro (R$ 1.234,56).
-
-DADOS ATUAIS DA FAMÍLIA:
-${context}`;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      system,
-      messages: messages.map(m => ({
-        role: m.role,
-        content: m.content,
-      })),
-    }),
-  });
-
-  if (!response.ok) throw new Error(`API error: ${response.status}`);
-  const data = await response.json();
-  const text = data.content?.[0]?.text ?? "Não consegui gerar uma resposta.";
-  const latency = Date.now() - t0;
-
-  // Log no banco
-  await supabase.from("ai_logs" as any).insert({
-    family_id: familyId,
-    feature: "assistente",
-    prompt: messages[messages.length - 1]?.content,
-    response: text.slice(0, 500),
-    tokens_input: data.usage?.input_tokens ?? 0,
-    tokens_output: data.usage?.output_tokens ?? 0,
-    estimated_cost: ((data.usage?.input_tokens ?? 0) * 0.000003 + (data.usage?.output_tokens ?? 0) * 0.000015),
-    latency_ms: latency,
-    success: true,
-  });
-
-  return text;
+  if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error);
+  return data.text ?? "Não consegui gerar uma resposta.";
 }
 
 function gerarRespostaDemo(pergunta: string, context: string): string {
