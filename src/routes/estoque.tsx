@@ -8,7 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ChevronDown, ChevronRight, Package, Plus, Minus, Search, ShoppingCart, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Package, Plus, Minus, Search, ShoppingCart, Loader2, ClipboardList } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import EstoqueRevisao from "./estoque.revisao-semanal";
 import { toast } from "sonner";
 import { SkeletonPage } from "@/components/skeletons";
 
@@ -126,6 +128,11 @@ function EstoquePage() {
               <Package className="h-5 w-5 text-primary" /> Estoque
             </h1>
           </div>
+          <Link to="/estoque/revisao-semanal">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <ClipboardList className="h-4 w-4" /> Revisão
+            </Button>
+          </Link>
           {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
       </header>

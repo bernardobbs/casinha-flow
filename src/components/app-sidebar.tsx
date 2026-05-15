@@ -34,7 +34,6 @@ const groups = [
     items: [
       { title: "Compras", url: "/compras", icon: ShoppingCart },
       { title: "Estoque", url: "/estoque", icon: Package },
-      { title: "Revisão Estoque", url: "/estoque/revisao-semanal", icon: ListChecks },
       { title: "Manutenção", url: "/manutencao", icon: Wrench },
       { title: "Combustível", url: "/gasolina", icon: Fuel },
     ],

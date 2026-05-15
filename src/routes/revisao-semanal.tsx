@@ -1,34 +1,19 @@
 import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { useFamily } from "@/hooks/use-family";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { ArrowLeft, Loader2, TrendingUp, TrendingDown } from "lucide-react";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
-import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/revisao-semanal")({
@@ -379,6 +364,12 @@ function RevisaoSemanalPage() {
                     </p>
                   )}
                 </div>
+              )}
+
+              {showEstoque && (
+                <Link to="/estoque/revisao-semanal" className="text-xs text-primary hover:underline flex items-center gap-1 mb-2">
+                  <Package className="h-3 w-3" /> Ver revisão completa de estoque →
+                </Link>
               )}
 
               {showEstoque && estoqueReview.length > 0 && (
