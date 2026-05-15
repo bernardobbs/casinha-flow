@@ -61,42 +61,83 @@ function ConciliacaoPage() {
   const [counts, setCounts] = useState({ semCat: 0, pend: 0, conc: 0 });
   const [bulkLoading, setBulkLoading] = useState(false);
   const [iaLoading, setIaLoading] = useState(false);
+  const [reprocessando, setReprocessando] = useState(false);
+  const [reprocessStep, setReprocessStep] = useState('');
 
   const SB_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
   const SB_ANON = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
 
-  const categorizarComIA = async () => {
+  const reprocessarTudo = async () => {
+    if (!familyId) return;
+    setReprocessando(true);
+
+    // PASSO 1: Aplicar regras conhecidas
+    setReprocessStep('📚 Aplicando regras aprendidas...');
+    const { data: rulesApplied } = await supabase.rpc('apply_transaction_rules' as any, { p_family_id: familyId });
+    await load();
+
+    // PASSO 2: Categorizar com IA os que ainda não têm categoria
     const semCat = txs.filter(t => !t.category_id);
-    if (!semCat.length) { toast.info("Todas as transações já têm categoria"); return; }
-    setIaLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setIaLoading(false); return; }
-    try {
-      const resp = await fetch(`${SB_URL}/functions/v1/ai-assistant`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": SB_ANON },
-        body: JSON.stringify({
-          feature: "categorizacao",
-          messages: [{ role: "user", content:
-            `Categorize estas transações financeiras. Retorne APENAS JSON válido sem markdown: [{"id":"...","category_id":"..."}]\nTransações: ${JSON.stringify(semCat.map(t => ({ id: t.id, desc: t.description, tipo: t.type })))}\nCategorias disponíveis: ${JSON.stringify(cats.map((c: any) => ({ id: c.id, nome: c.nome, tipo: c.tipo })))}` }]
-        }),
-      });
-      if (!resp.ok) throw new Error(`Erro ${resp.status}`);
-      const data = await resp.json();
-      const jsonMatch = (data.text ?? "").match(/\[[\s\S]*\]/);
-      if (!jsonMatch) throw new Error("IA não retornou JSON válido");
-      const resultados: { id: string; category_id: string }[] = JSON.parse(jsonMatch[0]);
-      let ok = 0;
-      for (const r of resultados) {
-        if (!r.category_id) continue;
-        const { error } = await supabase.from("transactions").update({ category_id: r.category_id }).eq("id", r.id);
-        if (!error) ok++;
+    if (semCat.length > 0) {
+      setReprocessStep(`✨ Categorizando ${semCat.length} transações com IA...`);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        try {
+          const resp = await fetch(`${SB_URL}/functions/v1/ai-assistant`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": SB_ANON },
+            body: JSON.stringify({
+              feature: "categorizacao",
+              txs: semCat.map(t => ({ id: t.id, description: t.description, amount: t.amount, type: t.type })),
+              categories: cats.map(c => ({ id: c.id, nome: c.nome, tipo: c.tipo })),
+              accounts: accs.map(a => ({ id: a.id, nome: a.nome, tipo: (a as any).tipo })),
+            }),
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            const resultados: { id: string; category_id: string; account_id: string }[] = data.results ?? [];
+            for (const r of resultados) {
+              if (!r.category_id) continue;
+              await supabase.from("transactions").update({
+                category_id: r.category_id,
+                account_id: r.account_id ?? undefined,
+              }).eq("id", r.id);
+              // Salvar regra aprendida
+              const tx = semCat.find(t => t.id === r.id);
+              if (tx) {
+                supabase.rpc('save_transaction_rule' as any, {
+                  p_family_id: familyId,
+                  p_description: tx.description,
+                  p_category_id: r.category_id,
+                  p_account_id: r.account_id ?? null,
+                  p_tipo: tx.type,
+                  p_origem: 'ia',
+                }).then(() => {}).catch(() => {});
+              }
+            }
+            await load();
+          }
+        } catch (e: any) { toast.error("Erro IA: " + (e as any).message); }
       }
-      toast.success(`✅ ${ok} transações categorizadas`);
-      await load();
-    } catch (e: any) { toast.error("Erro: " + e.message); }
-    setIaLoading(false);
+    }
+
+    // PASSO 3: Conciliar automaticamente todas as completas
+    setReprocessStep('✅ Conciliando transações completas...');
+    const { data: conciliadas } = await supabase.from("transactions")
+      .update({ conciliado: true, conciliado_em: new Date().toISOString() })
+      .eq("family_id", familyId).eq("conciliado", false)
+      .not("category_id", "is", null).not("account_id", "is", null)
+      .select("id");
+
+    await load();
+    const total = (conciliadas?.length ?? 0) + (rulesApplied ?? 0);
+    toast.success(`✅ Reprocessamento concluído — ${total} transações processadas`);
+    setReprocessando(false);
+    setReprocessStep('');
   };
+
+  // Manter compatibilidade
+  const categorizarComIA = reprocessarTudo;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -126,12 +167,36 @@ function ConciliacaoPage() {
     setLoading(false);
   };
 
-  useEffect(() => { if (familyId) load(); /* eslint-disable-next-line */ }, [familyId]);
+  useEffect(() => {
+    if (!familyId) return;
+    (async () => {
+      await load();
+      // Auto-aplicar regras conhecidas ao abrir
+      await supabase.rpc('apply_transaction_rules' as any, { p_family_id: familyId });
+      await load();
+    })();
+    /* eslint-disable-next-line */
+  }, [familyId]);
 
   const updateTx = async (id: string, patch: Partial<Tx>) => {
     const { error } = await supabase.from("transactions").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
     setTxs((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t));
+    // Aprender com a ação manual
+    const tx = txs.find(t => t.id === id);
+    if (tx && familyId && (patch.category_id || patch.account_id)) {
+      const updated = { ...tx, ...patch };
+      if (updated.category_id || updated.account_id) {
+        supabase.rpc('save_transaction_rule' as any, {
+          p_family_id: familyId,
+          p_description: tx.description,
+          p_category_id: updated.category_id ?? null,
+          p_account_id: updated.account_id ?? null,
+          p_tipo: tx.type,
+          p_origem: 'manual',
+        }).then(() => {}).catch(() => {});
+      }
+    }
   };
 
   const conciliar = async (id: string) => {
@@ -194,12 +259,10 @@ function ConciliacaoPage() {
         </div>
 
         <div className="flex justify-end gap-2">
-          {counts.semCat > 0 && (
-            <Button variant="outline" onClick={categorizarComIA} disabled={iaLoading} className="gap-1.5">
-              {iaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
-              {iaLoading ? "Categorizando..." : `IA (${counts.semCat})`}
-            </Button>
-          )}
+          <Button variant="outline" onClick={reprocessarTudo} disabled={reprocessando} className="gap-1.5">
+            {reprocessando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
+            {reprocessando ? reprocessStep || "Processando..." : "✨ Reprocessar tudo"}
+          </Button>
           <Button onClick={conciliarTodasCompletas} disabled={bulkLoading} className="gap-2">
             {bulkLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Conciliar todas completas
