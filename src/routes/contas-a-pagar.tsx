@@ -57,23 +57,22 @@ function ContasAPagarPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !familyId) return;
     (async () => {
       setLoading(true);
-      const { data: profile } = await supabase.from("profiles").select("family_id").eq("id", user.id).maybeSingle();
-      const fid = profile?.family_id ?? null;
-      if (!fid) { setLoading(false); return; }
-      try { await supabase.rpc("check_bills_alerts", { p_family_id: fid }); } catch { /* */ }
+      // Gerar lembretes do mês a partir dos recorrentes
+      try { await supabase.rpc("gerar_lembretes_recorrentes" as any, { p_family_id: familyId }); } catch { /* */ }
+      try { await supabase.rpc("check_bills_alerts", { p_family_id: familyId }); } catch { /* */ }
 
       const [b, a] = await Promise.all([
-        supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
-        supabase.from("accounts").select("id, nome").eq("family_id", fid).eq("ativo", true).order("nome"),
+        supabase.rpc("get_previsao_mes" as any, { p_family_id: familyId }),
+        supabase.from("accounts").select("id, nome").eq("family_id", familyId).eq("ativo", true).order("nome"),
       ]);
       setRows(((b.data ?? []) as BillRow[]));
       setAccounts((a.data ?? []) as Acc[]);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, familyId]);
 
   const reload = async () => {
     if (!familyId) return;

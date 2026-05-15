@@ -48,6 +48,7 @@ function RecorrentesPage() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [frequencia, setFrequencia] = useState<Freq>("mensal");
   const [diaDoMes, setDiaDoMes] = useState("1");
+  const [gerarLembrete, setGerarLembrete] = useState(true);
   const [accountId, setAccountId] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
 
@@ -113,6 +114,7 @@ function RecorrentesPage() {
       type,
       frequencia,
       dia_do_mes: dia,
+      gerar_lembrete: gerarLembrete,
       proxima_data: prox.toISOString().slice(0, 10),
       account_id: accountId || null,
       category_id: categoryId || null,
@@ -183,6 +185,13 @@ function RecorrentesPage() {
                   <div>
                     <Label>Dia do mês (1-28)</Label>
                     <Input type="number" min={1} max={28} value={diaDoMes} onChange={(e) => setDiaDoMes(e.target.value)} />
+                  </div>
+                  <div className="flex items-center justify-between border rounded-md p-2 col-span-2">
+                    <div>
+                      <p className="text-sm font-medium">Gerar lembrete em A Pagar</p>
+                      <p className="text-xs text-muted-foreground">Aparece automaticamente no mês corrente</p>
+                    </div>
+                    <Switch checked={gerarLembrete} onCheckedChange={setGerarLembrete} />
                   </div>
                 </div>
                 <div>
