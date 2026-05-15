@@ -127,21 +127,6 @@ async function askAI(
   return data.text ?? "Não consegui gerar uma resposta.";
 }
 
-function gerarRespostaDemo(pergunta: string, context: string): string {
-  const lower = pergunta.toLowerCase();
-  if (lower.includes("gast") || lower.includes("mes")) {
-    const match = context.match(/Gasto até agora: (R\$[\d.,]+)/);
-    return `📊 ${match?.[1] ? `Você gastou **${match[1]}** até agora este mês.` : "Ainda não tenho dados de gastos para este mês."}\n\n💡 *Configure sua chave VITE_ANTHROPIC_API_KEY no .env para respostas completas.*`;
-  }
-  if (lower.includes("conta") || lower.includes("venc")) {
-    const match = context.match(/CONTAS PENDENTES DO MÊS \((\d+)\)/);
-    return `📅 Você tem **${match?.[1] ?? 0} contas pendentes** este mês.\n\n💡 *Configure sua chave VITE_ANTHROPIC_API_KEY no .env para respostas completas.*`;
-  }
-  if (lower.includes("estoque") || lower.includes("repor")) {
-    return `📦 Verificando o estoque da sua casa...\n\n${context.includes("🔴") || context.includes("🟠") ? "Há itens críticos no estoque!" : "Estoque em dia."}\n\n💡 *Configure sua chave VITE_ANTHROPIC_API_KEY no .env para respostas completas.*`;
-  }
-  return `🤖 Entendi sua pergunta! Para respostas inteligentes com seus dados reais, configure a chave **VITE_ANTHROPIC_API_KEY** no arquivo **.env**.\n\nIsso permitirá que eu analise suas finanças, estoque e contas em tempo real.`;
-}
 
 function AssistentePage() {
   const { user, loading: authLoading } = useAuth();
@@ -182,7 +167,7 @@ function AssistentePage() {
     setLoading(true);
 
     try {
-      const resposta = await askClaude(history, context, familyId);
+      const resposta = await askAI(msgs, familyId);
       setMessages(prev => [...prev, { role: "assistant", content: resposta, ts: Date.now() }]);
     } catch (e: any) {
       toast.error("Erro ao consultar IA: " + (e?.message ?? ""));
@@ -192,7 +177,7 @@ function AssistentePage() {
     }
   };
 
-  const hasApiKey = !!import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const hasApiKey = true; // Gemini via Edge Function
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--gradient-subtle)" }}>
@@ -212,11 +197,6 @@ function AssistentePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!hasApiKey && (
-              <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">
-                Modo demo
-              </Badge>
-            )}
             {messages.length > 0 && (
               <Button variant="ghost" size="sm" onClick={() => setMessages([])}>
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -240,19 +220,6 @@ function AssistentePage() {
                 Posso responder sobre finanças, estoque, contas e muito mais.
               </p>
             </div>
-
-            {!hasApiKey && (
-              <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
-                <CardContent className="py-3 flex items-start gap-2">
-                  <Lightbulb className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-700 dark:text-amber-400">
-                    <strong>Modo demo</strong> — Para respostas completas, adicione
-                    <code className="mx-1 px-1 bg-amber-100 rounded">VITE_ANTHROPIC_API_KEY</code>
-                    no arquivo .env
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             <div className="grid grid-cols-2 gap-2">
               {SUGESTOES.map((s) => (
