@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2, RefreshCw, Trash2, Sparkles } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/conciliacao")({
@@ -60,6 +60,43 @@ function ConciliacaoPage() {
   const [accs, setAccs] = useState<Acc[]>([]);
   const [counts, setCounts] = useState({ semCat: 0, pend: 0, conc: 0 });
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [iaLoading, setIaLoading] = useState(false);
+
+  const SB_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
+  const SB_ANON = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
+
+  const categorizarComIA = async () => {
+    const semCat = txs.filter(t => !t.category_id);
+    if (!semCat.length) { toast.info("Todas as transações já têm categoria"); return; }
+    setIaLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setIaLoading(false); return; }
+    try {
+      const resp = await fetch(`${SB_URL}/functions/v1/ai-assistant`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": SB_ANON },
+        body: JSON.stringify({
+          feature: "categorizacao",
+          messages: [{ role: "user", content:
+            `Categorize estas transações financeiras. Retorne APENAS JSON válido sem markdown: [{"id":"...","category_id":"..."}]\nTransações: ${JSON.stringify(semCat.map(t => ({ id: t.id, desc: t.description, tipo: t.type })))}\nCategorias disponíveis: ${JSON.stringify(cats.map((c: any) => ({ id: c.id, nome: c.nome, tipo: c.tipo })))}` }]
+        }),
+      });
+      if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+      const data = await resp.json();
+      const jsonMatch = (data.text ?? "").match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error("IA não retornou JSON válido");
+      const resultados: { id: string; category_id: string }[] = JSON.parse(jsonMatch[0]);
+      let ok = 0;
+      for (const r of resultados) {
+        if (!r.category_id) continue;
+        const { error } = await supabase.from("transactions").update({ category_id: r.category_id }).eq("id", r.id);
+        if (!error) ok++;
+      }
+      toast.success(`✅ ${ok} transações categorizadas`);
+      await load();
+    } catch (e: any) { toast.error("Erro: " + e.message); }
+    setIaLoading(false);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -156,7 +193,13 @@ function ConciliacaoPage() {
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">✅ Conciliadas</CardTitle></CardHeader><CardContent className="text-2xl font-semibold" style={{ color: "var(--success)" }}>{counts.conc}</CardContent></Card>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {counts.semCat > 0 && (
+            <Button variant="outline" onClick={categorizarComIA} disabled={iaLoading} className="gap-1.5">
+              {iaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
+              {iaLoading ? "Categorizando..." : `IA (${counts.semCat})`}
+            </Button>
+          )}
           <Button onClick={conciliarTodasCompletas} disabled={bulkLoading} className="gap-2">
             {bulkLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Conciliar todas completas
