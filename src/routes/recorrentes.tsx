@@ -59,7 +59,7 @@ function RecorrentesPage() {
       setLoading(true);
       const [r, a, c] = await Promise.all([
         supabase.from("recurring_transactions")
-          .select("id, description, amount, type, frequencia, dia_do_mes, proxima_data, ativo, account_id, category_id, is_essencial")
+          .select("id, description, amount, type, frequencia, dia_do_mes, proxima_data, ativo, account_id, category_id")
           .eq("family_id", familyId).order("proxima_data", { ascending: true }),
         supabase.from("accounts").select("id, nome").eq("family_id", familyId).eq("ativo", true).order("nome"),
         supabase.from("categories").select("id, nome, tipo").eq("family_id", familyId).order("nome"),
@@ -74,7 +74,7 @@ function RecorrentesPage() {
   const reload = async () => {
     if (!familyId) return;
     const { data } = await supabase.from("recurring_transactions")
-      .select("id, description, amount, type, frequencia, dia_do_mes, proxima_data, ativo, account_id, category_id, is_essencial")
+      .select("id, description, amount, type, frequencia, dia_do_mes, proxima_data, ativo, account_id, category_id")
       .eq("family_id", familyId).order("proxima_data", { ascending: true });
     setRows((data ?? []) as RecRow[]);
   };

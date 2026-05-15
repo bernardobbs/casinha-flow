@@ -443,7 +443,6 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
     setCategoryId(tx.category_id ?? "");
     setAccountId(tx.account_id ?? "");
     setTipoEspecial(tx.tipo_especial);
-    setIsEssencial(tx.is_essencial);
     setObservacao("");
     setEnableRecurring(false);
     setDiaMes(new Date(tx.date + "T00:00:00").getDate());
@@ -483,8 +482,7 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
         date,
         category_id: categoryId || null,
         account_id: accountId || null,
-        tipo_especial: tipoEspecial,
-        is_essencial: isEssencial,
+        tipo_especial: tipoEspecial: isEssencial,
       })
       .eq("id", tx.id);
     setSaving(false);
