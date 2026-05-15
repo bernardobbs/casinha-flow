@@ -51,6 +51,8 @@ function EstoquePage() {
   const [search, setSearch] = useState("");
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [categoriaFiltro, setCategoriaFiltro] = useState("Todas");
+  const [editando, setEditando] = useState<Record<string, string>>({}); // id → valor digitado
+  const [saving, setSaving] = useState<Record<string, boolean>>({}); // id → salvando
   const [statusFiltro, setStatusFiltro] = useState("todos");
 
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
@@ -68,24 +70,58 @@ function EstoquePage() {
 
   useEffect(() => { reload(); }, [user, familyId]);
 
-  const mover = async (id: string, delta: number, und: string) => {
+  // Atualização otimista: UI primeiro, banco em background
+  const salvarEstoque = async (id: string, novoEstoque: number) => {
     const prod = produtos.find(p => p.id === id);
     if (!prod) return;
-    const novoEstoque = Math.max(0, (prod.estoque_atual ?? 0) + delta);
-    const { error } = await supabase.from("products" as any)
-      .update({ estoque_atual: novoEstoque }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    await supabase.from("stock_movements" as any).insert({
-      product_id: id, family_id: familyId, user_id: user?.id,
-      tipo: delta > 0 ? "entrada" : "saida", quantidade: Math.abs(delta),
-    });
+    const estoqueAnterior = prod.estoque_atual;
+    const delta = novoEstoque - estoqueAnterior;
+    if (delta === 0) return;
+
+    // Atualizar UI imediatamente
     setProdutos(prev => prev.map(p => p.id === id ? { ...p, estoque_atual: novoEstoque } : p));
-    // Atualizar pai
     if (prod.parent_id) {
       const irmãos = produtos.filter(p => p.parent_id === prod.parent_id && p.id !== id);
       const totalFilhos = irmãos.reduce((s, p) => s + (p.estoque_atual ?? 0), 0) + novoEstoque;
       setProdutos(prev => prev.map(p => p.id === prod.parent_id ? { ...p, estoque_atual: totalFilhos } : p));
     }
+
+    // Salvar no banco em background
+    setSaving(prev => ({ ...prev, [id]: true }));
+    const { error } = await supabase.from("products" as any)
+      .update({ estoque_atual: novoEstoque }).eq("id", id);
+    if (error) {
+      // Reverter se falhar
+      setProdutos(prev => prev.map(p => p.id === id ? { ...p, estoque_atual: estoqueAnterior } : p));
+      toast.error(error.message);
+    } else {
+      // Registrar movimento
+      supabase.from("stock_movements" as any).insert({
+        product_id: id, family_id: familyId, user_id: user?.id,
+        tipo: delta > 0 ? "entrada" : "saida", quantidade: Math.abs(delta),
+      }).then(() => {}).catch(() => {});
+    }
+    setSaving(prev => ({ ...prev, [id]: false }));
+  };
+
+  const mover = (id: string, delta: number) => {
+    const prod = produtos.find(p => p.id === id);
+    if (!prod) return;
+    const novo = Math.max(0, (prod.estoque_atual ?? 0) + delta);
+    salvarEstoque(id, novo);
+  };
+
+  const confirmarInput = (id: string) => {
+    const val = editando[id];
+    if (val === undefined) return;
+    const prod = produtos.find(p => p.id === id);
+    if (!prod) return;
+    // Valor digitado é em unidades de embalagem
+    const qtdEmb = parseFloat(val.replace(",", "."));
+    if (isNaN(qtdEmb) || qtdEmb < 0) { setEditando(prev => { const n = {...prev}; delete n[id]; return n; }); return; }
+    const novoEstoque = qtdEmb * prod.quantidade_por_embalagem;
+    salvarEstoque(id, novoEstoque);
+    setEditando(prev => { const n = {...prev}; delete n[id]; return n; });
   };
 
   // Organizar hierarquia
@@ -232,14 +268,33 @@ function EstoquePage() {
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             <Button variant="outline" size="sm" className="h-7 w-7 p-0"
-                              onClick={() => mover(filho.id, -filho.quantidade_por_embalagem, filho.unidade)}>
+                              onClick={() => mover(filho.id, -filho.quantidade_por_embalagem)}>
                               <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="text-xs w-12 text-center tabular-nums">
-                              {Number(filho.estoque_atual / filho.quantidade_por_embalagem).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} un
-                            </span>
+                            {editando[filho.id] !== undefined ? (
+                              <input
+                                type="number"
+                                value={editando[filho.id]}
+                                onChange={e => setEditando(prev => ({ ...prev, [filho.id]: e.target.value }))}
+                                onBlur={() => confirmarInput(filho.id)}
+                                onKeyDown={e => { if (e.key === "Enter") confirmarInput(filho.id); if (e.key === "Escape") setEditando(prev => { const n = {...prev}; delete n[filho.id]; return n; }); }}
+                                className="w-14 h-7 text-xs text-center border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
+                                autoFocus
+                                min={0}
+                                step={1}
+                              />
+                            ) : (
+                              <button
+                                onClick={() => setEditando(prev => ({
+                                  ...prev,
+                                  [filho.id]: String(Number(filho.estoque_atual / filho.quantidade_por_embalagem).toFixed(1))
+                                }))}
+                                className="w-14 h-7 text-xs text-center tabular-nums border rounded-md hover:bg-muted transition-colors">
+                                {saving[filho.id] ? "..." : `${Number(filho.estoque_atual / filho.quantidade_por_embalagem).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} un`}
+                              </button>
+                            )}
                             <Button variant="outline" size="sm" className="h-7 w-7 p-0"
-                              onClick={() => mover(filho.id, filho.quantidade_por_embalagem, filho.unidade)}>
+                              onClick={() => mover(filho.id, filho.quantidade_por_embalagem)}>
                               <Plus className="h-3 w-3" />
                             </Button>
                           </div>

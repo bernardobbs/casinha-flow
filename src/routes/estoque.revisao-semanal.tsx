@@ -234,18 +234,28 @@ function RevisaoEstoquePage() {
                       </div>
                       <Badge className={`${urg.cls} font-normal whitespace-nowrap`}>{urg.label}</Badge>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Button size="sm" variant="outline" className="h-7 px-2 gap-1" disabled={busyId === item.id} onClick={() => adjustQty(item, 1)}>
-                        <Plus className="h-3 w-3" />1
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={busyId === item.id} onClick={() => adjustQty(item, -1)}>
+                        <Minus className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 px-2 gap-1" disabled={busyId === item.id} onClick={() => adjustQty(item, 5)}>
-                        <Plus className="h-3 w-3" />5
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 px-2 gap-1" disabled={busyId === item.id || item.quantidade_atual <= 0} onClick={() => adjustQty(item, -1)}>
-                        <Minus className="h-3 w-3" />1
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 px-2 gap-1" disabled={busyId === item.id || item.quantidade_atual <= 0} onClick={() => adjustQty(item, -5)}>
-                        <Minus className="h-3 w-3" />5
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={item.quantidade_atual}
+                        onChange={e => {
+                          const novo = parseFloat(e.target.value.replace(",","."));
+                          if (!isNaN(novo) && novo >= 0) {
+                            const delta = novo - item.quantidade_atual;
+                            if (delta !== 0) adjustQty(item, delta);
+                          }
+                        }}
+                        disabled={busyId === item.id}
+                        className="w-14 h-7 text-xs text-center border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
+                      />
+                      <span className="text-xs text-muted-foreground">{item.unidade}</span>
+                      <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={busyId === item.id} onClick={() => adjustQty(item, 1)}>
+                        <Plus className="h-3 w-3" />
                       </Button>
                       <Sheet>
                         <SheetTrigger asChild>
