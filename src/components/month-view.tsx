@@ -146,9 +146,21 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
       });
       if (!resp.ok) throw new Error(`Erro ${resp.status}`);
       const data = await resp.json();
-      const jsonMatch = (data.text ?? "").match(/\[[\s\S]*\]/);
-      if (!jsonMatch) throw new Error("IA não retornou JSON válido");
-      const resultados: { id: string; category_id: string }[] = JSON.parse(jsonMatch[0]);
+      const rawText = data.text ?? "";
+      // Extrair JSON de forma robusta (ignora markdown, texto antes/depois)
+      let resultados: { id: string; category_id: string }[] = [];
+      const jsonMatch = rawText.match(/\[[\s\S]*?\]/);
+      if (jsonMatch) {
+        try { resultados = JSON.parse(jsonMatch[0]); } catch { /* ignorar */ }
+      }
+      if (!resultados.length) {
+        // Tentar extrair objetos individualmente
+        const objMatches = rawText.matchAll(/\{[^}]+\}/g);
+        for (const m of objMatches) {
+          try { resultados.push(JSON.parse(m[0])); } catch { /* ignorar */ }
+        }
+      }
+      if (!resultados.length) throw new Error("IA não retornou JSON válido: " + rawText.slice(0, 100));
       let ok = 0;
       for (const r of resultados) {
         if (!r.category_id) continue;
