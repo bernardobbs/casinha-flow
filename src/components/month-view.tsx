@@ -123,6 +123,8 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
   const [txs, setTxs] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "income" | "expense" | "transfer">("all");
+  const [categorizando, setCategorizando] = useState(false);
+  const [categorizandoId, setCategorizandoId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<Tx | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -315,6 +317,17 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
             className="pl-8 h-9"
           />
         </div>
+        {(() => {
+          const semCat = filteredTxs.filter(t => !t.category_id && t.tipo_especial === "normal");
+          return semCat.length > 0 ? (
+            <Button size="sm" variant="outline" className="gap-1.5 shrink-0"
+              onClick={categorizarTodas} disabled={categorizando}>
+              {categorizando
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Categorizando...</>
+                : <><Sparkles className="h-3.5 w-3.5 text-primary" />IA ({semCat.length})</>}
+            </Button>
+          ) : null;
+        })()}
       </div>
 
       {/* List grouped by date */}
@@ -373,6 +386,17 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
                             )}
                           </div>
                         </div>
+                        {!t.category_id && t.tipo_especial === "normal" && (
+                          <button
+                            onClick={(e) => categorizarUma(t, e)}
+                            disabled={categorizandoId === t.id}
+                            className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                            title="Categorizar com IA">
+                            {categorizandoId === t.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Sparkles className="h-3.5 w-3.5" />}
+                          </button>
+                        )}
                         <div
                           className="text-sm font-semibold shrink-0"
                           style={{ color: t.type === "income" ? "var(--success)" : "var(--destructive)" }}
@@ -465,6 +489,72 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
   const validCats = categories.filter(
     (c) => c.tipo === (tx.type === "income" ? "receita" : "despesa"),
   );
+
+  const SUPABASE_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
+  const SUPABASE_ANON = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
+
+  const categorizarComIA = async (txs: Tx[]) => {
+    if (!txs.length) { toast.info("Nenhuma transação sem categoria"); return; }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/ai-assistant`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+          "apikey": SUPABASE_ANON,
+        },
+        body: JSON.stringify({
+          feature: "categorizacao",
+          messages: [{
+            role: "user",
+            content: `Categorize estas transações financeiras nas categorias disponíveis.
+Retorne APENAS JSON: [{"id":"...","category_id":"...","category_nome":"..."}]
+Transações: ${JSON.stringify(txs.map(t => ({ id: t.id, desc: t.description, valor: t.amount, tipo: t.type })))}
+Categorias: ${JSON.stringify(categories.map(c => ({ id: c.id, nome: c.nome, tipo: c.tipo })))}`
+          }]
+        }),
+      });
+      if (!resp.ok) throw new Error(`Erro ${resp.status}`);
+      const data = await resp.json();
+      // Parsear resposta JSON da IA
+      const text = data.text ?? "";
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) throw new Error("IA não retornou JSON válido");
+      const resultados: { id: string; category_id: string; category_nome: string }[] = JSON.parse(jsonMatch[0]);
+
+      // Atualizar banco em lote
+      let atualizadas = 0;
+      for (const r of resultados) {
+        if (!r.category_id) continue;
+        const { error } = await supabase.from("transactions").update({ category_id: r.category_id }).eq("id", r.id);
+        if (!error) atualizadas++;
+      }
+      toast.success(`✅ ${atualizadas} transações categorizadas pela IA`);
+      // Atualizar estado local
+      setTxs(prev => prev.map(t => {
+        const r = resultados.find(r => r.id === t.id);
+        return r?.category_id ? { ...t, category_id: r.category_id } : t;
+      }));
+    } catch (e: any) {
+      toast.error("Erro na categorização: " + e.message);
+    }
+  };
+
+  const categorizarTodas = async () => {
+    setCategorizando(true);
+    const semCat = filteredTxs.filter(t => !t.category_id && t.tipo_especial === "normal");
+    await categorizarComIA(semCat);
+    setCategorizando(false);
+  };
+
+  const categorizarUma = async (t: Tx, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCategorizandoId(t.id);
+    await categorizarComIA([t]);
+    setCategorizandoId(null);
+  };
 
   const handleSave = async () => {
     setSaving(true);
