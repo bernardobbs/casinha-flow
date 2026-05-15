@@ -104,14 +104,16 @@ async function askAI(
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Sessão inválida");
 
+  const SUPABASE_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
+  const SUPABASE_ANON = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
   const resp = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`,
+    `${SUPABASE_URL}/functions/v1/ai-assistant`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${session.access_token}`,
-        "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+        "apikey": SUPABASE_ANON,
       },
       body: JSON.stringify({ messages, feature: "assistente" }),
     }
