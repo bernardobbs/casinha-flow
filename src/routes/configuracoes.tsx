@@ -235,22 +235,25 @@ function ConfigPage() {
   const loadRules = async (fid: string) => {
     const { data } = await supabase
       .from("categorization_rules")
-      .select("id, termo, category_id, origem, confianca, usos, categories(nome)")
+      .select("id, termo, category_id, origem, confianca, usos")
       .eq("family_id", fid)
       .order("usos", { ascending: false })
       .limit(500);
-    const rs: Rule[] = (data ?? []).map((r) => {
-      const cat = (r as unknown as { categories?: { nome?: string } }).categories;
-      return {
-        id: r.id,
-        termo: r.termo,
-        category_id: r.category_id,
-        origem: r.origem,
-        confianca: Number(r.confianca),
-        usos: r.usos,
-        category_nome: cat?.nome,
-      };
-    });
+    // Buscar nomes das categorias separadamente
+    const { data: cats } = await supabase
+      .from("categories")
+      .select("id, nome")
+      .eq("family_id", fid);
+    const catMap = new Map((cats ?? []).map((c: any) => [c.id, c.nome]));
+    const rs: Rule[] = (data ?? []).map((r: any) => ({
+      id: r.id,
+      termo: r.termo,
+      category_id: r.category_id,
+      origem: r.origem,
+      confianca: Number(r.confianca),
+      usos: r.usos,
+      category_nome: r.category_id ? catMap.get(r.category_id) : undefined,
+    }));
     setRules(rs);
   };
 
