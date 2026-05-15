@@ -64,7 +64,6 @@ interface Tx {
   scope: string;
   category_id: string | null;
   account_id: string | null;
-  is_essencial: boolean;
   tipo_especial: "normal" | "transferencia" | "pagamento_fatura";
   recorrente_id?: string | null;
 }
