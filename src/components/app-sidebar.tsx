@@ -3,13 +3,15 @@ import {
   LayoutDashboard, Wallet, Banknote, Target, Repeat,
   CalendarClock, Package, Wrench, Users, Bot,
   BarChart3, AlertTriangle, Zap, ShoppingCart,
-  ListChecks, RefreshCw, ClipboardList, Fuel, TrendingUp, FileText,
+  ListChecks, RefreshCw, ClipboardList, Fuel, TrendingUp, FileText, LogOut,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
-  SidebarHeader, useSidebar,
+  SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const APP_NAME = "Casinha Hub";
 const APP_TAGLINE = "O centro de controle da sua casa";
@@ -65,6 +67,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const handleNav = () => { if (isMobile) setOpenMobile(false); };
+  const { user } = useAuth();
+  const handleLogout = async () => { await supabase.auth.signOut(); window.location.href = '/auth'; };
 
   return (
     <Sidebar collapsible="icon">
@@ -114,6 +118,25 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+      <SidebarFooter className="px-3 py-2 border-t border-border/50">
+        {!collapsed ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium truncate">{user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'Usuário'}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{user?.email ?? ''}</p>
+            </div>
+            <button onClick={handleLogout} title="Sair"
+              className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <button onClick={handleLogout} title="Sair"
+            className="w-full flex justify-center rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+            <LogOut className="h-4 w-4" />
+          </button>
+        )}
+      </SidebarFooter>
     </Sidebar>
   );
 }
