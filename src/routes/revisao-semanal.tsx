@@ -84,18 +84,18 @@ function RevisaoSemanalPage() {
         supabase.from("transactions")
           .select("id, description, amount, type, category_id, date")
           .eq("family_id", fid).gte("date", iso(start7)).lte("date", iso(today))
-          .eq("tipo_especial", "normal"),
+          .or("tipo_especial.is.null,tipo_especial.eq.normal"),
         supabase.from("transactions")
           .select("id, description, amount, type, category_id, date")
           .eq("family_id", fid).gte("date", iso(start14)).lt("date", iso(start7))
-          .eq("tipo_especial", "normal"),
+          .or("tipo_especial.is.null,tipo_especial.eq.normal"),
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
         supabase.from("bills_reminders")
           .select("id, descricao, valor, data_vencimento, status, category_id")
           .eq("family_id", fid).gte("data_vencimento", iso(start7)).lte("data_vencimento", iso(today)),
         supabase.from("bills_reminders")
           .select("id, descricao, valor, data_vencimento, status, category_id")
-          .eq("family_id", fid).neq("status", "pago")
+          .eq("family_id", fid).or("status.is.null,status.eq.pendente")
           .gt("data_vencimento", iso(today)).lte("data_vencimento", iso(in7))
           .order("data_vencimento", { ascending: true }),
         supabase.from("accounts").select("id, nome").eq("family_id", fid).eq("ativo", true).order("nome"),
@@ -109,7 +109,7 @@ function RevisaoSemanalPage() {
       setAccounts((a.data ?? []) as Acc[]);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, familyId]);
 
   const totalSemana = txWeek.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
   const totalSemAnt = txPrev.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
