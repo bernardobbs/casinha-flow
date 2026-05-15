@@ -188,6 +188,11 @@ function ConfigPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Recarregar regras quando familyId do hook estiver disponível
+  useEffect(() => {
+    if (familyId) loadRules(familyId);
+  }, [familyId]);
+
   const loadMembers = async (fid: string) => {
     const { data: rows } = await supabase
       .from("family_members")
@@ -233,14 +238,18 @@ function ConfigPage() {
   };
 
   const loadRules = async (fid: string) => {
+    if (!fid) { console.warn("loadRules: fid vazio"); return; }
     const { data, error } = await supabase
       .from("categorization_rules" as any)
       .select("id, termo, category_id, origem, confianca, usos")
       .eq("family_id", fid)
       .order("usos", { ascending: false })
       .limit(500);
-    if (error) console.error("loadRules error:", error);
-    // Buscar nomes das categorias separadamente
+    if (error) {
+      console.error("loadRules error:", error);
+      toast.error("Erro ao carregar regras: " + error.message);
+      return;
+    }
     const { data: cats } = await supabase
       .from("categories")
       .select("id, nome")
