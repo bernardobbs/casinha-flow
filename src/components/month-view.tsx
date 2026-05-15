@@ -482,7 +482,7 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
         date,
         category_id: categoryId || null,
         account_id: accountId || null,
-        tipo_especial: tipoEspecial: isEssencial,
+        tipo_especial: tipoEspecial,
       })
       .eq("id", tx.id);
     setSaving(false);
