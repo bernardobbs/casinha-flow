@@ -113,7 +113,7 @@ function RecorrentesPage() {
       amount: amt,
       valor: amt,
       type,
-      tipo: type,
+      tipo: type === "income" ? "receita" : "despesa",
       frequencia,
       dia_do_mes: dia,
       gerar_lembrete: gerarLembrete as boolean,
