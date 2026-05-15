@@ -1,18 +1,34 @@
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { useFamily } from "@/hooks/use-family";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { ArrowLeft, Loader2, TrendingUp, TrendingDown } from "lucide-react";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import { Package, ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/revisao-semanal")({
@@ -42,6 +58,24 @@ function RevisaoSemanalPage() {
   const [billsWeek, setBillsWeek] = useState<BillRow[]>([]);
   const [billsNext, setBillsNext] = useState<BillRow[]>([]);
   const [accounts, setAccounts] = useState<Acc[]>([]);
+  const [estoqueReview, setEstoqueReview] = useState<any[]>([]);
+  const [loadingEstoque, setLoadingEstoque] = useState(false);
+  const [showEstoque, setShowEstoque] = useState(false);
+
+  const carregarEstoque = async () => {
+    if (!familyId || estoqueReview.length > 0) { setShowEstoque(true); return; }
+    setLoadingEstoque(true);
+    const { data } = await supabase.rpc("get_stock_review_summary" as any, { p_family_id: familyId });
+    setEstoqueReview((data as any) ?? []);
+    setShowEstoque(true);
+    setLoadingEstoque(false);
+  };
+
+  const chkEstoque = () => {
+    const problemas = estoqueReview.filter((p: any) => p.status !== 'ok');
+    return problemas.length === 0;
+  };
+
   const [chk, setChk] = useState({ semCat: false, vencidasPagas: false, estourou: false });
   const [payOpen, setPayOpen] = useState<BillRow | null>(null);
   const [payAccount, setPayAccount] = useState("");
@@ -299,6 +333,72 @@ function RevisaoSemanalPage() {
               <Checkbox checked={chk.estourou} onCheckedChange={(v) => setChk((p) => ({ ...p, estourou: !!v }))} />
               <span className="text-sm">Alguma categoria estourou?</span>
             </label>
+            {/* SEÇÃO ESTOQUE */}
+            <div className="border-t pt-4 mt-2">
+              <button onClick={carregarEstoque}
+                className="w-full flex items-center justify-between text-sm font-medium mb-3 hover:text-primary transition-colors">
+                <span className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Verificar Estoque
+                  {estoqueReview.filter((p: any) => p.status !== 'ok').length > 0 && (
+                    <span className="bg-orange-500 text-white text-xs rounded-full px-1.5 py-0.5">
+                      {estoqueReview.filter((p: any) => p.status !== 'ok').length}
+                    </span>
+                  )}
+                </span>
+                {loadingEstoque ? <Loader2 className="h-4 w-4 animate-spin" /> :
+                  showEstoque ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </button>
+
+              {showEstoque && estoqueReview.length > 0 && (
+                <div className="space-y-1 mb-3 max-h-64 overflow-y-auto">
+                  {["zerado", "critico", "baixo", "atencao"].map(st => {
+                    const items = estoqueReview.filter((p: any) => p.status === st);
+                    if (!items.length) return null;
+                    const cor = st === "zerado" || st === "critico" ? "text-red-600" :
+                      st === "baixo" ? "text-orange-500" : "text-yellow-600";
+                    const label = { zerado: "🔴 Zerado", critico: "🟠 Crítico", baixo: "🟡 Baixo", atencao: "⚠️ Atenção" }[st];
+                    return (
+                      <div key={st}>
+                        <p className={`text-xs font-semibold ${cor} mb-1`}>{label}</p>
+                        {items.map((p: any) => (
+                          <div key={p.produto_id} className="flex justify-between text-xs py-0.5 pl-3">
+                            <span className="truncate flex-1">{p.produto_nome}</span>
+                            <span className="text-muted-foreground shrink-0 ml-2">
+                              {Number(p.estoque_atual).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} {p.unidade}
+                              {p.dias_restantes ? ` (~${p.dias_restantes}d)` : ""}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  {estoqueReview.filter((p: any) => p.status === 'ok').length > 0 && (
+                    <p className="text-xs text-muted-foreground pt-1">
+                      ✅ {estoqueReview.filter((p: any) => p.status === 'ok').length} produtos abastecidos
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {showEstoque && estoqueReview.length > 0 && (
+                <div className="bg-muted/50 rounded-md p-3 mb-3 text-xs space-y-1">
+                  <p className="font-medium">📊 Consumo estimado (próximos 30 dias)</p>
+                  {estoqueReview
+                    .filter((p: any) => p.sugestao_compra > 0)
+                    .slice(0, 5)
+                    .map((p: any) => (
+                      <div key={p.produto_id} className="flex justify-between">
+                        <span>{p.produto_nome}</span>
+                        <span className="text-orange-600 font-medium">
+                          comprar {Number(p.sugestao_compra).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} {p.unidade}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
             <Button className="w-full mt-2" onClick={fechar}>Fechar revisão</Button>
           </CardContent>
         </Card>
