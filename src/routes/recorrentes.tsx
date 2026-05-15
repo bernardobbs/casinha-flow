@@ -114,7 +114,7 @@ function RecorrentesPage() {
       type,
       frequencia,
       dia_do_mes: dia,
-      gerar_lembrete: gerarLembrete,
+      gerar_lembrete: gerarLembrete as boolean,
       proxima_data: prox.toISOString().slice(0, 10),
       account_id: accountId || null,
       category_id: categoryId || null,
