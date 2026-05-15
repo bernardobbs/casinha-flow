@@ -233,12 +233,13 @@ function ConfigPage() {
   };
 
   const loadRules = async (fid: string) => {
-    const { data } = await supabase
-      .from("categorization_rules")
+    const { data, error } = await supabase
+      .from("categorization_rules" as any)
       .select("id, termo, category_id, origem, confianca, usos")
       .eq("family_id", fid)
       .order("usos", { ascending: false })
       .limit(500);
+    if (error) console.error("loadRules error:", error);
     // Buscar nomes das categorias separadamente
     const { data: cats } = await supabase
       .from("categories")
