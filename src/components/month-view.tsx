@@ -534,7 +534,6 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
         dia_do_mes: frequencia === "mensal" || frequencia === "anual" ? diaMes : null,
         account_id: accountId || null,
         category_id: categoryId || null,
-        is_essencial: isEssencial,
         ativo: true,
         proxima_data: computeProxima(),
       })

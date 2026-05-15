@@ -25,7 +25,6 @@ type RecRow = {
   id: string; description: string; amount: number; type: "income" | "expense";
   frequencia: Freq; dia_do_mes: number | null; proxima_data: string;
   ativo: boolean; account_id: string | null; category_id: string | null;
-  is_essencial: boolean;
 };
 type Acc = { id: string; nome: string };
 type Cat = { id: string; nome: string; tipo: "despesa" | "receita" };
@@ -118,7 +117,6 @@ function RecorrentesPage() {
       proxima_data: prox.toISOString().slice(0, 10),
       account_id: accountId || null,
       category_id: categoryId || null,
-      is_essencial: false,
       ativo: true,
     });
     if (error) return toast.error("Erro: " + error.message);
