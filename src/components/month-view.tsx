@@ -38,6 +38,7 @@ import {
   TrendingDown,
   TrendingUp,
   Search,
+  Sparkles,
 } from "lucide-react";
 
 interface Cat {
