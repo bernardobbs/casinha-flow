@@ -71,13 +71,21 @@ function ConciliacaoPage() {
     if (!familyId) return;
     setReprocessando(true);
 
-    // PASSO 1: Aplicar regras conhecidas
+    // PASSO 1: Aplicar regras conhecidas (banco aplica direto)
     setReprocessStep('📚 Aplicando regras aprendidas...');
-    const { data: rulesApplied } = await supabase.rpc('apply_transaction_rules' as any, { p_family_id: familyId });
-    await load();
+    await supabase.rpc('apply_transaction_rules' as any, { p_family_id: familyId });
 
-    // PASSO 2: Categorizar com IA os que ainda não têm categoria
-    const semCat = txs.filter(t => !t.category_id);
+    // Buscar dados frescos do banco (não do estado)
+    const [{ data: txFrescas }, { data: catsFrescas }, { data: accsFrescos }] = await Promise.all([
+      supabase.from("transactions").select("id, description, amount, type, category_id, account_id")
+        .eq("family_id", familyId).eq("conciliado", false).limit(200),
+      supabase.from("categories").select("id, nome, tipo").eq("family_id", familyId),
+      supabase.from("accounts").select("id, nome, tipo").eq("family_id", familyId).eq("ativo", true),
+    ]);
+
+    const semCat = (txFrescas ?? []).filter((t: any) => !t.category_id);
+
+    // PASSO 2: IA categoriza o que sobrou
     if (semCat.length > 0) {
       setReprocessStep(`✨ Categorizando ${semCat.length} transações com IA...`);
       const { data: { session } } = await supabase.auth.getSession();
@@ -88,9 +96,9 @@ function ConciliacaoPage() {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "apikey": SB_ANON },
             body: JSON.stringify({
               feature: "categorizacao",
-              txs: semCat.map(t => ({ id: t.id, description: t.description, amount: t.amount, type: t.type })),
-              categories: cats.map(c => ({ id: c.id, nome: c.nome, tipo: c.tipo })),
-              accounts: accs.map(a => ({ id: a.id, nome: a.nome, tipo: (a as any).tipo })),
+              txs: semCat.map((t: any) => ({ id: t.id, description: t.description, amount: t.amount, type: t.type })),
+              categories: (catsFrescas ?? []).map((c: any) => ({ id: c.id, nome: c.nome, tipo: c.tipo })),
+              accounts: (accsFrescos ?? []).map((a: any) => ({ id: a.id, nome: a.nome, tipo: a.tipo })),
             }),
           });
           if (resp.ok) {
@@ -100,28 +108,24 @@ function ConciliacaoPage() {
               if (!r.category_id) continue;
               await supabase.from("transactions").update({
                 category_id: r.category_id,
-                account_id: r.account_id ?? undefined,
+                ...(r.account_id ? { account_id: r.account_id } : {}),
               }).eq("id", r.id);
               // Salvar regra aprendida
-              const tx = semCat.find(t => t.id === r.id);
+              const tx = semCat.find((t: any) => t.id === r.id) as any;
               if (tx) {
                 supabase.rpc('save_transaction_rule' as any, {
-                  p_family_id: familyId,
-                  p_description: tx.description,
-                  p_category_id: r.category_id,
-                  p_account_id: r.account_id ?? null,
-                  p_tipo: tx.type,
-                  p_origem: 'ia',
+                  p_family_id: familyId, p_description: tx.description,
+                  p_category_id: r.category_id, p_account_id: r.account_id ?? null,
+                  p_tipo: tx.type, p_origem: 'ia',
                 }).then(() => {}).catch(() => {});
               }
             }
-            await load();
           }
-        } catch (e: any) { toast.error("Erro IA: " + (e as any).message); }
+        } catch (e: any) { toast.error("Erro IA: " + e.message); }
       }
     }
 
-    // PASSO 3: Conciliar automaticamente todas as completas
+    // PASSO 3: Conciliar automaticamente as completas
     setReprocessStep('✅ Conciliando transações completas...');
     const { data: conciliadas } = await supabase.from("transactions")
       .update({ conciliado: true, conciliado_em: new Date().toISOString() })
@@ -130,13 +134,11 @@ function ConciliacaoPage() {
       .select("id");
 
     await load();
-    const total = (conciliadas?.length ?? 0) + (rulesApplied ?? 0);
-    toast.success(`✅ Reprocessamento concluído — ${total} transações processadas`);
+    toast.success(`✅ Reprocessamento concluído — ${(conciliadas?.length ?? 0) + semCat.length} transações processadas`);
     setReprocessando(false);
     setReprocessStep('');
   };
 
-  // Manter compatibilidade
   const categorizarComIA = reprocessarTudo;
 
   useEffect(() => {
