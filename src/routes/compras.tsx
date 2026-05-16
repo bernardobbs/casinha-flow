@@ -857,16 +857,11 @@ function ComprasPage() {
                         onClick={() => {
                           const cats = CATS_ESTOQUE.join(', ');
                           const naoId = importItens.filter(i => !i.sub_produto_id);
-                          const texto = 'Para cada produto abaixo, sugira um nome curto para o "produto mae" e a categoria.
-' +
-                            'Categorias: ' + cats + '
-' +
-                            'Responda em JSON: [{"indice":0,"nome_mae":"...","categoria":"..."}]
-
-' +
-                            'Produtos:
-' + naoId.map((it, i) => i + ':' + it.nome_original).join('
-');
+                          const nl = '\n';
+                          const texto = 'Para cada produto abaixo, sugira um nome curto para o produto mae e a categoria.' + nl +
+                            'Categorias: ' + cats + nl +
+                            'Responda em JSON: [{"indice":0,"nome_mae":"...","categoria":"..."}]' + nl + nl +
+                            'Produtos:' + nl + naoId.map((it, i) => i + ':' + it.nome_original).join(nl);
                           navigator.clipboard.writeText(texto);
                           toast.success('Copiado! Cole em qualquer IA e depois cole a resposta abaixo');
                           setModoImportIA(true);
