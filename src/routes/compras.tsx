@@ -84,6 +84,9 @@ function ComprasPage() {
   const [importItens, setImportItens] = useState<any[]>([]);
   const [importStep, setImportStep] = useState<"input"|"review"|"done">("input");
   const [importLoading, setImportLoading] = useState(false);
+  const [criandoProduto, setCriandoProduto] = useState<number | null>(null); // índice do item
+  const [novaCategoria, setNovaCategoria] = useState('Mercearia');
+  const CATS_ESTOQUE = ['Mercearia','Laticínios','Bebidas','Bebidas Quentes','Carnes','Frios','Temperos','Higiene','Limpeza'];
   const [itemDialog, setItemDialog] = useState<{ open: boolean; listId?: string }>({ open: false });
   const [deleteList, setDeleteList] = useState<ShoppingList | null>(null);
   const [completeAsk, setCompleteAsk] = useState<ShoppingList | null>(null);
@@ -427,6 +430,31 @@ function ComprasPage() {
     setImportLoading(false);
   };
 
+  const criarProdutoParaItem = async (idx: number, nomeMae: string, categoria: string) => {
+    if (!familyId || !nomeMae.trim()) return;
+    // Criar produto mãe
+    const { data: mae } = await supabase.from('products' as any).insert({
+      family_id: familyId, nome: nomeMae.trim(), categoria,
+      unidade: 'un', estoque_minimo: 0, estoque_atual: 0, ativo: true,
+    }).select('id').single();
+    if (!mae) { toast.error('Erro ao criar produto'); return; }
+    // Criar sub-produto com nome original da nota
+    const item = importItens[idx];
+    const { data: filho } = await supabase.from('products' as any).insert({
+      family_id: familyId, nome: item.nome_original, categoria,
+      unidade: 'un', estoque_minimo: 0, estoque_atual: 0, ativo: true,
+      parent_id: (mae as any).id, quantidade_por_embalagem: 1, unidade_embalagem: 'un',
+    }).select('id').single();
+    if (!filho) { toast.error('Erro ao criar sub-produto'); return; }
+    // Vincular item ao novo sub-produto
+    setImportItens(prev => prev.map((it, i) => i === idx
+      ? { ...it, sub_produto_id: (filho as any).id, vinculado: nomeMae.trim(), qtd_emb: 1 }
+      : it
+    ));
+    setCriandoProduto(null);
+    toast.success(`✅ "${nomeMae}" criado e vinculado`);
+  };
+
   const confirmarImport = async () => {
     if (!familyId || !user) return;
     setImportLoading(true);
@@ -758,24 +786,60 @@ function ComprasPage() {
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">{importItens.length} itens encontrados</span>
                 <span className="text-muted-foreground">
-                  {importItens.filter(i => i.sub_produto_id).length} vinculados ao estoque ·{" "}
-                  {importItens.filter(i => !i.sub_produto_id).length} não identificados
+                  {importItens.filter(i => i.sub_produto_id).length} ✅ vinculados ·{" "}
+                  {importItens.filter(i => !i.sub_produto_id).length} ⚠️ não identificados
                 </span>
               </div>
-              <div className="max-h-72 overflow-y-auto space-y-1 border rounded-md p-2">
+              <div className="max-h-[340px] overflow-y-auto space-y-1 border rounded-md p-2">
                 {importItens.map((item, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs py-1 border-b last:border-0">
-                    {item.sub_produto_id
-                      ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                      : <AlertCircle className="h-3.5 w-3.5 text-orange-400 shrink-0 mt-0.5" />}
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate font-medium">{item.nome_original}</p>
-                      {item.vinculado && <p className="text-muted-foreground">→ {item.vinculado}</p>}
-                      {!item.vinculado && <p className="text-orange-500">Não identificado — não entrará no estoque</p>}
+                  <div key={i} className="text-xs py-1.5 border-b last:border-0">
+                    <div className="flex items-start gap-2">
+                      {item.sub_produto_id
+                        ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        : <AlertCircle className="h-3.5 w-3.5 text-orange-400 shrink-0 mt-0.5" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{item.nome_original}</p>
+                        {item.vinculado && <p className="text-muted-foreground">→ {item.vinculado}</p>}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-muted-foreground">{item.qtd}un · R${item.preco_unitario.toFixed(2)}</span>
+                        {!item.sub_produto_id && criandoProduto !== i && (
+                          <Button size="sm" variant="outline" className="h-6 text-xs px-2"
+                            onClick={() => { setCriandoProduto(i); setNovaCategoria('Mercearia'); }}>
+                            + Criar
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <span className="shrink-0 text-muted-foreground">
-                      {item.qtd}un · R${item.preco_unitario.toFixed(2)}
-                    </span>
+                    {/* Form de criação de produto */}
+                    {criandoProduto === i && (
+                      <div className="mt-2 ml-5 p-2 bg-muted/50 rounded-md space-y-2">
+                        <p className="text-xs text-muted-foreground font-medium">Criar produto no estoque:</p>
+                        <div className="flex gap-2">
+                          <Input
+                            className="h-7 text-xs flex-1"
+                            placeholder="Nome do produto mãe (ex: Desinfetante Pastilha)"
+                            defaultValue={item.nome_original.split(' ').slice(0,3).join(' ')}
+                            id={`novo-nome-${i}`}
+                          />
+                          <Select value={novaCategoria} onValueChange={setNovaCategoria}>
+                            <SelectTrigger className="h-7 text-xs w-32"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {CATS_ESTOQUE.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex gap-1.5 justify-end">
+                          <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setCriandoProduto(null)}>Cancelar</Button>
+                          <Button size="sm" className="h-6 text-xs gap-1" onClick={() => {
+                            const input = document.getElementById(`novo-nome-${i}`) as HTMLInputElement;
+                            criarProdutoParaItem(i, input?.value || item.nome_original, novaCategoria);
+                          }}>
+                            <Plus className="h-3 w-3" /> Criar e vincular
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
