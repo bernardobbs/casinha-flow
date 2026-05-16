@@ -441,23 +441,36 @@ function ComprasPage() {
     if (!session) { setSugerindoIA(false); return; }
     try {
       const cats = CATS_ESTOQUE.join(', ');
-      const lista = naoId.map(x => x.i + ':' + x.nome).join(' | ');
-      const prompt = 'Para cada produto de supermercado, sugira nome curto do produto mae e categoria. Categorias: ' + cats + '. Retorne APENAS JSON: [{"indice":0,"nome_mae":"...","categoria":"..."}]. Produtos: ' + lista;
+      const lista = naoId.map(x => x.i + ':' + x.nome).join('\n');
+      const prompt = 'Classifique estes produtos de supermercado. Para cada um, sugira um nome curto para o produto mae e a categoria. Categorias disponiveis: ' + cats + '. Responda SOMENTE com array JSON sem markdown: [{"indice":0,"nome_mae":"nome curto","categoria":"Categoria"}]\n\nProdutos (formato indice:nome):\n' + lista;
       const resp = await fetch('https://mmqoyozyeidxbgbxqnda.supabase.co/functions/v1/ai-assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token, 'apikey': 'sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX' },
-        body: JSON.stringify({ feature: 'categorizacao', messages: [{ role: 'user', content: prompt }] }),
+        body: JSON.stringify({ feature: 'assistente', messages: [{ role: 'user', content: prompt }] }),
       });
       if (!resp.ok) throw new Error('Erro ' + resp.status);
       const data = await resp.json();
       const raw = (data.text ?? '') as string;
-      const m = raw.match(/\[[\s\S]*?\]/);
-      if (!m) throw new Error('IA nao retornou JSON');
-      const resultados: {indice:number;nome_mae:string;categoria:string}[] = JSON.parse(m[0]);
+      // Parser robusto: tenta JSON direto, depois array, depois objetos individuais
+      let resultados: {indice:number;nome_mae:string;categoria:string}[] = [];
+      try { resultados = JSON.parse(raw); } catch { /* */ }
+      if (!resultados.length) {
+        const m = raw.match(/\[[\s\S]*\]/);
+        if (m) { try { resultados = JSON.parse(m[0]); } catch { /* */ } }
+      }
+      if (!resultados.length) {
+        // Extrair objetos individuais
+        const objs = [...raw.matchAll(/\{[^{}]+\}/g)];
+        for (const o of objs) { try { resultados.push(JSON.parse(o[0])); } catch { /* */ } }
+      }
+      if (!resultados.length) throw new Error('IA nao retornou JSON. Resposta: ' + raw.slice(0, 100));
       const novas: Record<number, {nome:string;categoria:string}> = {};
-      resultados.forEach(r => { novas[r.indice] = { nome: r.nome_mae, categoria: r.categoria }; });
+      resultados.forEach(r => {
+        const idx = Number(r.indice);
+        if (!isNaN(idx)) novas[idx] = { nome: r.nome_mae || '', categoria: r.categoria || 'Mercearia' };
+      });
       setSugestoes(novas);
-      toast.success('IA sugeriu ' + resultados.length + ' classificacoes');
+      toast.success('IA sugeriu ' + Object.keys(novas).length + ' classificacoes');
     } catch (e: any) { toast.error('Erro IA: ' + e.message); }
     setSugerindoIA(false);
   };
