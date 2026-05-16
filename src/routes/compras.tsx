@@ -433,46 +433,36 @@ function ComprasPage() {
   };
 
   const sugerirComIA = async () => {
-    const naoIdentificados = importItens.map((item, i) => ({ i, nome: item.nome_original }))
+    const naoId = importItens.map((item, i) => ({ i, nome: item.nome_original }))
       .filter(x => !importItens[x.i].sub_produto_id);
-    if (!naoIdentificados.length) return;
+    if (!naoId.length) return;
     setSugerindoIA(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setSugerindoIA(false); return; }
     try {
-      const cats = CATS_ESTOQUE;
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL || 'https://mmqoyozyeidxbgbxqnda.supabase.co'}/functions/v1/ai-assistant`, {
+      const cats = CATS_ESTOQUE.join(', ');
+      const lista = naoId.map(x => x.i + ':' + x.nome).join(' | ');
+      const prompt = 'Para cada produto de supermercado, sugira nome curto do produto mae e categoria. Categorias: ' + cats + '. Retorne APENAS JSON: [{"indice":0,"nome_mae":"...","categoria":"..."}]. Produtos: ' + lista;
+      const resp = await fetch('https://mmqoyozyeidxbgbxqnda.supabase.co/functions/v1/ai-assistant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}`, 'apikey': 'sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX' },
-        body: JSON.stringify({
-          feature: 'categorizacao',
-          messages: [{ role: 'user', content:
-            `Para cada produto de supermercado abaixo, sugira:
-1. Um nome curto e genérico para o "produto mãe" (ex: "Desinfetante Pastilha", "Saco Higiênico para Pet", "Chocolate Kinder")
-2. A categoria mais adequada dentre: ${cats.join(', ')}
-
-Retorne APENAS JSON válido: [{"indice": 0, "nome_mae": "...", "categoria": "..."}]
-
-Produtos:
-${naoIdentificados.map(x => `{"indice": ${x.i}, "nome_original": "${x.nome}"}`).join('
-')}` }]
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token, 'apikey': 'sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX' },
+        body: JSON.stringify({ feature: 'categorizacao', messages: [{ role: 'user', content: prompt }] }),
       });
       if (!resp.ok) throw new Error('Erro ' + resp.status);
       const data = await resp.json();
-      const raw = data.text ?? data.results?.[0]?.text ?? '';
-      const jsonMatch = raw.match(/\[[\s\S]*?\]/);
-      if (!jsonMatch) throw new Error('IA não retornou JSON');
-      const resultados: {indice:number;nome_mae:string;categoria:string}[] = JSON.parse(jsonMatch[0]);
+      const raw = (data.text ?? '') as string;
+      const m = raw.match(/\[[\s\S]*?\]/);
+      if (!m) throw new Error('IA nao retornou JSON');
+      const resultados: {indice:number;nome_mae:string;categoria:string}[] = JSON.parse(m[0]);
       const novas: Record<number, {nome:string;categoria:string}> = {};
       resultados.forEach(r => { novas[r.indice] = { nome: r.nome_mae, categoria: r.categoria }; });
       setSugestoes(novas);
-      toast.success(`✨ IA sugeriu ${resultados.length} classificações — revise e confirme`);
+      toast.success('IA sugeriu ' + resultados.length + ' classificacoes');
     } catch (e: any) { toast.error('Erro IA: ' + e.message); }
     setSugerindoIA(false);
   };
 
-  const criarProdutoParaItem = async (idx: number, nomeMae: string, categoria: string) => {
+    const criarProdutoParaItem = async (idx: number, nomeMae: string, categoria: string) => {
     if (!familyId || !nomeMae.trim()) return;
     // Criar produto mãe
     const { data: mae } = await supabase.from('products' as any).insert({
