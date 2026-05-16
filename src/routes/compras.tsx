@@ -804,6 +804,66 @@ function ItemRow({ item, onToggle, onPrice, onRemove }: {
   );
 }
 
+function ListDialog({ open, editing, onClose, onSave }: {
+  open: boolean; editing?: ShoppingList; onClose: () => void;
+  onSave: (form: { nome: string; data_prevista: Date | undefined; local_preferido: string }) => void;
+}) {
+  const initialLocal = editing?.local_preferido && !LOCAIS.includes(editing.local_preferido as any) ? "Outro" : (editing?.local_preferido ?? "");
+  const [nome, setNome] = useState(editing?.nome ?? "");
+  const [data, setData] = useState<Date | undefined>(editing?.data_prevista ? new Date(editing.data_prevista + "T00:00:00") : undefined);
+  const [localSel, setLocalSel] = useState<string>(initialLocal);
+  const [localOutro, setLocalOutro] = useState<string>(initialLocal === "Outro" ? (editing?.local_preferido ?? "") : "");
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{editing ? "Editar lista" : "Nova lista"}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Nome *</Label>
+            <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Compra do mês" />
+          </div>
+          <div>
+            <Label>Data prevista</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !data && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {data ? format(data, "PPP", { locale: ptBR }) : "Escolher data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={data} onSelect={setData} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div>
+            <Label>Local preferido</Label>
+            <Select value={localSel} onValueChange={setLocalSel}>
+              <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+              <SelectContent>
+                {LOCAIS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {localSel === "Outro" && (
+              <Input className="mt-2" value={localOutro} onChange={(e) => setLocalOutro(e.target.value)} placeholder="Nome do local" />
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={() => onSave({
+            nome,
+            data_prevista: data,
+            local_preferido: localSel === "Outro" ? localOutro : localSel,
+          })}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 function ItemDialog({ open, productNames, onClose, onSave }: {
   open: boolean; productNames: string[]; onClose: () => void;
   onSave: (form: { nome: string; quantidade: number; unidade: string; preco_estimado: number | null }) => void;
