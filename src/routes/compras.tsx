@@ -77,6 +77,14 @@ function ComprasPage() {
   const [categories, setCategories] = useState<{ id: string; nome: string }[]>([]);
 
   const [listDialog, setListDialog] = useState<{ open: boolean; editing?: ShoppingList }>({ open: false });
+  const [importDialog, setImportDialog] = useState(false);
+  const [importTexto, setImportTexto] = useState("");
+  const [importData, setImportData] = useState("");
+  const [importConta, setImportConta] = useState("");
+  const [importNome, setImportNome] = useState("");
+  const [importItens, setImportItens] = useState<any[]>([]);
+  const [importStep, setImportStep] = useState<"input"|"review"|"done">("input");
+  const [importLoading, setImportLoading] = useState(false);
   const [itemDialog, setItemDialog] = useState<{ open: boolean; listId?: string }>({ open: false });
   const [deleteList, setDeleteList] = useState<ShoppingList | null>(null);
   const [completeAsk, setCompleteAsk] = useState<ShoppingList | null>(null);
