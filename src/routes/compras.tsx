@@ -432,26 +432,36 @@ function ComprasPage() {
     setImportLoading(false);
   };
 
+  const callIA = async (prompt: string): Promise<string> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Sessao invalida — faca login novamente');
+    const resp = await fetch('https://mmqoyozyeidxbgbxqnda.supabase.co/functions/v1/ai-assistant', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+        'apikey': 'sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX',
+      },
+      body: JSON.stringify({ feature: 'assistente', messages: [{ role: 'user', content: prompt }] }),
+    });
+    if (!resp.ok) {
+      const body = await resp.text();
+      throw new Error('Erro ' + resp.status + ': ' + body.slice(0, 100));
+    }
+    const data = await resp.json();
+    return (data.text ?? '') as string;
+  };
+
   const sugerirComIA = async () => {
     const naoId = importItens.map((item, i) => ({ i, nome: item.nome_original }))
       .filter(x => !importItens[x.i].sub_produto_id);
     if (!naoId.length) return;
     setSugerindoIA(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { setSugerindoIA(false); return; }
     try {
       const cats = CATS_ESTOQUE.join(', ');
       const lista = naoId.map(x => x.i + ':' + x.nome).join('\n');
-      const prompt = 'Classifique estes produtos de supermercado. Para cada um, sugira um nome curto para o produto mae e a categoria. Categorias disponiveis: ' + cats + '. Responda SOMENTE com array JSON sem markdown: [{"indice":0,"nome_mae":"nome curto","categoria":"Categoria"}]\n\nProdutos (formato indice:nome):\n' + lista;
-      const resp = await fetch('https://mmqoyozyeidxbgbxqnda.supabase.co/functions/v1/ai-assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token, 'apikey': 'sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX' },
-        body: JSON.stringify({ feature: 'assistente', messages: [{ role: 'user', content: prompt }] }),
-      });
-      if (!resp.ok) throw new Error('Erro ' + resp.status);
-      const data = await resp.json();
-      const raw = (data.text ?? '') as string;
-      // Parser robusto: tenta JSON direto, depois array, depois objetos individuais
+      const prompt = 'Classifique estes produtos de supermercado. Para cada um, sugira um nome curto para o produto mae e a categoria. Categorias disponiveis: ' + cats + '. Responda SOMENTE com array JSON sem markdown: [{"indice":0,"nome_mae":"nome curto","categoria":"Categoria"}]\n\nProdutos (indice:nome):\n' + lista;
+      const raw = await callIA(prompt);
       let resultados: {indice:number;nome_mae:string;categoria:string}[] = [];
       try { resultados = JSON.parse(raw); } catch { /* */ }
       if (!resultados.length) {
@@ -459,11 +469,10 @@ function ComprasPage() {
         if (m) { try { resultados = JSON.parse(m[0]); } catch { /* */ } }
       }
       if (!resultados.length) {
-        // Extrair objetos individuais
         const objs = [...raw.matchAll(/\{[^{}]+\}/g)];
         for (const o of objs) { try { resultados.push(JSON.parse(o[0])); } catch { /* */ } }
       }
-      if (!resultados.length) throw new Error('IA nao retornou JSON. Resposta: ' + raw.slice(0, 100));
+      if (!resultados.length) throw new Error('IA nao retornou JSON. Resposta: ' + raw.slice(0, 150));
       const novas: Record<number, {nome:string;categoria:string}> = {};
       resultados.forEach(r => {
         const idx = Number(r.indice);
