@@ -545,12 +545,13 @@ function ComprasPage() {
       : 'Compras ' + new Date(dataCompra + 'T12:00').toLocaleDateString('pt-BR'));
 
     // 1. Criar lista de compras
-    const { data: lista } = await supabase.from("shopping_lists" as any).insert({
+    const { data: lista, error: listaErr } = await supabase.from("shopping_lists" as any).insert({
       family_id: familyId, created_by: user?.id,
       nome: nomeAuto,
       status: "concluida", data_prevista: dataCompra,
       location_id: importLocalId || null,
     }).select("id").single();
+    if (listaErr) console.error("Erro ao criar lista:", listaErr);
 
     // 2. Dar entrada no estoque dos vinculados
     for (const item of importItens) {
@@ -602,9 +603,9 @@ function ComprasPage() {
 
     toast.success(`✅ ${importItens.filter(i => i.sub_produto_id).length} itens no estoque + transação R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
     setImportStep("done");
-    reload();
     setImportLoading(false);
-    if (lista) reload();
+    await reload();
+    setTab("concluida" as any);
   };
 
   return (
