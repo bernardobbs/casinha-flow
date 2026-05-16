@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Printer, Loader2, TrendingUp, BarChart3, FileText } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, TrendingUp, BarChart3, FileText, MapPin } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/relatorios" as any)({
@@ -197,10 +197,11 @@ function RelatoriosPage() {
 
         <main className="max-w-4xl mx-auto px-4 py-5">
           <Tabs defaultValue="extrato">
-            <TabsList className="no-print mb-4 w-full sm:w-auto">
+            <TabsList className="no-print mb-4 w-full sm:w-auto grid grid-cols-4">
               <TabsTrigger value="extrato" className="gap-1.5"><FileText className="h-4 w-4" />Extrato</TabsTrigger>
               <TabsTrigger value="evolucao" className="gap-1.5"><TrendingUp className="h-4 w-4" />Evolução Mensal</TabsTrigger>
               <TabsTrigger value="orcado" className="gap-1.5"><BarChart3 className="h-4 w-4" />Orçado x Realizado</TabsTrigger>
+              <TabsTrigger value="precos" className="gap-1.5"><MapPin className="h-4 w-4" />Preços</TabsTrigger>
             </TabsList>
 
             {/* ── ABA EXTRATO ─────────────────────────── */}
@@ -415,5 +416,114 @@ function RelatoriosPage() {
         </main>
       </div>
     </>
+  );
+}
+
+function ComparativoPrecos({ familyId }: { familyId: string }) {
+  const [dados, setDados] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [busca, setBusca] = useState('');
+  const { supabase: sb } = { supabase: (window as any).__supabase };
+
+  useEffect(() => {
+    if (!familyId) return;
+    setLoading(true);
+    import('@/integrations/supabase/client').then(({ supabase }) => {
+      supabase.from('product_price_history' as any)
+        .select(`id, preco_unitario, data, quantidade,
+          product:product_id(id, nome, unidade),
+          location:location_id(id, nome)`)
+        .eq('family_id', familyId)
+        .order('data', { ascending: false })
+        .limit(500)
+        .then(({ data }) => {
+          setDados((data ?? []) as any[]);
+          setLoading(false);
+        });
+    });
+  }, [familyId]);
+
+  // Agrupar por produto → comparar locais
+  const agrupado = useMemo(() => {
+    const map: Record<string, { nome: string; unidade: string; locais: Record<string, { nome: string; precos: {preco:number;data:string}[] }> }> = {};
+    dados.forEach((r: any) => {
+      const pid = r.product?.id;
+      const pnome = r.product?.nome ?? '—';
+      const pund = r.product?.unidade ?? '';
+      const lid = r.location?.id ?? 'sem_local';
+      const lnome = r.location?.nome ?? 'Sem local';
+      if (!pid) return;
+      if (!map[pid]) map[pid] = { nome: pnome, unidade: pund, locais: {} };
+      if (!map[pid].locais[lid]) map[pid].locais[lid] = { nome: lnome, precos: [] };
+      map[pid].locais[lid].precos.push({ preco: Number(r.preco_unitario), data: r.data });
+    });
+    return Object.entries(map)
+      .filter(([, v]) => Object.keys(v.locais).length >= 1)
+      .map(([pid, v]) => ({
+        pid, nome: v.nome, unidade: v.unidade,
+        locais: Object.entries(v.locais).map(([lid, l]) => ({
+          lid, nome: l.nome,
+          preco_atual: l.precos[0]?.preco ?? 0,
+          data_atual: l.precos[0]?.data ?? '',
+          preco_min: Math.min(...l.precos.map(p => p.preco)),
+          preco_max: Math.max(...l.precos.map(p => p.preco)),
+        })).sort((a, b) => a.preco_atual - b.preco_atual)
+      }))
+      .filter(p => !busca || p.nome.toLowerCase().includes(busca.toLowerCase()))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [dados, busca]);
+
+  const fmtBRL2 = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-border/60">
+        <CardContent className="py-4">
+          <Input placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} />
+        </CardContent>
+      </Card>
+      {loading ? (
+        <Card><CardContent className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></CardContent></Card>
+      ) : agrupado.length === 0 ? (
+        <Card><CardContent className="py-10 text-center text-muted-foreground">
+          <MapPin className="h-10 w-10 mx-auto mb-2 opacity-30" />
+          <p>Nenhum histórico de preços ainda.</p>
+          <p className="text-sm mt-1">Importe listas com local de compra para começar o comparativo.</p>
+        </CardContent></Card>
+      ) : (
+        <div className="space-y-2">
+          {agrupado.map(p => (
+            <Card key={p.pid} className="border-border/60">
+              <CardContent className="py-3">
+                <p className="font-medium text-sm mb-2">{p.nome}</p>
+                <div className="space-y-1">
+                  {p.locais.map((l, i) => {
+                    const isCheapest = i === 0 && p.locais.length > 1;
+                    const pctDiff = i > 0 && p.locais[0].preco_atual > 0
+                      ? ((l.preco_atual - p.locais[0].preco_atual) / p.locais[0].preco_atual * 100)
+                      : 0;
+                    return (
+                      <div key={l.lid} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          {isCheapest && <span className="text-xs bg-emerald-500/15 text-emerald-700 px-1.5 rounded">Mais barato</span>}
+                          <span className="text-muted-foreground">{l.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-right">
+                          <span className={`font-medium tabular-nums ${isCheapest ? 'text-emerald-700' : ''}`}>
+                            {fmtBRL2(l.preco_atual)}/{p.unidade}
+                          </span>
+                          {pctDiff > 0 && <span className="text-xs text-orange-500">+{pctDiff.toFixed(0)}%</span>}
+                          <span className="text-xs text-muted-foreground">{new Date(l.data_atual+'T12:00').toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

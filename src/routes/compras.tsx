@@ -84,6 +84,11 @@ function ComprasPage() {
   const [importItens, setImportItens] = useState<any[]>([]);
   const [importStep, setImportStep] = useState<"input"|"review"|"done">("input");
   const [importLoading, setImportLoading] = useState(false);
+  const [locations, setLocations] = useState<{id:string;nome:string;tipo:string}[]>([]);
+  const [importLocalId, setImportLocalId] = useState('');
+  const [localDialog, setLocalDialog] = useState(false);
+  const [localForm, setLocalForm] = useState({nome:'',tipo:'supermercado',endereco:'',cnpj:''});
+  const [localSaving, setLocalSaving] = useState(false);
   const [criandoProduto, setCriandoProduto] = useState<number | null>(null); // índice do item
   const [sugerindoIA, setSugerindoIA] = useState(false);
   const [sugestoes, setSugestoes] = useState<Record<number, {nome:string;categoria:string}>>({});
@@ -434,6 +439,24 @@ function ComprasPage() {
     setImportLoading(false);
   };
 
+  const salvarLocal = async () => {
+    if (!localForm.nome.trim()) { toast.error('Nome obrigatorio'); return; }
+    setLocalSaving(true);
+    const { data, error } = await supabase.from('shopping_locations' as any).insert({
+      family_id: familyId, nome: localForm.nome.trim(), tipo: localForm.tipo,
+      endereco: localForm.endereco || null, cnpj: localForm.cnpj || null,
+    }).select('id, nome, tipo').single();
+    if (error) { toast.error(error.message); }
+    else {
+      setLocations(prev => [...prev, data as any]);
+      setImportLocalId((data as any).id);
+      toast.success('Local criado!');
+      setLocalDialog(false);
+      setLocalForm({nome:'',tipo:'supermercado',endereco:'',cnpj:''});
+    }
+    setLocalSaving(false);
+  };
+
   const callIA = async (prompt: string): Promise<string> => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) throw new Error('Sessao invalida — faca login novamente');
@@ -552,6 +575,24 @@ function ComprasPage() {
         account_id: importConta, date: dataCompra,
         tipo_especial: "normal",
       });
+    }
+
+    // Salvar histórico de preços
+    if (importLocalId) {
+      const priceInserts = importItens
+        .filter(i => i.sub_produto_id && i.preco_unitario > 0)
+        .map(i => ({
+          family_id: familyId, product_id: i.sub_produto_id,
+          location_id: importLocalId, preco_unitario: i.preco_unitario,
+          quantidade: i.qtd, data: dataCompra,
+        }));
+      if (priceInserts.length) {
+        await supabase.from('product_price_history' as any).insert(priceInserts);
+      }
+      // Vincular lista ao local
+      if ((lista as any)?.id) {
+        await supabase.from('shopping_lists' as any).update({ location_id: importLocalId }).eq('id', (lista as any).id);
+      }
     }
 
     toast.success(`✅ ${importItens.filter(i => i.sub_produto_id).length} itens no estoque + transação R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
@@ -818,6 +859,19 @@ function ComprasPage() {
                   <Input value={importNome} onChange={e => setImportNome(e.target.value)} placeholder="Matheus 17/05" /></div>
                 <div><Label>Data</Label>
                   <Input type="date" value={importData} onChange={e => setImportData(e.target.value)} /></div>
+              </div>
+              <div><Label>Local de compra</Label>
+                <div className="flex gap-2">
+                  <Select value={importLocalId} onValueChange={setImportLocalId}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {locations.map((l: any) => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setLocalDialog(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div><Label>Conta de pagamento</Label>
                 <Select value={importConta} onValueChange={setImportConta}>
