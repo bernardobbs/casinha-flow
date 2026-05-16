@@ -415,7 +415,7 @@ function ComprasPage() {
     toast.success(`✅ ${importItens.filter(i => i.sub_produto_id).length} itens no estoque + transação R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
     setImportStep("done");
     setImportLoading(false);
-    if (lista) loadListas();
+    if (lista) reload();
   };
 
   return (
