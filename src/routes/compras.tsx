@@ -87,6 +87,8 @@ function ComprasPage() {
   const [criandoProduto, setCriandoProduto] = useState<number | null>(null); // índice do item
   const [sugerindoIA, setSugerindoIA] = useState(false);
   const [sugestoes, setSugestoes] = useState<Record<number, {nome:string;categoria:string}>>({});
+  const [modoImportIA, setModoImportIA] = useState(false);
+  const [respostaIA, setRespostaIA] = useState('');
   const [novaCategoria, setNovaCategoria] = useState('Mercearia');
   const CATS_ESTOQUE = ['Mercearia','Laticínios','Bebidas','Bebidas Quentes','Carnes','Frios','Temperos','Higiene','Limpeza'];
   const [itemDialog, setItemDialog] = useState<{ open: boolean; listId?: string }>({ open: false });
@@ -845,14 +847,72 @@ function ComprasPage() {
                     {importItens.filter(i => !i.sub_produto_id).length} ⚠️
                   </span>
                   {importItens.some(i => !i.sub_produto_id) && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
-                      onClick={sugerirComIA} disabled={sugerindoIA}>
-                      {sugerindoIA ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-primary" />}
-                      {sugerindoIA ? 'Analisando...' : '✨ Classificar com IA'}
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+                        onClick={sugerirComIA} disabled={sugerindoIA}>
+                        {sugerindoIA ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-primary" />}
+                        {sugerindoIA ? 'Analisando...' : '✨ IA'}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1"
+                        onClick={() => {
+                          const cats = CATS_ESTOQUE.join(', ');
+                          const naoId = importItens.filter(i => !i.sub_produto_id);
+                          const texto = 'Para cada produto abaixo, sugira um nome curto para o "produto mae" e a categoria.
+' +
+                            'Categorias: ' + cats + '
+' +
+                            'Responda em JSON: [{"indice":0,"nome_mae":"...","categoria":"..."}]
+
+' +
+                            'Produtos:
+' + naoId.map((it, i) => i + ':' + it.nome_original).join('
+');
+                          navigator.clipboard.writeText(texto);
+                          toast.success('Copiado! Cole em qualquer IA e depois cole a resposta abaixo');
+                          setModoImportIA(true);
+                        }}>
+                        📋 Copiar prompt
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
+              {modoImportIA && (
+                <div className="border rounded-md p-3 bg-primary/5 space-y-2">
+                  <p className="text-xs font-medium">Cole aqui a resposta JSON da IA externa:</p>
+                  <textarea
+                    className="w-full h-24 text-xs font-mono border rounded-md p-2 bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder={'[{"indice":0,"nome_mae":"Desinfetante Pastilha","categoria":"Limpeza"},...]'}
+                    value={respostaIA}
+                    onChange={e => setRespostaIA(e.target.value)}
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setModoImportIA(false); setRespostaIA(''); }}>Cancelar</Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={() => {
+                      try {
+                        const raw = respostaIA.trim();
+                        let resultados: {indice:number;nome_mae:string;categoria:string}[] = [];
+                        try { resultados = JSON.parse(raw); } catch { /* */ }
+                        if (!resultados.length) {
+                          const m = raw.match(/\[[\s\S]*\]/);
+                          if (m) resultados = JSON.parse(m[0]);
+                        }
+                        const novas: Record<number, {nome:string;categoria:string}> = {};
+                        // Mapear por índice ou por posição na lista de não identificados
+                        const naoId = importItens.map((it, i) => ({i, it})).filter(x => !x.it.sub_produto_id);
+                        resultados.forEach((r, pos) => {
+                          const idx = r.indice !== undefined ? Number(r.indice) : (naoId[pos]?.i ?? -1);
+                          if (idx >= 0) novas[idx] = { nome: r.nome_mae || '', categoria: r.categoria || 'Mercearia' };
+                        });
+                        setSugestoes(novas);
+                        setModoImportIA(false);
+                        setRespostaIA('');
+                        toast.success(Object.keys(novas).length + ' sugestoes aplicadas');
+                      } catch (e: any) { toast.error('JSON invalido: ' + e.message); }
+                    }}>Aplicar sugestões</Button>
+                  </div>
+                </div>
+              )}
               <div className="max-h-[340px] overflow-y-auto space-y-1 border rounded-md p-2">
                 {importItens.map((item, i) => (
                   <div key={i} className="text-xs py-1.5 border-b last:border-0">
