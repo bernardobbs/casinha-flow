@@ -687,7 +687,7 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
         proxima_data: proximaData || null,
       });
       if (error) throw error;
-      await supabase.from("vehicles" as any).update({ odometro_atual: h }).eq("id", vehicleId);
+      // Hodômetro só é atualizado por abastecimento, não por manutenção
       toast.success("✅ Manutenção registrada");
       onOpenChange(false); onSaved();
     } catch (e: any) {
