@@ -311,6 +311,45 @@ function ComprasPage() {
 
   // ── UI ────────────────────────────────────────────────
   // Parsear texto do SoftList
+  // Detectar formato automaticamente
+  const detectarFormato = (texto: string): 'softlist' | 'nfce' => {
+    const linhas = texto.split(/?
+/).filter(l => l.trim());
+    // NFC-e: tem tabs e cabeçalho com "Código" ou "Descrição"
+    if (linhas[0] && (linhas[0].includes('	') || /código.*descrição/i.test(linhas[0]))) return 'nfce';
+    return 'softlist';
+  };
+
+  // Parser NFC-e SEFAZ (formato com tabs: Código | Descrição | Qtde | Un | Vl Unit | Vl Total)
+  const parseNFCe = (texto: string) => {
+    const linhas = texto.split(/?
+/).filter(l => l.trim());
+    const itens: any[] = [];
+    for (const linha of linhas) {
+      const cols = linha.split('	').map(c => c.trim());
+      if (cols.length < 4) continue;
+      // Pular cabeçalho e rodapé
+      if (/código|descrição|qtd.*total|forma.*pag/i.test(linha)) continue;
+      if (/valor.*total|cartão|dinheiro|pix/i.test(linha)) continue;
+      // Tentar parsear: Código | Descrição | Qtde | Un | Vl Unit | Vl Total
+      let nome: string, qtd: number, preco: number;
+      if (cols.length >= 6 && !isNaN(parseInt(cols[0]))) {
+        // Formato: Código | Descrição | Qtde | Un | Vl Unit | Vl Total
+        nome = cols[1];
+        qtd = parseFloat(cols[2].replace(',', '.')) || 0;
+        preco = parseFloat(cols[4].replace(',', '.')) || 0;
+      } else if (cols.length >= 4 && !isNaN(parseFloat(cols[cols.length-1].replace(',','.')))) {
+        // Formato alternativo
+        nome = cols[0];
+        qtd = parseFloat(cols[cols.length-3]?.replace(',', '.')) || 1;
+        preco = parseFloat(cols[cols.length-2]?.replace(',', '.')) || 0;
+      } else continue;
+      if (!nome || nome.length < 3 || qtd <= 0) continue;
+      itens.push({ nome_original: nome, qtd, preco_unitario: preco, total: qtd * preco, vinculado: null, sub_produto_id: null });
+    }
+    return itens;
+  };
+
   const parseSoftList = (texto: string) => {
     const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const itens: any[] = [];
@@ -368,7 +407,8 @@ function ComprasPage() {
   const processarImport = async () => {
     if (!importTexto.trim()) { toast.error("Cole o texto da lista"); return; }
     setImportLoading(true);
-    const itens = parseSoftList(importTexto);
+    const formato = detectarFormato(importTexto);
+    const itens = formato === 'nfce' ? parseNFCe(importTexto) : parseSoftList(importTexto);
     if (!itens.length) { toast.error("Nenhum item encontrado. Verifique o formato."); setImportLoading(false); return; }
     const vinculados = await vincularProdutos(itens);
     setImportItens(vinculados);
@@ -677,7 +717,7 @@ function ComprasPage() {
 
           {importStep === "input" && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Cole o texto exportado do SoftList abaixo. Formato esperado: nome do produto, quantidade, preço.</p>
+              <p className="text-sm text-muted-foreground">Cole o texto do <strong>SoftList</strong> ou da <strong>NFC-e SEFAZ</strong> (selecione tudo na nota e cole aqui). O formato é detectado automaticamente.</p>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Nome da compra</Label>
                   <Input value={importNome} onChange={e => setImportNome(e.target.value)} placeholder="Matheus 17/05" /></div>
@@ -691,7 +731,7 @@ function ComprasPage() {
                 </Select></div>
               <div><Label>Texto da lista (SoftList)</Label>
                 <Textarea value={importTexto} onChange={e => setImportTexto(e.target.value)}
-                  rows={10} placeholder={"ARROZ TIO JOÃO 1KG\n5 un\nR$ 6,99\nDETERGENTE LIMPOL 500ML\n6 un\nR$ 2,19\n..."} className="font-mono text-xs" /></div>
+                  rows={10} placeholder={"SoftList: Nome\nQtd un\nR$ X,XX\n\nNFC-e SEFAZ: Cole o conteúdo com colunas (Código, Descrição, Qtde...)"} className="font-mono text-xs" /></div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setImportDialog(false)}>Cancelar</Button>
                 <Button onClick={processarImport} disabled={importLoading} className="gap-1.5">
