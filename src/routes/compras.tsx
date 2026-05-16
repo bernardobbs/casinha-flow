@@ -546,9 +546,10 @@ function ComprasPage() {
 
     // 1. Criar lista de compras
     const { data: lista } = await supabase.from("shopping_lists" as any).insert({
-      family_id: familyId, user_id: user.id,
-      nome: importNome || `Compras ${new Date(dataCompra + "T12:00").toLocaleDateString("pt-BR")}`,
+      family_id: familyId, created_by: user?.id,
+      nome: nomeAuto,
       status: "concluida", data_prevista: dataCompra,
+      location_id: importLocalId || null,
     }).select("id").single();
 
     // 2. Dar entrada no estoque dos vinculados
@@ -601,6 +602,7 @@ function ComprasPage() {
 
     toast.success(`✅ ${importItens.filter(i => i.sub_produto_id).length} itens no estoque + transação R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
     setImportStep("done");
+    reload();
     setImportLoading(false);
     if (lista) reload();
   };
