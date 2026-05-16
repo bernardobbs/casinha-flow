@@ -5,7 +5,6 @@ import { ptBR } from "date-fns/locale";
 import { CalendarIcon, ShoppingCart, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Loader2, ListChecks, Wallet, CheckCircle2, Package, Upload, FileText, AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
