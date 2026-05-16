@@ -110,7 +110,7 @@ function ManutencaoPage() {
     if (!form.titulo.trim()) { toast.error("Título é obrigatório"); return; }
     setSaving(true);
     const payload: any = {
-      family_id: familyId, user_id: user?.id,
+      family_id: familyId,
       titulo: form.titulo.trim(), categoria: form.categoria,
       descricao: form.descricao || null, prioridade: form.prioridade,
       responsavel: form.responsavel || null,
