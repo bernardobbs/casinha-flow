@@ -312,24 +312,51 @@ function ComprasPage() {
   // ── UI ────────────────────────────────────────────────
   // Parsear texto do SoftList
   const detectarFormato = (texto: string): 'softlist' | 'nfce' => {
-    const primeira = texto.split('\n')[0] ?? '';
-    return primeira.includes('\t') || /^[0-9]+\t/.test(primeira) ? 'nfce' : 'softlist';
+    const linhas = texto.split('\n').filter(l => l.trim());
+    // NFC-e: tem tabs E pelo menos uma linha com código alfanumérico seguido de tab
+    const temTab = linhas.some(l => l.includes('\t'));
+    const temCodigo = linhas.some(l => /^[A-Z0-9]+\t/.test(l.trim()));
+    return (temTab && temCodigo) ? 'nfce' : 'softlist';
   };
 
   const parseNFCe = (texto: string) => {
     const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
     const itens: any[] = [];
+    // Encontrar onde começa a tabela de itens (após cabeçalho "Código Descrição...")
+    let iniciou = false;
     for (const linha of linhas) {
+      // Detectar cabeçalho da tabela
+      if (/^c.{0,3}digo.*descri/i.test(linha)) { iniciou = true; continue; }
+      if (!iniciou) continue;
+      // Parar no rodapé
+      if (/^qtd.*total|^valor.*total|^forma.*pag|^informa/i.test(linha)) break;
       const cols = linha.split('\t').map((c: string) => c.trim());
       if (cols.length < 4) continue;
-      const col0 = cols[0].toLowerCase();
-      if (col0.includes('igo') || col0.includes('escri') || col0.includes('qtd') || col0.includes('forma') || col0.includes('valor')) continue;
-      if (!cols[0] || isNaN(parseInt(cols[0]))) continue;
+      // Código: alfanumérico (ex: S255176, 94721, etc.)
+      if (!/^[A-Z0-9]+$/i.test(cols[0])) continue;
       const nome = cols[1] ?? '';
+      if (!nome || nome.length < 3) continue;
+      // Quantidade: pode ter vírgula decimal
       const qtd = parseFloat((cols[2] ?? '1').replace(',', '.')) || 0;
-      const preco = parseFloat((cols[4] ?? '0').replace(',', '.')) || 0;
-      if (!nome || nome.length < 3 || qtd <= 0) continue;
-      itens.push({ nome_original: nome, qtd, preco_unitario: preco, total: qtd * preco, vinculado: null, sub_produto_id: null });
+      if (qtd <= 0) continue;
+      // Unidade em cols[3]: UN, UNID, KG, etc.
+      // Preço unitário em cols[4], total em cols[5]
+      const preco = parseFloat((cols[4] ?? cols[3] ?? '0').replace(',', '.')) || 0;
+      const total = parseFloat((cols[5] ?? cols[4] ?? '0').replace(',', '.')) || qtd * preco;
+      itens.push({ nome_original: nome, qtd, preco_unitario: preco, total, vinculado: null, sub_produto_id: null });
+    }
+    // Se não detectou com cabeçalho, tentar heurística direta
+    if (!itens.length) {
+      for (const linha of linhas) {
+        const cols = linha.split('\t').map((c: string) => c.trim());
+        if (cols.length < 5) continue;
+        if (!/^[A-Z0-9]+$/i.test(cols[0])) continue;
+        const nome = cols[1] ?? '';
+        const qtd = parseFloat((cols[2] ?? '1').replace(',', '.')) || 0;
+        const preco = parseFloat((cols[4] ?? '0').replace(',', '.')) || 0;
+        if (!nome || nome.length < 3 || qtd <= 0) continue;
+        itens.push({ nome_original: nome, qtd, preco_unitario: preco, total: qtd * preco, vinculado: null, sub_produto_id: null });
+      }
     }
     return itens;
   };
