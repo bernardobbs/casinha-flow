@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
@@ -104,8 +104,7 @@ async function askAI(
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Sessão inválida");
 
-  const SUPABASE_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
-  const SUPABASE_ANON = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
+  const SUPABASE_ANON = SUPABASE_PUBLISHABLE_KEY;
   const resp = await fetch(
     `${SUPABASE_URL}/functions/v1/ai-assistant`,
     {

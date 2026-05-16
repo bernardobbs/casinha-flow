@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,8 +127,8 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
   const [categorizando, setCategorizando] = useState(false);
   const [categorizandoId, setCategorizandoId] = useState<string | null>(null);
 
-  const SB_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
-  const SB_ANON = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
+  const SB_URL = SUPABASE_URL;
+  const SB_ANON = SUPABASE_PUBLISHABLE_KEY;
 
   const categorizarComIA = async (txList: Tx[]) => {
     if (!txList.length) { toast.info("Nenhuma transação sem categoria"); return; }

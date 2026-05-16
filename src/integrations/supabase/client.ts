@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 // BANCO PRINCIPAL — não alterar
-const SUPABASE_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
+export const SUPABASE_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
+export const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {

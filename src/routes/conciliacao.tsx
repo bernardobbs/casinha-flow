@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
 import { Button } from "@/components/ui/button";
@@ -64,8 +64,8 @@ function ConciliacaoPage() {
   const [reprocessando, setReprocessando] = useState(false);
   const [reprocessStep, setReprocessStep] = useState('');
 
-  const SB_URL = "https://mmqoyozyeidxbgbxqnda.supabase.co";
-  const SB_ANON = "sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX";
+  const SB_URL = SUPABASE_URL;
+  const SB_ANON = SUPABASE_PUBLISHABLE_KEY;
 
   const reprocessarTudo = async () => {
     if (!familyId) return;
