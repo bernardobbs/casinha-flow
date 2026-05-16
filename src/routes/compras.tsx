@@ -311,46 +311,30 @@ function ComprasPage() {
 
   // ── UI ────────────────────────────────────────────────
   // Parsear texto do SoftList
-  // Detectar formato automaticamente
   const detectarFormato = (texto: string): 'softlist' | 'nfce' => {
-    const linhas = texto.split(/?
-/).filter(l => l.trim());
-    // NFC-e: tem tabs e cabeçalho com "Código" ou "Descrição"
-    if (linhas[0] && (linhas[0].includes('	') || /código.*descrição/i.test(linhas[0]))) return 'nfce';
-    return 'softlist';
+    const primeira = texto.split('\n')[0] ?? '';
+    return primeira.includes('\t') || /^[0-9]+\t/.test(primeira) ? 'nfce' : 'softlist';
   };
 
-  // Parser NFC-e SEFAZ (formato com tabs: Código | Descrição | Qtde | Un | Vl Unit | Vl Total)
   const parseNFCe = (texto: string) => {
-    const linhas = texto.split(/?
-/).filter(l => l.trim());
+    const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
     const itens: any[] = [];
     for (const linha of linhas) {
-      const cols = linha.split('	').map(c => c.trim());
+      const cols = linha.split('\t').map((c: string) => c.trim());
       if (cols.length < 4) continue;
-      // Pular cabeçalho e rodapé
-      if (/código|descrição|qtd.*total|forma.*pag/i.test(linha)) continue;
-      if (/valor.*total|cartão|dinheiro|pix/i.test(linha)) continue;
-      // Tentar parsear: Código | Descrição | Qtde | Un | Vl Unit | Vl Total
-      let nome: string, qtd: number, preco: number;
-      if (cols.length >= 6 && !isNaN(parseInt(cols[0]))) {
-        // Formato: Código | Descrição | Qtde | Un | Vl Unit | Vl Total
-        nome = cols[1];
-        qtd = parseFloat(cols[2].replace(',', '.')) || 0;
-        preco = parseFloat(cols[4].replace(',', '.')) || 0;
-      } else if (cols.length >= 4 && !isNaN(parseFloat(cols[cols.length-1].replace(',','.')))) {
-        // Formato alternativo
-        nome = cols[0];
-        qtd = parseFloat(cols[cols.length-3]?.replace(',', '.')) || 1;
-        preco = parseFloat(cols[cols.length-2]?.replace(',', '.')) || 0;
-      } else continue;
+      const col0 = cols[0].toLowerCase();
+      if (col0.includes('igo') || col0.includes('escri') || col0.includes('qtd') || col0.includes('forma') || col0.includes('valor')) continue;
+      if (!cols[0] || isNaN(parseInt(cols[0]))) continue;
+      const nome = cols[1] ?? '';
+      const qtd = parseFloat((cols[2] ?? '1').replace(',', '.')) || 0;
+      const preco = parseFloat((cols[4] ?? '0').replace(',', '.')) || 0;
       if (!nome || nome.length < 3 || qtd <= 0) continue;
       itens.push({ nome_original: nome, qtd, preco_unitario: preco, total: qtd * preco, vinculado: null, sub_produto_id: null });
     }
     return itens;
   };
 
-  const parseSoftList = (texto: string) => {
+    const parseSoftList = (texto: string) => {
     const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const itens: any[] = [];
     let i = 0;
