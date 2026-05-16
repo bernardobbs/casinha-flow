@@ -1,290 +1,212 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,
-} from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Loader2, Minus, Plus } from "lucide-react";
-import { SkeletonRevisaoEstoque } from "@/components/skeletons";
+import { ArrowLeft, Package, CheckCircle2, Loader2 } from "lucide-react";
+import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/estoque/revisao-semanal")({
-  head: () => ({
-    meta: [
-      { title: "Revisão de Estoque — Casinha Hub" },
-      { name: "description", content: "Revisão semanal de estoque da família." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Inventário de Estoque — Casinha Hub" }] }),
   component: RevisaoEstoquePage,
 });
 
-interface StockItem {
-  id: string;
-  family_id: string;
-  nome: string;
-  categoria: string | null;
-  unidade: string;
-  quantidade_atual: number;
-  quantidade_minima: number;
-  data_validade: string | null;
-  ultima_revisao: string | null;
-  urgencia: "zerado" | "vencendo" | "critico" | "baixo" | "ok";
-  dias_sem_revisao: number;
-  dias_para_vencer: number | null;
-  dias_restantes: number | null;
-}
-
-const URG_BADGE: Record<StockItem["urgencia"], { label: string; cls: string }> = {
-  zerado:   { label: "🔴 Zerado",   cls: "bg-red-500/15 text-red-700" },
-  critico:  { label: "🟠 Crítico",  cls: "bg-orange-500/15 text-orange-700" },
-  baixo:    { label: "🟡 Baixo",    cls: "bg-yellow-500/15 text-yellow-700" },
-  vencendo: { label: "⚠️ Vencendo", cls: "bg-amber-500/15 text-amber-700" },
-  ok:       { label: "✅ OK",        cls: "bg-emerald-500/15 text-emerald-700" },
+type Produto = {
+  id: string; nome: string; categoria: string; unidade: string;
+  estoque_atual: number; quantidade_por_embalagem: number; unidade_embalagem: string;
+  parent_id: string | null;
 };
 
-const URG_ORDER: Record<StockItem["urgencia"], number> = {
-  zerado: 0, vencendo: 1, critico: 2, baixo: 3, ok: 4,
-};
+const CATS = ["Mercearia","Laticínios","Bebidas","Bebidas Quentes","Carnes","Frios","Temperos","Higiene","Limpeza"];
 
 function RevisaoEstoquePage() {
   const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const { familyId, loading: familyLoading } = useFamily();
-  const [items, setItems] = useState<StockItem[]>([]);
+  const navigate = useNavigate();
+  const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [finalizing, setFinalizing] = useState(false);
-  const [revisedIds, setRevisedIds] = useState<Set<string>>(new Set());
+  const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [catFiltro, setCatFiltro] = useState("Todas");
+  const [busyAll, setBusyAll] = useState(false);
+
+  useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!authLoading && !user) navigate({ to: "/auth" });
-  }, [user, authLoading, navigate]);
-
-  const load = async () => {
     if (!familyId) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("v_stock_review" as never)
-      .select("*")
-      .eq("family_id", familyId);
-    if (error) toast.error(error.message);
-    const list = ((data ?? []) as unknown as StockItem[])
-      .map((r) => ({ ...r, quantidade_atual: Number(r.quantidade_atual), quantidade_minima: Number(r.quantidade_minima) }))
-      .sort((a, b) => URG_ORDER[a.urgencia] - URG_ORDER[b.urgencia]);
-    setItems(list);
-    setLoading(false);
-  };
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from("products" as any)
+        .select("id, nome, categoria, unidade, estoque_atual, quantidade_por_embalagem, unidade_embalagem, parent_id")
+        .eq("family_id", familyId).eq("ativo", true)
+        .order("categoria").order("nome");
+      const list = ((data ?? []) as Produto[]);
+      setProdutos(list);
+      // Pré-preencher com valores atuais em embalagens
+      const init: Record<string, string> = {};
+      list.filter(p => p.parent_id !== null).forEach(p => {
+        const embs = p.quantidade_por_embalagem > 0 ? p.estoque_atual / p.quantidade_por_embalagem : 0;
+        init[p.id] = embs > 0 ? String(Math.round(embs * 10) / 10) : "0";
+      });
+      setInputs(init);
+      setLoading(false);
+    })();
+  }, [familyId]);
 
-  useEffect(() => { if (familyId) load(); /* eslint-disable-next-line */ }, [familyId]);
-
-  const counts = useMemo(() => ({
-    zerados: items.filter((i) => i.urgencia === "zerado").length,
-    criticos: items.filter((i) => i.urgencia === "critico").length,
-    vencendo: items.filter((i) => i.urgencia === "vencendo").length,
-    semRev: items.filter((i) => i.dias_sem_revisao >= 7).length,
-  }), [items]);
-
-  const adjustQty = async (item: StockItem, delta: number) => {
-    if (!user || !familyId) return;
-    setBusyId(item.id);
-    const tipo = delta >= 0 ? "entrada" : "saida";
-    const today = new Date().toISOString().slice(0, 10);
-    const { error } = await supabase.from("stock_movements").insert({
-      product_id: item.id,
-      family_id: familyId,
-      user_id: user.id,
-      tipo,
-      quantidade: Math.abs(delta),
-      data: today,
-    });
-    if (error) { setBusyId(null); toast.error(error.message); return; }
-
-    const novaQtd = Math.max(0, item.quantidade_atual + delta);
-    await supabase.from("products")
-      .update({ ultima_revisao: today, quantidade_atual: novaQtd })
-      .eq("id", item.id);
-
-    // Recalcular consumo médio após saída
-    if (tipo === "saida") {
-      await supabase.rpc("recalc_consumo_medio" as any, { p_product_id: item.id });
+  const salvarItem = async (filho: Produto, valor: string) => {
+    const qtd = parseFloat(valor.replace(",", "."));
+    if (isNaN(qtd) || qtd < 0) return;
+    const novoEstoque = qtd * filho.quantidade_por_embalagem;
+    setSaving(prev => ({ ...prev, [filho.id]: true }));
+    const { error } = await supabase.from("products" as any)
+      .update({ estoque_atual: novoEstoque }).eq("id", filho.id);
+    if (error) { toast.error(error.message); }
+    else {
+      setSaved(prev => new Set([...prev, filho.id]));
+      // Atualizar pai
+      const pai = produtos.find(p => p.id === filho.parent_id);
+      if (pai) {
+        const irmaos = produtos.filter(p => p.parent_id === filho.parent_id && p.id !== filho.id);
+        const totalFilhos = irmaos.reduce((s, p) => {
+          const v = parseFloat(inputs[p.id] ?? "0") || 0;
+          return s + v * p.quantidade_por_embalagem;
+        }, 0) + novoEstoque;
+        await supabase.from("products" as any).update({ estoque_atual: totalFilhos }).eq("id", filho.parent_id);
+        setProdutos(prev => prev.map(p => p.id === filho.parent_id ? { ...p, estoque_atual: totalFilhos } : p));
+      }
     }
-
-    setItems((prev) => prev.map((p) => p.id === item.id
-      ? { ...p, quantidade_atual: novaQtd, ultima_revisao: today, dias_sem_revisao: 0 }
-      : p));
-    setRevisedIds((s) => new Set(s).add(item.id));
-    setBusyId(null);
+    setSaving(prev => ({ ...prev, [filho.id]: false }));
   };
 
-  const acabou = async (item: StockItem) => {
-    if (!user || !familyId) return;
-    setBusyId(item.id);
-    const today = new Date().toISOString().slice(0, 10);
-    await supabase.from("stock_movements").insert({
-      product_id: item.id, family_id: familyId, user_id: user.id,
-      tipo: "ajuste", quantidade: 0, data: today, motivo: "Acabou — revisão semanal",
-    });
-    await supabase.from("products").update({ ultima_revisao: today, quantidade_atual: 0 }).eq("id", item.id);
-    setItems((prev) => prev.map((p) => p.id === item.id
-      ? { ...p, quantidade_atual: 0, urgencia: "zerado", ultima_revisao: today, dias_sem_revisao: 0 }
-      : p));
-    setRevisedIds((s) => new Set(s).add(item.id));
-    setBusyId(null);
-    toast.success("Marcado como zerado");
-  };
-
-  const naoCompro = async (item: StockItem) => {
-    setBusyId(item.id);
-    const { error } = await supabase.from("products").update({ ativo: false }).eq("id", item.id);
-    setBusyId(null);
-    if (error) { toast.error(error.message); return; }
-    setItems((prev) => prev.filter((p) => p.id !== item.id));
-    toast.success("Produto desativado");
-  };
-
-  const finalizar = async () => {
-    if (!user || !familyId) return;
-    setFinalizing(true);
-
-    // Recalcular consumo médio de todos os itens revisados
-    for (const id of revisedIds) {
-      await supabase.rpc("recalc_consumo_medio" as any, { p_product_id: id });
+  const salvarTodos = async () => {
+    setBusyAll(true);
+    const filhos = produtos.filter(p => p.parent_id !== null);
+    for (const filho of filhos) {
+      await salvarItem(filho, inputs[filho.id] ?? "0");
     }
-
-    const { error } = await supabase.from("weekly_reviews").insert({
-      family_id: familyId,
-      user_id: user.id,
-      checklist: {
-        tipo: "estoque",
-        revisados: revisedIds.size,
-        total_itens: items.length,
-        criticos: counts.criticos,
-        zerados: counts.zerados,
-        vencendo: counts.vencendo,
-        data: new Date().toISOString().slice(0, 10),
-      },
-    });
-    setFinalizing(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(`✅ Revisão finalizada — ${revisedIds.size} itens revisados`);
-    navigate({ to: "/estoque" });
+    toast.success("✅ Inventário salvo!");
+    setBusyAll(false);
   };
 
-  const todayPt = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+  // Organizar hierarquia
+  const maes = useMemo(() => produtos.filter(p => p.parent_id === null), [produtos]);
+  const filhosPor = useMemo(() => {
+    const m: Record<string, Produto[]> = {};
+    produtos.filter(p => p.parent_id).forEach(p => {
+      if (!m[p.parent_id!]) m[p.parent_id!] = [];
+      m[p.parent_id!].push(p);
+    });
+    return m;
+  }, [produtos]);
 
-  if (authLoading) return <SkeletonRevisaoEstoque />;
-  if (!user) return null;
+  const cats = useMemo(() => ["Todas", ...CATS.filter(c => maes.some(m => m.categoria === c))], [maes]);
+  const maesFiltradas = useMemo(() =>
+    maes.filter(m => catFiltro === "Todas" || m.categoria === catFiltro), [maes, catFiltro]);
+
+  const totalSalvos = saved.size;
+  const totalFilhos = produtos.filter(p => p.parent_id !== null).length;
+  const pct = totalFilhos > 0 ? Math.round((totalSalvos / totalFilhos) * 100) : 0;
+
+  if (authLoading || familyLoading) return <SkeletonPage />;
 
   return (
-    <div className="min-h-screen pb-24" style={{ background: "var(--gradient-subtle)" }}>
+    <div className="min-h-screen" style={{ background: "var(--gradient-subtle)" }}>
       <header className="border-b border-border/60 bg-card/60 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <span className="font-semibold tracking-tight">📦 Revisão de Estoque</span>
-          <Link to="/estoque"><Button variant="ghost" size="sm" className="gap-2"><ArrowLeft className="h-4 w-4" />Estoque</Button></Link>
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Link to="/estoque"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Estoque</Button></Link>
+            <h1 className="text-lg font-semibold flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" /> Inventário
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {totalSalvos > 0 && (
+              <span className="text-xs text-muted-foreground">{totalSalvos}/{totalFilhos} atualizados ({pct}%)</span>
+            )}
+            <Button size="sm" onClick={salvarTodos} disabled={busyAll} className="gap-1.5">
+              {busyAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              {busyAll ? "Salvando..." : "Salvar tudo"}
+            </Button>
+          </div>
         </div>
+        {/* Progresso */}
+        {totalSalvos > 0 && (
+          <div className="h-1 bg-muted">
+            <div className="h-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        )}
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-5">
-        <div>
-          <h1 className="text-xl font-semibold">Revisão de Estoque</h1>
-          <p className="text-sm text-muted-foreground">{todayPt}</p>
+      <main className="max-w-4xl mx-auto px-4 py-4 space-y-4">
+        {/* Instrução */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="py-3 text-sm text-muted-foreground">
+            💡 Digite a quantidade de <strong>embalagens</strong> que você tem em casa para cada produto. Deixe <strong>0</strong> se não tiver. Clique em <strong>Salvar tudo</strong> ao terminar.
+          </CardContent>
+        </Card>
+
+        {/* Filtro categoria */}
+        <div className="flex flex-wrap gap-1.5">
+          {cats.map(c => (
+            <button key={c} onClick={() => setCatFiltro(c)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-all ${catFiltro === c ? "bg-primary text-primary-foreground border-primary" : "border-border/60 bg-card hover:bg-muted"}`}>
+              {c}
+            </button>
+          ))}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">🔴 Zerados</CardTitle></CardHeader><CardContent className="text-xl font-semibold">{counts.zerados}</CardContent></Card>
-          <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">🟠 Críticos</CardTitle></CardHeader><CardContent className="text-xl font-semibold">{counts.criticos}</CardContent></Card>
-          <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">⚠️ Vencendo</CardTitle></CardHeader><CardContent className="text-xl font-semibold">{counts.vencendo}</CardContent></Card>
-          <Card><CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground">📋 Sem revisão</CardTitle></CardHeader><CardContent className="text-xl font-semibold">{counts.semRev}</CardContent></Card>
-        </div>
-
-        {loading ? (
-          <div className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
-        ) : items.length === 0 ? (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum produto ativo para revisar.</CardContent></Card>
-        ) : (
+        {loading ? <SkeletonPage /> : (
           <div className="space-y-2">
-            {items.map((item) => {
-              const urg = URG_BADGE[item.urgencia];
+            {maesFiltradas.map(mae => {
+              const filhos = filhosPor[mae.id] ?? [];
+              if (!filhos.length) return null;
+              const totalMae = filhos.reduce((s, f) => {
+                const v = parseFloat(inputs[f.id] ?? "0") || 0;
+                return s + v * f.quantidade_por_embalagem;
+              }, 0);
               return (
-                <Card key={item.id} className={revisedIds.has(item.id) ? "border-emerald-500/40" : ""}>
-                  <CardContent className="p-3 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-medium truncate flex items-center gap-2">
-                          {revisedIds.has(item.id) && <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />}
-                          {item.nome}
-                        </div>
-                        {item.categoria && <div className="text-xs text-muted-foreground">{item.categoria}</div>}
-                        <div className="text-xs text-muted-foreground">
-                          {item.quantidade_atual} {item.unidade}
-                          {item.dias_para_vencer !== null && item.dias_para_vencer <= 30 && (
-                            <span className="ml-2 text-amber-600">· vence em {item.dias_para_vencer}d</span>
-                          )}
-                          {item.dias_restantes !== null && (
-                            <span className={`ml-2 ${item.dias_restantes <= 3 ? "text-red-600" : item.dias_restantes <= 7 ? "text-amber-600" : "text-muted-foreground"}`}>
-                              · ~{item.dias_restantes}d restantes
+                <Card key={mae.id} className="border-border/60">
+                  <CardHeader className="py-2 px-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-medium">{mae.nome}</CardTitle>
+                      <span className="text-xs text-muted-foreground">
+                        Total: {totalMae.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} {mae.unidade}
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="py-2 px-4 space-y-2">
+                    {filhos.map(filho => {
+                      const isSaved = saved.has(filho.id);
+                      const isSaving = saving[filho.id];
+                      return (
+                        <div key={filho.id} className="flex items-center gap-3">
+                          <span className={`flex-1 text-sm truncate ${isSaved ? "text-emerald-700 dark:text-emerald-400" : ""}`}>
+                            {isSaved && "✓ "}{filho.nome}
+                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <input
+                              type="number" min={0} step={1}
+                              value={inputs[filho.id] ?? "0"}
+                              onChange={e => {
+                                setInputs(prev => ({ ...prev, [filho.id]: e.target.value }));
+                                setSaved(prev => { const n = new Set(prev); n.delete(filho.id); return n; });
+                              }}
+                              onBlur={e => salvarItem(filho, e.target.value)}
+                              onKeyDown={e => { if (e.key === "Enter") salvarItem(filho, inputs[filho.id] ?? "0"); }}
+                              className="w-16 h-8 text-sm text-center border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
+                            />
+                            <span className="text-xs text-muted-foreground w-12">
+                              {isSaving ? <Loader2 className="h-3 w-3 animate-spin inline" /> : `un de ${filho.quantidade_por_embalagem}${filho.unidade_embalagem}`}
                             </span>
-                          )}
-                        </div>
-                      </div>
-                      <Badge className={`${urg.cls} font-normal whitespace-nowrap`}>{urg.label}</Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 items-center">
-                      <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={busyId === item.id} onClick={() => adjustQty(item, -1)}>
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={item.quantidade_atual}
-                        onChange={e => {
-                          const novo = parseFloat(e.target.value.replace(",","."));
-                          if (!isNaN(novo) && novo >= 0) {
-                            const delta = novo - item.quantidade_atual;
-                            if (delta !== 0) adjustQty(item, delta);
-                          }
-                        }}
-                        disabled={busyId === item.id}
-                        className="w-14 h-7 text-xs text-center border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary tabular-nums"
-                      />
-                      <span className="text-xs text-muted-foreground">{item.unidade}</span>
-                      <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={busyId === item.id} onClick={() => adjustQty(item, 1)}>
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Sheet>
-                        <SheetTrigger asChild>
-                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">Acabou</Button>
-                        </SheetTrigger>
-                        <SheetContent side="bottom">
-                          <SheetHeader>
-                            <SheetTitle>{item.nome}</SheetTitle>
-                            <SheetDescription>O que aconteceu com esse item?</SheetDescription>
-                          </SheetHeader>
-                          <div className="grid gap-2 py-4">
-                            <Button onClick={() => acabou(item)} className="justify-start gap-2 h-auto py-3">
-                              <span className="text-xl">📦</span>
-                              <span className="text-left">
-                                <div className="font-medium">Zerado — vou repor</div>
-                                <div className="text-xs opacity-80">Marca como 0 e mantém na lista</div>
-                              </span>
-                            </Button>
-                            <Button onClick={() => naoCompro(item)} variant="outline" className="justify-start gap-2 h-auto py-3">
-                              <span className="text-xl">🚫</span>
-                              <span className="text-left">
-                                <div className="font-medium">Não compro mais</div>
-                                <div className="text-xs opacity-80">Desativa o produto</div>
-                              </span>
-                            </Button>
                           </div>
-                        </SheetContent>
-                      </Sheet>
-                    </div>
+                        </div>
+                      );
+                    })}
                   </CardContent>
                 </Card>
               );
@@ -292,18 +214,6 @@ function RevisaoEstoquePage() {
           </div>
         )}
       </main>
-
-      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur border-t border-border/60 p-3 z-20">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-          <span className="text-sm text-muted-foreground">
-            {revisedIds.size} de {items.length} revisados
-          </span>
-          <Button onClick={finalizar} disabled={finalizing} className="gap-2">
-            {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Finalizar revisão
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
