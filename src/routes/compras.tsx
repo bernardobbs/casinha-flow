@@ -551,7 +551,11 @@ function ComprasPage() {
       status: "concluida", data_prevista: dataCompra,
       location_id: importLocalId || null,
     }).select("id").single();
-    if (listaErr) console.error("Erro ao criar lista:", listaErr);
+    if (listaErr) {
+      toast.error("Erro ao criar lista: " + listaErr.message);
+      setImportLoading(false);
+      return;
+    }
 
     // 2. Dar entrada no estoque dos vinculados
     for (const item of importItens) {
