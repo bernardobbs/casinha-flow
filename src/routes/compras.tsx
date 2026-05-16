@@ -2,7 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, ShoppingCart, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Loader2, ListChecks, Wallet, CheckCircle2, Package } from "lucide-react";
+import { CalendarIcon, ShoppingCart, Plus, Trash2, Pencil, ChevronDown, ChevronUp, Loader2, ListChecks, Wallet, CheckCircle2, Package, Upload, FileText, AlertCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
@@ -300,6 +303,121 @@ function ComprasPage() {
   };
 
   // ── UI ────────────────────────────────────────────────
+  // Parsear texto do SoftList
+  const parseSoftList = (texto: string) => {
+    const linhas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const itens: any[] = [];
+    let i = 0;
+    while (i < linhas.length) {
+      const nome = linhas[i];
+      // Próxima linha: "N un" ou "N unidades"
+      if (i + 1 < linhas.length && /^\d+\s*(un|unidades?|kg|g|ml|l|lt|litros?)$/i.test(linhas[i+1])) {
+        const [qtdStr, ...restUnd] = linhas[i+1].split(/\s+/);
+        const qtd = parseFloat(qtdStr);
+        // Próxima linha: preço "R$ X,XX"
+        const precoLinha = linhas[i+2] ?? "";
+        const precoMatch = precoLinha.match(/R\$\s*([\d.,]+)/);
+        const preco = precoMatch ? parseFloat(precoMatch[1].replace(".", "").replace(",", ".")) : 0;
+        if (qtd > 0 && nome.length > 2) {
+          itens.push({ nome_original: nome, qtd, preco_unitario: preco, total: qtd * preco, vinculado: null, sub_produto_id: null });
+        }
+        i += precoMatch ? 3 : 2;
+      } else {
+        i++;
+      }
+    }
+    return itens;
+  };
+
+  const vincularProdutos = async (itens: any[]) => {
+    if (!familyId) return itens;
+    // Buscar todos os sub-produtos
+    const { data: prods } = await supabase.from("products" as any)
+      .select("id, nome, parent_id, quantidade_por_embalagem, unidade_embalagem")
+      .eq("family_id", familyId).not("parent_id", "is", null);
+    const produtos = (prods ?? []) as any[];
+
+    return itens.map(item => {
+      const nomeNorm = item.nome_original.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+      // Tentar match por substring
+      let melhor: any = null;
+      let melhorScore = 0;
+      for (const p of produtos) {
+        const pNorm = p.nome.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+        // Contar palavras em comum
+        const palavrasItem = nomeNorm.split(" ").filter((w: string) => w.length > 2);
+        const palavrasProd = pNorm.split(" ").filter((w: string) => w.length > 2);
+        const comuns = palavrasItem.filter((w: string) => palavrasProd.includes(w)).length;
+        const score = comuns / Math.max(palavrasItem.length, palavrasProd.length);
+        if (score > melhorScore && score >= 0.4) {
+          melhorScore = score;
+          melhor = p;
+        }
+      }
+      return { ...item, vinculado: melhor?.nome ?? null, sub_produto_id: melhor?.id ?? null, qtd_emb: melhor ? melhor.quantidade_por_embalagem : 1 };
+    });
+  };
+
+  const processarImport = async () => {
+    if (!importTexto.trim()) { toast.error("Cole o texto da lista"); return; }
+    setImportLoading(true);
+    const itens = parseSoftList(importTexto);
+    if (!itens.length) { toast.error("Nenhum item encontrado. Verifique o formato."); setImportLoading(false); return; }
+    const vinculados = await vincularProdutos(itens);
+    setImportItens(vinculados);
+    setImportStep("review");
+    setImportLoading(false);
+  };
+
+  const confirmarImport = async () => {
+    if (!familyId || !user) return;
+    setImportLoading(true);
+    const dataCompra = importData || new Date().toISOString().slice(0, 10);
+    const total = importItens.reduce((s, i) => s + (i.total || 0), 0);
+
+    // 1. Criar lista de compras
+    const { data: lista } = await supabase.from("shopping_lists" as any).insert({
+      family_id: familyId, user_id: user.id,
+      nome: importNome || `Compras ${new Date(dataCompra + "T12:00").toLocaleDateString("pt-BR")}`,
+      status: "concluida", data_prevista: dataCompra,
+    }).select("id").single();
+
+    // 2. Dar entrada no estoque dos vinculados
+    for (const item of importItens) {
+      if (!item.sub_produto_id) continue;
+      const novaQtd = item.qtd * item.qtd_emb;
+      const { data: prod } = await supabase.from("products" as any)
+        .select("estoque_atual, parent_id, quantidade_por_embalagem").eq("id", item.sub_produto_id).maybeSingle();
+      if (prod) {
+        const novo = Number((prod as any).estoque_atual) + novaQtd;
+        await supabase.from("products" as any).update({ estoque_atual: novo }).eq("id", item.sub_produto_id);
+        // Salvar regra de categorização pelo nome
+        await supabase.rpc("save_transaction_rule" as any, {
+          p_family_id: familyId, p_description: item.nome_original,
+          p_category_id: "c931bce9-bb3e-4335-8891-dea9488b0b90", // Alimentação — Supermercado
+          p_account_id: importConta || null, p_tipo: "expense", p_origem: "importacao",
+        }).then(() => {}).catch(() => {});
+      }
+    }
+
+    // 3. Criar transação financeira
+    if (total > 0 && importConta) {
+      await supabase.from("transactions").insert({
+        family_id: familyId, user_id: user.id,
+        description: importNome || "Compras Supermercado",
+        amount: -total, type: "expense",
+        category_id: "c931bce9-bb3e-4335-8891-dea9488b0b90",
+        account_id: importConta, date: dataCompra,
+        tipo_especial: "normal",
+      });
+    }
+
+    toast.success(`✅ ${importItens.filter(i => i.sub_produto_id).length} itens no estoque + transação R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
+    setImportStep("done");
+    setImportLoading(false);
+    if (lista) loadListas();
+  };
+
   return (
     <div className="min-h-screen p-4" style={{ background: "var(--gradient-subtle)" }}>
       <div className="max-w-4xl mx-auto space-y-4">
@@ -313,9 +431,14 @@ function ComprasPage() {
               <p className="text-sm text-muted-foreground">Listas e itens da família</p>
             </div>
           </div>
-          <Button onClick={() => setListDialog({ open: true })} size="sm">
-            <Plus className="h-4 w-4 mr-1" /> Nova lista
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setImportStep("input"); setImportTexto(""); setImportItens([]); setImportData(""); setImportNome(""); setImportDialog(true); }}>
+              <Upload className="h-4 w-4 mr-1" /> Importar
+            </Button>
+            <Button onClick={() => setListDialog({ open: true })} size="sm">
+              <Plus className="h-4 w-4 mr-1" /> Nova lista
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -535,6 +658,94 @@ function ComprasPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Importar SoftList */}
+      <Dialog open={importDialog} onOpenChange={v => { if (!v) setImportDialog(false); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" /> Importar lista de compras
+            </DialogTitle>
+          </DialogHeader>
+
+          {importStep === "input" && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Cole o texto exportado do SoftList abaixo. Formato esperado: nome do produto, quantidade, preço.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Nome da compra</Label>
+                  <Input value={importNome} onChange={e => setImportNome(e.target.value)} placeholder="Matheus 17/05" /></div>
+                <div><Label>Data</Label>
+                  <Input type="date" value={importData} onChange={e => setImportData(e.target.value)} /></div>
+              </div>
+              <div><Label>Conta de pagamento</Label>
+                <Select value={importConta} onValueChange={setImportConta}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>{accounts.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}</SelectContent>
+                </Select></div>
+              <div><Label>Texto da lista (SoftList)</Label>
+                <Textarea value={importTexto} onChange={e => setImportTexto(e.target.value)}
+                  rows={10} placeholder={"ARROZ TIO JOÃO 1KG\n5 un\nR$ 6,99\nDETERGENTE LIMPOL 500ML\n6 un\nR$ 2,19\n..."} className="font-mono text-xs" /></div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setImportDialog(false)}>Cancelar</Button>
+                <Button onClick={processarImport} disabled={importLoading} className="gap-1.5">
+                  {importLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Processar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {importStep === "review" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{importItens.length} itens encontrados</span>
+                <span className="text-muted-foreground">
+                  {importItens.filter(i => i.sub_produto_id).length} vinculados ao estoque ·{" "}
+                  {importItens.filter(i => !i.sub_produto_id).length} não identificados
+                </span>
+              </div>
+              <div className="max-h-72 overflow-y-auto space-y-1 border rounded-md p-2">
+                {importItens.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs py-1 border-b last:border-0">
+                    {item.sub_produto_id
+                      ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                      : <AlertCircle className="h-3.5 w-3.5 text-orange-400 shrink-0 mt-0.5" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate font-medium">{item.nome_original}</p>
+                      {item.vinculado && <p className="text-muted-foreground">→ {item.vinculado}</p>}
+                      {!item.vinculado && <p className="text-orange-500">Não identificado — não entrará no estoque</p>}
+                    </div>
+                    <span className="shrink-0 text-muted-foreground">
+                      {item.qtd}un · R${item.preco_unitario.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">
+                  Total: R$ {importItens.reduce((s, i) => s + (i.total||0), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setImportStep("input")}>← Voltar</Button>
+                  <Button size="sm" onClick={confirmarImport} disabled={importLoading} className="gap-1.5">
+                    {importLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    Confirmar importação
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {importStep === "done" && (
+            <div className="text-center py-6 space-y-3">
+              <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
+              <p className="font-medium">Importação concluída!</p>
+              <p className="text-sm text-muted-foreground">Estoque atualizado e transação registrada.</p>
+              <Button onClick={() => setImportDialog(false)}>Fechar</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -583,65 +794,6 @@ function ItemRow({ item, onToggle, onPrice, onRemove }: {
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </div>
-  );
-}
-
-function ListDialog({ open, editing, onClose, onSave }: {
-  open: boolean; editing?: ShoppingList; onClose: () => void;
-  onSave: (form: { nome: string; data_prevista: Date | undefined; local_preferido: string }) => void;
-}) {
-  const initialLocal = editing?.local_preferido && !LOCAIS.includes(editing.local_preferido as any) ? "Outro" : (editing?.local_preferido ?? "");
-  const [nome, setNome] = useState(editing?.nome ?? "");
-  const [data, setData] = useState<Date | undefined>(editing?.data_prevista ? new Date(editing.data_prevista + "T00:00:00") : undefined);
-  const [localSel, setLocalSel] = useState<string>(initialLocal);
-  const [localOutro, setLocalOutro] = useState<string>(initialLocal === "Outro" ? (editing?.local_preferido ?? "") : "");
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>{editing ? "Editar lista" : "Nova lista"}</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Nome *</Label>
-            <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Compra do mês" />
-          </div>
-          <div>
-            <Label>Data prevista</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !data && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {data ? format(data, "PPP", { locale: ptBR }) : "Escolher data"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={data} onSelect={setData} initialFocus className={cn("p-3 pointer-events-auto")} />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div>
-            <Label>Local preferido</Label>
-            <Select value={localSel} onValueChange={setLocalSel}>
-              <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-              <SelectContent>
-                {LOCAIS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {localSel === "Outro" && (
-              <Input className="mt-2" value={localOutro} onChange={(e) => setLocalOutro(e.target.value)} placeholder="Nome do local" />
-            )}
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave({
-            nome,
-            data_prevista: data,
-            local_preferido: localSel === "Outro" ? localOutro : localSel,
-          })}>Salvar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
