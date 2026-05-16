@@ -846,6 +846,34 @@ function ComprasPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog Novo Local */}
+      <Dialog open={localDialog} onOpenChange={setLocalDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Novo local de compra</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <div><Label>Nome *</Label>
+              <Input value={localForm.nome} onChange={e => setLocalForm(p => ({...p, nome: e.target.value}))} placeholder="Ex: Atacadão" /></div>
+            <div><Label>Tipo</Label>
+              <Select value={localForm.tipo} onValueChange={v => setLocalForm(p => ({...p, tipo: v}))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="supermercado">🛒 Supermercado</SelectItem>
+                  <SelectItem value="atacado">📦 Atacado</SelectItem>
+                  <SelectItem value="feira">🥕 Feira</SelectItem>
+                  <SelectItem value="online">🌐 Online</SelectItem>
+                  <SelectItem value="outro">📍 Outro</SelectItem>
+                </SelectContent>
+              </Select></div>
+            <div><Label>Endereço</Label>
+              <Input value={localForm.endereco} onChange={e => setLocalForm(p => ({...p, endereco: e.target.value}))} placeholder="Opcional" /></div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setLocalDialog(false)}>Cancelar</Button>
+              <Button onClick={salvarLocal} disabled={localSaving}>{localSaving ? 'Salvando...' : 'Salvar'}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialog Importar SoftList */}
       <Dialog open={importDialog} onOpenChange={v => { if (!v) setImportDialog(false); }}>
         <DialogContent className="max-w-xl">
