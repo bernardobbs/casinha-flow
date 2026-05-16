@@ -539,6 +539,10 @@ function ComprasPage() {
     setImportLoading(true);
     const dataCompra = importData || new Date().toISOString().slice(0, 10);
     const total = importItens.reduce((s, i) => s + (i.total || 0), 0);
+    const localNome = locations.find(l => l.id === importLocalId)?.nome ?? '';
+    const nomeAuto = importNome || (localNome
+      ? localNome + ' ' + new Date(dataCompra + 'T12:00').toLocaleDateString('pt-BR')
+      : 'Compras ' + new Date(dataCompra + 'T12:00').toLocaleDateString('pt-BR'));
 
     // 1. Criar lista de compras
     const { data: lista } = await supabase.from("shopping_lists" as any).insert({
@@ -856,7 +860,7 @@ function ComprasPage() {
               <p className="text-sm text-muted-foreground">Cole o texto do <strong>SoftList</strong> ou da <strong>NFC-e SEFAZ</strong> (selecione tudo na nota e cole aqui). O formato é detectado automaticamente.</p>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Nome da compra</Label>
-                  <Input value={importNome} onChange={e => setImportNome(e.target.value)} placeholder="Matheus 17/05" /></div>
+                  <Input value={importNome} onChange={e => setImportNome(e.target.value)} placeholder="Gerado automaticamente" /></div>
                 <div><Label>Data</Label>
                   <Input type="date" value={importData} onChange={e => setImportData(e.target.value)} /></div>
               </div>
