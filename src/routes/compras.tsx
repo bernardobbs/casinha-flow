@@ -85,6 +85,8 @@ function ComprasPage() {
   const [importStep, setImportStep] = useState<"input"|"review"|"done">("input");
   const [importLoading, setImportLoading] = useState(false);
   const [criandoProduto, setCriandoProduto] = useState<number | null>(null); // índice do item
+  const [sugerindoIA, setSugerindoIA] = useState(false);
+  const [sugestoes, setSugestoes] = useState<Record<number, {nome:string;categoria:string}>>({});
   const [novaCategoria, setNovaCategoria] = useState('Mercearia');
   const CATS_ESTOQUE = ['Mercearia','Laticínios','Bebidas','Bebidas Quentes','Carnes','Frios','Temperos','Higiene','Limpeza'];
   const [itemDialog, setItemDialog] = useState<{ open: boolean; listId?: string }>({ open: false });
@@ -428,6 +430,46 @@ function ComprasPage() {
     setImportItens(vinculados);
     setImportStep("review");
     setImportLoading(false);
+  };
+
+  const sugerirComIA = async () => {
+    const naoIdentificados = importItens.map((item, i) => ({ i, nome: item.nome_original }))
+      .filter(x => !importItens[x.i].sub_produto_id);
+    if (!naoIdentificados.length) return;
+    setSugerindoIA(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setSugerindoIA(false); return; }
+    try {
+      const cats = CATS_ESTOQUE;
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL || 'https://mmqoyozyeidxbgbxqnda.supabase.co'}/functions/v1/ai-assistant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}`, 'apikey': 'sb_publishable_UvQKkzE7smFYlWpeOxnv6A_MEYtwUYX' },
+        body: JSON.stringify({
+          feature: 'categorizacao',
+          messages: [{ role: 'user', content:
+            `Para cada produto de supermercado abaixo, sugira:
+1. Um nome curto e genérico para o "produto mãe" (ex: "Desinfetante Pastilha", "Saco Higiênico para Pet", "Chocolate Kinder")
+2. A categoria mais adequada dentre: ${cats.join(', ')}
+
+Retorne APENAS JSON válido: [{"indice": 0, "nome_mae": "...", "categoria": "..."}]
+
+Produtos:
+${naoIdentificados.map(x => `{"indice": ${x.i}, "nome_original": "${x.nome}"}`).join('
+')}` }]
+        }),
+      });
+      if (!resp.ok) throw new Error('Erro ' + resp.status);
+      const data = await resp.json();
+      const raw = data.text ?? data.results?.[0]?.text ?? '';
+      const jsonMatch = raw.match(/\[[\s\S]*?\]/);
+      if (!jsonMatch) throw new Error('IA não retornou JSON');
+      const resultados: {indice:number;nome_mae:string;categoria:string}[] = JSON.parse(jsonMatch[0]);
+      const novas: Record<number, {nome:string;categoria:string}> = {};
+      resultados.forEach(r => { novas[r.indice] = { nome: r.nome_mae, categoria: r.categoria }; });
+      setSugestoes(novas);
+      toast.success(`✨ IA sugeriu ${resultados.length} classificações — revise e confirme`);
+    } catch (e: any) { toast.error('Erro IA: ' + e.message); }
+    setSugerindoIA(false);
   };
 
   const criarProdutoParaItem = async (idx: number, nomeMae: string, categoria: string) => {
@@ -783,12 +825,21 @@ function ComprasPage() {
 
           {importStep === "review" && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-sm flex-wrap gap-2">
                 <span className="font-medium">{importItens.length} itens encontrados</span>
-                <span className="text-muted-foreground">
-                  {importItens.filter(i => i.sub_produto_id).length} ✅ vinculados ·{" "}
-                  {importItens.filter(i => !i.sub_produto_id).length} ⚠️ não identificados
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">
+                    {importItens.filter(i => i.sub_produto_id).length} ✅ ·{" "}
+                    {importItens.filter(i => !i.sub_produto_id).length} ⚠️
+                  </span>
+                  {importItens.some(i => !i.sub_produto_id) && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+                      onClick={sugerirComIA} disabled={sugerindoIA}>
+                      {sugerindoIA ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-primary" />}
+                      {sugerindoIA ? 'Analisando...' : '✨ Classificar com IA'}
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="max-h-[340px] overflow-y-auto space-y-1 border rounded-md p-2">
                 {importItens.map((item, i) => (
@@ -800,13 +851,14 @@ function ComprasPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{item.nome_original}</p>
                         {item.vinculado && <p className="text-muted-foreground">→ {item.vinculado}</p>}
+                      {!item.vinculado && sugestoes[i] && <p className="text-primary text-xs">✨ {sugestoes[i].nome} ({sugestoes[i].categoria})</p>}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-muted-foreground">{item.qtd}un · R${item.preco_unitario.toFixed(2)}</span>
                         {!item.sub_produto_id && criandoProduto !== i && (
-                          <Button size="sm" variant="outline" className="h-6 text-xs px-2"
-                            onClick={() => { setCriandoProduto(i); setNovaCategoria('Mercearia'); }}>
-                            + Criar
+                          <Button size="sm" variant={sugestoes[i] ? "default" : "outline"} className="h-6 text-xs px-2 gap-1"
+                            onClick={() => { setCriandoProduto(i); setNovaCategoria(sugestoes[i]?.categoria || 'Mercearia'); }}>
+                            {sugestoes[i] ? <><Sparkles className="h-3 w-3" />Criar</> : '+ Criar'}
                           </Button>
                         )}
                       </div>
@@ -818,8 +870,8 @@ function ComprasPage() {
                         <div className="flex gap-2">
                           <Input
                             className="h-7 text-xs flex-1"
-                            placeholder="Nome do produto mãe (ex: Desinfetante Pastilha)"
-                            defaultValue={item.nome_original.split(' ').slice(0,3).join(' ')}
+                            placeholder="Nome do produto mãe"
+                            defaultValue={sugestoes[i]?.nome || item.nome_original.split(' ').slice(0,3).join(' ')}
                             id={`novo-nome-${i}`}
                           />
                           <Select value={novaCategoria} onValueChange={setNovaCategoria}>
