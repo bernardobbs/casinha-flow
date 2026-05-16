@@ -882,7 +882,7 @@ function ComprasPage() {
       </Dialog>
 
       {/* Dialog Importar SoftList */}
-      <Dialog open={importDialog} onOpenChange={v => { if (!v) setImportDialog(false); }}>
+      <Dialog open={importDialog} onOpenChange={v => { if (!v) { setImportDialog(false); if (importStep === "done") setTab("concluida" as Status); } }}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1075,7 +1075,7 @@ function ComprasPage() {
               <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
               <p className="font-medium">Importação concluída!</p>
               <p className="text-sm text-muted-foreground">Estoque atualizado e transação registrada.</p>
-              <Button onClick={() => setImportDialog(false)}>Fechar</Button>
+              <Button onClick={() => { setImportDialog(false); setTab("concluida" as Status); }}>Ver em Concluídas</Button>
             </div>
           )}
         </DialogContent>
