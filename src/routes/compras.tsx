@@ -557,7 +557,25 @@ function ComprasPage() {
       return;
     }
 
-    // 2. Dar entrada no estoque dos vinculados
+    // 2. Inserir itens na lista
+    if ((lista as any)?.id) {
+      const listaId = (lista as any).id;
+      const itemInserts = importItens.map(item => ({
+        list_id: listaId, family_id: familyId,
+        nome: item.nome_original, quantidade: item.qtd,
+        unidade: 'UN', preco_estimado: item.preco_unitario,
+        preco_real: item.preco_unitario,
+        product_id: item.sub_produto_id || null,
+        comprado: true, comprado_em: new Date().toISOString(),
+      }));
+      await supabase.from('shopping_items' as any).insert(itemInserts);
+      // Atualizar total da lista
+      await supabase.from('shopping_lists' as any)
+        .update({ total_real: total, total_estimado: total })
+        .eq('id', listaId);
+    }
+
+    // 3. Dar entrada no estoque dos vinculados
     for (const item of importItens) {
       if (!item.sub_produto_id) continue;
       const novaQtd = item.qtd * item.qtd_emb;
