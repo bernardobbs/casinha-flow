@@ -43,6 +43,51 @@ type ContaPendente = { descricao: string; valor: number; data_vencimento: string
 
 const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+function ComprometimentoCard({ recorrentes, parcelas, salario }: { recorrentes: number; parcelas: number; salario: number }) {
+  const total = recorrentes + parcelas;
+  const livre = salario - total;
+  const pctRec = salario > 0 ? (recorrentes / salario) * 100 : 0;
+  const pctParc = salario > 0 ? (parcelas / salario) * 100 : 0;
+  const pctLivre = Math.max(0, 100 - pctRec - pctParc);
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  return (
+    <Card className="border-border/60 shadow-[var(--shadow-soft)]">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <Repeat className="h-4 w-4 text-primary" /> Comprometimento Mensal
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-3">
+        <div className="h-3 rounded-full overflow-hidden flex gap-0.5">
+          <div className="h-full rounded-l-full bg-orange-500 transition-all" style={{ width: pctRec + "%" }} />
+          <div className="h-full bg-red-500 transition-all" style={{ width: pctParc + "%" }} />
+          <div className="h-full rounded-r-full bg-emerald-500 transition-all" style={{ width: pctLivre + "%" }} />
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div>
+            <div className="flex items-center gap-1 text-muted-foreground mb-0.5"><span className="w-2 h-2 rounded-full bg-orange-500 inline-block" /> Recorrentes</div>
+            <p className="font-semibold tabular-nums">{fmt(recorrentes)}</p>
+            <p className="text-muted-foreground">{pctRec.toFixed(0)}% do salário</p>
+          </div>
+          <div>
+            <div className="flex items-center gap-1 text-muted-foreground mb-0.5"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Parcelas</div>
+            <p className="font-semibold tabular-nums">{fmt(parcelas)}</p>
+            <p className="text-muted-foreground">{pctParc.toFixed(0)}% do salário</p>
+          </div>
+          <div>
+            <div className="flex items-center gap-1 text-muted-foreground mb-0.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Margem livre</div>
+            <p className={`font-semibold tabular-nums ${livre < 0 ? "text-destructive" : "text-emerald-600"}`}>{fmt(livre)}</p>
+            <p className="text-muted-foreground">{pctLivre.toFixed(0)}% do salário</p>
+          </div>
+        </div>
+        <div className="text-xs text-muted-foreground border-t border-border/50 pt-2">
+          Total comprometido: <span className="font-medium text-foreground">{fmt(total)}</span> de <span className="font-medium">{fmt(salario)}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function MiniGauge({ score }: { score: number }) {
   const pct = Math.max(0, Math.min(100, score));
   const r = 38, c = 2 * Math.PI * r, off = c - (pct / 100) * c;
@@ -119,6 +164,16 @@ function Dashboard() {
         setTotalPendente(pendentes.reduce((acc: number, p: any) => acc + Number(p.valor), 0));
       }
 
+      // Comprometimento mensal
+      const { data: recData } = await supabase
+        .from("recurring_transactions" as any)
+        .select("valor")
+        .eq("family_id", fid)
+        .eq("ativo", true)
+        .eq("tipo", "despesa");
+      const totalRec = ((recData ?? []) as any[]).reduce((s: number, r: any) => s + Number(r.valor), 0);
+      setComprometimento({ recorrentes: totalRec, parcelas: 2543, salario: 11143.20 });
+
       setStockReviewOk(true);
       setLoading(false);
     })();
@@ -174,6 +229,15 @@ function Dashboard() {
       <CrisisBanner />
 
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+        {/* Comprometimento Mensal */}
+        {comprometimento && (
+          <ComprometimentoCard
+            recorrentes={comprometimento.recorrentes}
+            parcelas={comprometimento.parcelas}
+            salario={comprometimento.salario}
+          />
+        )}
+
         {/* Comprometimento Mensal */}
         {comprometimento && (
           <ComprometimentoCard
