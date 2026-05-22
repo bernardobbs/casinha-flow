@@ -238,15 +238,6 @@ function Dashboard() {
           />
         )}
 
-        {/* Comprometimento Mensal */}
-        {comprometimento && (
-          <ComprometimentoCard
-            recorrentes={comprometimento.recorrentes}
-            parcelas={comprometimento.parcelas}
-            salario={comprometimento.salario}
-          />
-        )}
-
         {/* Saldo + Score */}
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
           <CardContent className="py-5 flex items-center justify-between gap-3">
