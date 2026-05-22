@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Printer, Loader2, TrendingUp, BarChart3, FileText, MapPin } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, TrendingUp, BarChart3, FileText, MapPin, Repeat } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/relatorios" as any)({
@@ -202,6 +202,7 @@ function RelatoriosPage() {
               <TabsTrigger value="evolucao" className="gap-1.5"><TrendingUp className="h-4 w-4" />Evolução Mensal</TabsTrigger>
               <TabsTrigger value="orcado" className="gap-1.5"><BarChart3 className="h-4 w-4" />Orçado x Realizado</TabsTrigger>
               <TabsTrigger value="precos" className="gap-1.5"><MapPin className="h-4 w-4" />Preços</TabsTrigger>
+              <TabsTrigger value="compromisso" className="gap-1.5"><Repeat className="h-4 w-4" />Comprometimento</TabsTrigger>
             </TabsList>
 
             {/* ── ABA EXTRATO ─────────────────────────── */}
@@ -524,6 +525,121 @@ function ComparativoPrecos({ familyId }: { familyId: string }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ComprometimentoRelatorio({ familyId }: { familyId: string }) {
+  const [recorrentes, setRecorrentes] = useState<{descricao:string;valor:number;dia_do_mes:number}[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [salario, setSalario] = useState(11143.20);
+  const [parcelas, setParcelas] = useState(2543.00);
+
+  useEffect(() => {
+    if (!familyId) return;
+    setLoading(true);
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      supabase.from("recurring_transactions" as any)
+        .select("descricao, valor, dia_do_mes, tipo")
+        .eq("family_id", familyId).eq("ativo", true).eq("tipo", "despesa")
+        .order("valor", { ascending: false })
+        .then(({ data }) => { setRecorrentes((data ?? []) as any); setLoading(false); });
+    });
+  }, [familyId]);
+
+  const totalRec = recorrentes.reduce((s, r) => s + Number(r.valor), 0);
+  const total = totalRec + parcelas;
+  const livre = salario - total;
+  const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
+  const pct = (n: number) => salario > 0 ? ((n / salario) * 100).toFixed(1) + "%" : "—";
+
+  return (
+    <div className="space-y-4">
+      {/* Resumo executivo */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Salário", value: fmt(salario), color: "text-emerald-600" },
+          { label: "Recorrentes", value: fmt(totalRec), sub: pct(totalRec), color: "text-orange-500" },
+          { label: "Parcelas cartão", value: fmt(parcelas), sub: pct(parcelas), color: "text-red-500" },
+          { label: "Margem livre", value: fmt(livre), sub: pct(livre), color: livre >= 0 ? "text-emerald-600" : "text-destructive" },
+        ].map(item => (
+          <Card key={item.label} className="border-border/60">
+            <CardContent className="py-3 px-4">
+              <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
+              <p className={`text-xl font-bold tabular-nums ${item.color}`}>{item.value}</p>
+              {item.sub && <p className="text-xs text-muted-foreground">{item.sub} do salário</p>}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Barra visual */}
+      <Card className="border-border/60">
+        <CardContent className="py-4 px-4 space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Distribuição do salário</p>
+          <div className="h-6 rounded-full overflow-hidden flex">
+            <div className="h-full bg-orange-500 flex items-center justify-center text-xs text-white font-medium transition-all"
+              style={{ width: Math.min(100, (totalRec/salario)*100) + "%" }}>
+              {(totalRec/salario*100) > 8 ? pct(totalRec) : ""}
+            </div>
+            <div className="h-full bg-red-500 flex items-center justify-center text-xs text-white font-medium transition-all"
+              style={{ width: Math.min(100, (parcelas/salario)*100) + "%" }}>
+              {(parcelas/salario*100) > 8 ? pct(parcelas) : ""}
+            </div>
+            <div className="h-full bg-emerald-500 flex items-center justify-center text-xs text-white font-medium transition-all"
+              style={{ width: Math.max(0, 100 - (total/salario)*100) + "%" }}>
+              {((salario-total)/salario*100) > 8 ? pct(livre) : ""}
+            </div>
+          </div>
+          <div className="flex gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" />Recorrentes</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />Parcelas</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />Margem livre</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Editar salário e parcelas */}
+      <Card className="border-border/60">
+        <CardContent className="py-3 px-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div><p className="text-xs text-muted-foreground mb-1">Salário (editar)</p>
+              <input type="number" value={salario} onChange={e => setSalario(Number(e.target.value))}
+                className="w-full h-8 px-2 text-sm border rounded-md bg-background" /></div>
+            <div><p className="text-xs text-muted-foreground mb-1">Parcelas cartão/mês</p>
+              <input type="number" value={parcelas} onChange={e => setParcelas(Number(e.target.value))}
+                className="w-full h-8 px-2 text-sm border rounded-md bg-background" /></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lista de recorrentes */}
+      <Card className="border-border/60">
+        <CardContent className="py-3 px-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Recorrentes fixos</p>
+          {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : (
+            <div className="space-y-2">
+              {recorrentes.map((r, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 rounded-full bg-orange-500" style={{ width: Math.max(4, (Number(r.valor)/totalRec)*80) + "px" }} />
+                    <span>{r.descricao}</span>
+                    <span className="text-xs text-muted-foreground">dia {r.dia_do_mes}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="tabular-nums font-medium">{fmt(Number(r.valor))}</span>
+                    <span className="text-xs text-muted-foreground w-10 text-right">{pct(Number(r.valor))}</span>
+                  </div>
+                </div>
+              ))}
+              <div className="border-t border-border/50 pt-2 flex justify-between font-semibold text-sm">
+                <span>Total recorrentes</span>
+                <span className="text-orange-500 tabular-nums">{fmt(totalRec)}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

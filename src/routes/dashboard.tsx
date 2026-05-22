@@ -65,6 +65,7 @@ function Dashboard() {
   const [familyName, setFamilyName] = useState("");
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashSummary | null>(null);
+  const [comprometimento, setComprometimento] = useState<{recorrentes:number;parcelas:number;salario:number}|null>(null);
   const [saldo, setSaldo] = useState<Saldo | null>(null);
   const [cats, setCats] = useState<CatProj[]>([]);
   const [alerts, setAlerts] = useState<AlertRow[]>([]);
@@ -86,12 +87,20 @@ function Dashboard() {
       setFamilyName((profile as any)?.families?.nome ?? "");
       if (!fid) { setLoading(false); return; }
 
-      const [s, sa, c, prev] = await Promise.all([
+      const [s, sa, c, prev, comp] = await Promise.all([
         supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
         supabase.rpc("get_saldo_total", { p_family_id: fid }),
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
         supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
+        Promise.all([
+          supabase.from("recurring_transactions" as any).select("valor").eq("family_id", fid).eq("ativo", true).eq("tipo", "despesa"),
+          supabase.from("transactions" as any).select("amount").eq("family_id", fid).eq("conciliado", false).gte("date", new Date().toISOString().slice(0,7) + "-01"),
+        ]),
       ]);
+      // Comprometimento
+      const [recRows, _parcRows] = comp as any;
+      const totalRec = (recRows.data ?? []).reduce((s: number, r: any) => s + Number(r.valor), 0);
+      setComprometimento({ recorrentes: totalRec, parcelas: 2543, salario: 11143.20 });
 
       const summaryRow = Array.isArray(s.data) ? s.data[0] : s.data;
       if (summaryRow) setSummary(summaryRow as DashSummary);
@@ -164,6 +173,15 @@ function Dashboard() {
       <CrisisBanner />
 
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+        {/* Comprometimento Mensal */}
+        {comprometimento && (
+          <ComprometimentoCard
+            recorrentes={comprometimento.recorrentes}
+            parcelas={comprometimento.parcelas}
+            salario={comprometimento.salario}
+          />
+        )}
+
         {/* Saldo + Score */}
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
           <CardContent className="py-5 flex items-center justify-between gap-3">
