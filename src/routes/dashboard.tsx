@@ -164,15 +164,7 @@ function Dashboard() {
         setTotalPendente(pendentes.reduce((acc: number, p: any) => acc + Number(p.valor), 0));
       }
 
-      // Comprometimento mensal
-      const { data: recData } = await supabase
-        .from("recurring_transactions" as any)
-        .select("valor")
-        .eq("family_id", fid)
-        .eq("ativo", true)
-        .eq("tipo", "despesa");
-      const totalRec = ((recData ?? []) as any[]).reduce((s: number, r: any) => s + Number(r.valor), 0);
-      setComprometimento({ recorrentes: totalRec, parcelas: 2543, salario: 11143.20 });
+      // Comprometimento mensal já carregado acima
 
       setStockReviewOk(true);
       setLoading(false);
