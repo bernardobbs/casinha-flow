@@ -87,19 +87,20 @@ function Dashboard() {
       setFamilyName((profile as any)?.families?.nome ?? "");
       if (!fid) { setLoading(false); return; }
 
-      const [s, sa, c, prev, comp] = await Promise.all([
+      const [s, sa, c, prev] = await Promise.all([
         supabase.rpc("get_dashboard_summary", { p_family_id: fid }),
         supabase.rpc("get_saldo_total", { p_family_id: fid }),
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
         supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
-        Promise.all([
-          supabase.from("recurring_transactions" as any).select("valor").eq("family_id", fid).eq("ativo", true).eq("tipo", "despesa"),
-          supabase.from("transactions" as any).select("amount").eq("family_id", fid).eq("conciliado", false).gte("date", new Date().toISOString().slice(0,7) + "-01"),
-        ]),
       ]);
-      // Comprometimento
-      const [recRows, _parcRows] = comp as any;
-      const totalRec = (recRows.data ?? []).reduce((s: number, r: any) => s + Number(r.valor), 0);
+      // Buscar recorrentes separadamente
+      const { data: recData } = await supabase
+        .from("recurring_transactions" as any)
+        .select("valor")
+        .eq("family_id", fid)
+        .eq("ativo", true)
+        .eq("tipo", "despesa");
+      const totalRec = ((recData ?? []) as any[]).reduce((s: number, r: any) => s + Number(r.valor), 0);
       setComprometimento({ recorrentes: totalRec, parcelas: 2543, salario: 11143.20 });
 
       const summaryRow = Array.isArray(s.data) ? s.data[0] : s.data;
