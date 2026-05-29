@@ -676,7 +676,20 @@ function RelatorioEstoque({ familyId }: { familyId: string }) {
     });
   }, [familyId]);
 
-  const maes = useMemo(() => dados.filter((p: any) => !p.parent_id && p.estoque_atual > 0), [dados]);
+  const maes = useMemo(() => {
+    const filhosPorTemp: Record<string, any[]> = {};
+    dados.filter((p: any) => p.parent_id).forEach((p: any) => {
+      if (!filhosPorTemp[p.parent_id]) filhosPorTemp[p.parent_id] = [];
+      filhosPorTemp[p.parent_id].push(p);
+    });
+    return dados.filter((p: any) => {
+      if (p.parent_id) return false;
+      // Mostrar se o próprio pai tem estoque OU se algum filho tem
+      if (p.estoque_atual > 0) return true;
+      const filhos = filhosPorTemp[p.id] ?? [];
+      return filhos.some((f: any) => f.estoque_atual > 0);
+    });
+  }, [dados]);
   const filhosPor = useMemo(() => {
     const m: Record<string, any[]> = {};
     dados.filter((p: any) => p.parent_id).forEach((p: any) => {
