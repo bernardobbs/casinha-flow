@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Printer, Loader2, TrendingUp, BarChart3, FileText, MapPin, Repeat } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, TrendingUp, BarChart3, FileText, MapPin, Repeat, Package } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
 
 export const Route = createFileRoute("/relatorios" as any)({
@@ -203,6 +203,7 @@ function RelatoriosPage() {
               <TabsTrigger value="orcado" className="gap-1.5"><BarChart3 className="h-4 w-4" />Orçado x Realizado</TabsTrigger>
               <TabsTrigger value="precos" className="gap-1.5"><MapPin className="h-4 w-4" />Preços</TabsTrigger>
               <TabsTrigger value="compromisso" className="gap-1.5"><Repeat className="h-4 w-4" />Comprometimento</TabsTrigger>
+              <TabsTrigger value="estoque" className="gap-1.5"><Package className="h-4 w-4" />Estoque</TabsTrigger>
             </TabsList>
 
             {/* ── ABA EXTRATO ─────────────────────────── */}
@@ -640,6 +641,151 @@ function ComprometimentoRelatorio({ familyId }: { familyId: string }) {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+const CAT_EMOJI_R: Record<string, string> = {
+  Mercearia: "🛒", Laticínios: "🥛", Bebidas: "🥤", "Bebidas Quentes": "☕",
+  Carnes: "🥩", Frios: "🧀", Temperos: "🧄", Higiene: "🧴", Limpeza: "🧹",
+};
+const CAT_COLOR_R: Record<string, string> = {
+  Mercearia: "#0284c7", Laticínios: "#9333ea", Bebidas: "#3b82f6",
+  "Bebidas Quentes": "#ca8a04", Carnes: "#ef4444", Frios: "#06b6d4",
+  Temperos: "#c026d3", Higiene: "#16a34a", Limpeza: "#f97316",
+};
+
+function RelatorioEstoque({ familyId }: { familyId: string }) {
+  const [dados, setDados] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [busca, setBusca] = useState('');
+  const [catFiltro, setCatFiltro] = useState('Todas');
+
+  useEffect(() => {
+    if (!familyId) return;
+    setLoading(true);
+    import('@/integrations/supabase/client').then(({ supabase }) => {
+      supabase.from('products' as any)
+        .select('id, nome, categoria, unidade, estoque_atual, quantidade_por_embalagem, unidade_embalagem, parent_id')
+        .eq('family_id', familyId).eq('ativo', true)
+        .order('categoria').order('nome')
+        .then(({ data }) => {
+          setDados((data ?? []) as any[]);
+          setLoading(false);
+        });
+    });
+  }, [familyId]);
+
+  const maes = useMemo(() => dados.filter((p: any) => !p.parent_id && p.estoque_atual > 0), [dados]);
+  const filhosPor = useMemo(() => {
+    const m: Record<string, any[]> = {};
+    dados.filter((p: any) => p.parent_id).forEach((p: any) => {
+      if (!m[p.parent_id]) m[p.parent_id] = [];
+      m[p.parent_id].push(p);
+    });
+    return m;
+  }, [dados]);
+
+  const cats = useMemo(() => ['Todas', ...Array.from(new Set(maes.map((m: any) => m.categoria))).sort()], [maes]);
+
+  const maesFiltradas = useMemo(() => maes.filter((m: any) => {
+    if (catFiltro !== 'Todas' && m.categoria !== catFiltro) return false;
+    if (busca && !m.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+    return true;
+  }), [maes, catFiltro, busca]);
+
+  // Agrupar por categoria para exibição
+  const porCategoria = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    maesFiltradas.forEach((m: any) => {
+      if (!groups[m.categoria]) groups[m.categoria] = [];
+      groups[m.categoria].push(m);
+    });
+    return groups;
+  }, [maesFiltradas]);
+
+  const fmtQtd = (estoque: number, qtdEmb: number, undEmb: string) => {
+    const unidades = qtdEmb > 0 ? Math.round((estoque / qtdEmb) * 10) / 10 : estoque;
+    return `${unidades.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} un`;
+  };
+
+  const totalItens = maes.length;
+
+  return (
+    <div className="space-y-4">
+      {/* Header de busca */}
+      <div className="flex gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <input
+            type="text"
+            placeholder="Buscar produto..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            className="w-full h-9 pl-3 pr-3 text-sm border border-border/60 rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <span className="text-sm text-muted-foreground self-center">{totalItens} produtos em estoque</span>
+      </div>
+
+      {/* Filtro categoria */}
+      <div className="flex flex-wrap gap-1.5">
+        {cats.map(c => (
+          <button key={c} onClick={() => setCatFiltro(c)}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-all ${catFiltro === c ? 'bg-primary text-primary-foreground border-primary' : 'border-border/60 bg-card hover:bg-muted'}`}>
+            {CAT_EMOJI_R[c] ?? ''} {c}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <Card><CardContent className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></CardContent></Card>
+      ) : Object.keys(porCategoria).length === 0 ? (
+        <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhum produto encontrado</CardContent></Card>
+      ) : (
+        <div className="space-y-3">
+          {Object.entries(porCategoria).map(([cat, prods]) => {
+            const cor = CAT_COLOR_R[cat] ?? '#64748b';
+            return (
+              <Card key={cat} className="border-border/60 overflow-hidden">
+                {/* Header da categoria */}
+                <div className="flex items-center gap-3 px-4 py-2.5"
+                  style={{ borderLeft: `4px solid ${cor}`, background: `${cor}12` }}>
+                  <span className="font-semibold text-sm flex-1">
+                    {CAT_EMOJI_R[cat] ?? ''} {cat}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{prods.length} itens</span>
+                </div>
+                {/* Itens */}
+                <div className="divide-y divide-border/40">
+                  {prods.map((mae: any) => {
+                    const filhos = (filhosPor[mae.id] ?? []).filter((f: any) => f.estoque_atual > 0);
+                    return (
+                      <div key={mae.id} className="px-4 py-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{mae.nome}</span>
+                          <span className="text-sm font-semibold tabular-nums text-primary">
+                            {mae.estoque_atual.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} {mae.unidade}
+                          </span>
+                        </div>
+                        {filhos.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {filhos.map((filho: any) => (
+                              <div key={filho.id} className="flex items-center justify-between text-xs text-muted-foreground pl-3">
+                                <span>{filho.nome}</span>
+                                <span className="tabular-nums">{fmtQtd(filho.estoque_atual, filho.quantidade_por_embalagem, filho.unidade_embalagem)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
