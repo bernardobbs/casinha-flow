@@ -138,6 +138,7 @@ function EstoquePage() {
   const categorias = useMemo(() => ["Todas", ...Array.from(new Set(maes.map(p => p.categoria))).sort()], [maes]);
 
   const maesFiltradas = useMemo(() => maes.filter(p => {
+    if (p.estoque_atual <= 0) return false;
     if (categoriaFiltro !== "Todas" && p.categoria !== categoriaFiltro) return false;
     if (statusFiltro !== "todos" && p.status !== statusFiltro) return false;
     if (search && !p.nome.toLowerCase().includes(search.toLowerCase())) return false;
