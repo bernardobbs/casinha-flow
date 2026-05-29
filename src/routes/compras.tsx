@@ -418,7 +418,7 @@ function ComprasPage() {
         const palavrasProd = pNorm.split(" ").filter((w: string) => w.length > 2);
         const comuns = palavrasItem.filter((w: string) => palavrasProd.includes(w)).length;
         const score = comuns / Math.max(palavrasItem.length, palavrasProd.length);
-        if (score > melhorScore && score >= 0.4) {
+        if (score > melhorScore && score >= 0.3) {
           melhorScore = score;
           melhor = p;
         }
@@ -536,6 +536,14 @@ function ComprasPage() {
 
   const confirmarImport = async () => {
     if (!familyId || !user) return;
+    const naoVinculados = importItens.filter(i => !i.sub_produto_id).length;
+    const vinculados = importItens.filter(i => i.sub_produto_id).length;
+    if (naoVinculados > vinculados) {
+      const ok = confirm(`⚠️ Atenção: ${naoVinculados} de ${importItens.length} itens NÃO foram vinculados ao estoque e serão ignorados.
+
+Deseja continuar mesmo assim?`);
+      if (!ok) return;
+    }
     setImportLoading(true);
     const dataCompra = importData || new Date().toISOString().slice(0, 10);
     const total = importItens.reduce((s, i) => s + (i.total || 0), 0);
