@@ -230,6 +230,22 @@ function Dashboard() {
           />
         )}
 
+        {/* DRE */}
+        <Link to="/dre">
+          <Card className="border-border/60 hover:border-primary/40 transition-colors cursor-pointer shadow-[var(--shadow-soft)]">
+            <CardContent className="py-3 px-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📊</span>
+                <div>
+                  <p className="font-semibold text-sm">DRE</p>
+                  <p className="text-xs text-muted-foreground">Resultado mensal, anual e projeção futura</p>
+                </div>
+              </div>
+              <span className="text-muted-foreground text-xs">→</span>
+            </CardContent>
+          </Card>
+        </Link>
+
         {/* Saldo + Score */}
         <Card className="border-border/60 shadow-[var(--shadow-soft)]">
           <CardContent className="py-5 flex items-center justify-between gap-3">
