@@ -144,6 +144,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AssistenteRoute: typeof AssistenteRoute
+  DreRoute: typeof DreRoute
   AuthRoute: typeof AuthRouteWithChildren
   BudgetsRoute: typeof BudgetsRoute
   ComprasRoute: typeof ComprasRoute
@@ -178,6 +179,7 @@ declare module '@tanstack/react-router' {
     '/financial-state': { id: '/financial-state'; path: '/financial-state'; fullPath: '/financial-state'; preLoaderRoute: typeof FinancialStateRouteImport; parentRoute: typeof rootRouteImport }
     '/estoque': { id: '/estoque'; path: '/estoque'; fullPath: '/estoque'; preLoaderRoute: typeof EstoqueRouteImport; parentRoute: typeof rootRouteImport }
     '/dashboard': { id: '/dashboard'; path: '/dashboard'; fullPath: '/dashboard'; preLoaderRoute: typeof DashboardRouteImport; parentRoute: typeof rootRouteImport }
+    '/dre': { id: '/dre'; path: '/dre'; fullPath: '/dre'; preLoaderRoute: typeof DreRouteImport; parentRoute: typeof rootRouteImport }
     '/crisis': { id: '/crisis'; path: '/crisis'; fullPath: '/crisis'; preLoaderRoute: typeof CrisisRouteImport; parentRoute: typeof rootRouteImport }
     '/contas-a-pagar': { id: '/contas-a-pagar'; path: '/contas-a-pagar'; fullPath: '/contas-a-pagar'; preLoaderRoute: typeof ContasAPagarRouteImport; parentRoute: typeof rootRouteImport }
     '/contas': { id: '/contas'; path: '/contas'; fullPath: '/contas'; preLoaderRoute: typeof ContasRouteImport; parentRoute: typeof rootRouteImport }
@@ -204,7 +206,7 @@ const EstoqueRouteWithChildren = EstoqueRoute._addFileChildren(EstoqueRouteChild
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute, AssistenteRoute, AuthRoute: AuthRouteWithChildren,
   BudgetsRoute, ComprasRoute, ConciliacaoRoute, ConfiguracoesRoute,
-  ContasRoute, ContasAPagarRoute, CrisisRoute, DashboardRoute,
+  ContasRoute, ContasAPagarRoute, CrisisRoute, DashboardRoute, DreRoute,
   EstoqueRoute: EstoqueRouteWithChildren, FinancialStateRoute,
   GasolinaRoute, ManutencaoRoute, MembrosRoute, RecorrentesRoute,
   RelatoriosRoute, RevisaoSemanalRoute, SituacaoRoute, TransactionsRoute,
