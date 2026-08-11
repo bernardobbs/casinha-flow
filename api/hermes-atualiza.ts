@@ -400,7 +400,7 @@ async function registrarAbastecimento(familyId: string, userId: string, body: an
       conta: (contaResolvida as any).nome,
     },
     resultado: result,
-    resumo_wa: `⛽ Abastecimento registrado: ${litrosFinal.toFixed(2)}L a ${fmtBRL(precoLitroFinal)}/L (${fmtBRL(valor_pago)}) no ${veiculoResolvido.nome} — hodômetro ${hodometro}km — pago em ${(contaResolvida as any).nome}.`,
+    resumo_wa: `⛽ Abastecimento registrado: ${litrosFinal.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}L a ${fmtBRL(precoLitroFinal)}/L (${fmtBRL(valor_pago)}) no ${veiculoResolvido.nome} — hodômetro ${hodometro}km — pago em ${(contaResolvida as any).nome}.`,
   });
 }
 
