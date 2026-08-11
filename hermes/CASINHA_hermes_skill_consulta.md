@@ -112,8 +112,9 @@ Sem lista aberta → `resumo_wa` diz "Nenhuma lista de compras aberta no momento
 - Se `ok:false` ou erro HTTP, avise no grupo que não conseguiu consultar agora
   e sugira tentar de novo — nunca invente saldo/estoque.
 
-## Escopo futuro (não implementado)
+## Ações de escrita
 
-Ações de escrita (marcar item como comprado, adicionar item na lista) exigiriam
-uma skill nova com seu próprio endpoint (`/api/hermes-atualiza`, por exemplo),
-seguindo o mesmo padrão de auth. Fora de escopo desta skill.
+Adicionar item na lista, lançar transação e registrar abastecimento vivem na
+skill `casinha_atualiza` (`/api/hermes-atualiza`), com etapa de confirmação
+antes de gravar. Marcar item como comprado ainda não tem skill — fora de
+escopo por ora.
