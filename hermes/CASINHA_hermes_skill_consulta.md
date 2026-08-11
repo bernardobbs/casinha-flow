@@ -48,6 +48,14 @@ Resposta:
 ```
 `saldo` negativo = categoria estourou o orçamento do mês.
 
+`categorias` vem **completa** (todas as categorias com orçamento no mês, não
+só as com problema) e `resumo_wa` já traz todas na ordem — da mais crítica
+pra mais folgada (por `saldo`, do menor pro maior). Legenda dos emojis, caso
+alguém pergunte o que significam ou queira só as piores:
+- 🔴 `saldo < 0` — já estourou o orçamento do mês.
+- 🟡 `pct_atingido >= 90` (mas saldo ainda positivo) — quase no limite.
+- 🟢 as demais.
+
 ### 2. `estoque` — itens em falta ou quase acabando
 ```json
 { "acao": "estoque" }
