@@ -119,7 +119,10 @@ function BudgetsPage() {
   const { familyId, loading: familyLoading } = useFamily();
 
   useEffect(() => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
 
@@ -149,7 +152,7 @@ function BudgetsPage() {
       await loadStatuses(familyId, mes);
       setLoading(false);
     })();
-  }, [user, familyId, mes, loadStatuses]);
+  }, [user, familyId, mes, loadStatuses, authLoading, familyLoading]);
 
   const totals = useMemo(() => {
     let planejado = 0;

@@ -57,7 +57,10 @@ function EstoquePage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
   const reload = async () => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from("v_stock_status" as any).select("*")
@@ -67,7 +70,7 @@ function EstoquePage() {
     setLoading(false);
   };
 
-  useEffect(() => { reload(); }, [user, familyId]);
+  useEffect(() => { reload(); }, [user, familyId, authLoading, familyLoading]);
 
   // Atualização otimista: UI primeiro, banco em background
   const salvarEstoque = async (id: string, novoEstoque: number) => {

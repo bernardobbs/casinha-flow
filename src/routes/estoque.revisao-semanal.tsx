@@ -48,7 +48,10 @@ function InventarioPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
       const { data } = await supabase.from("products" as any)
@@ -66,7 +69,7 @@ function InventarioPage() {
       setInputs(init);
       setLoading(false);
     })();
-  }, [familyId]);
+  }, [familyId, familyLoading]);
 
   const salvarItem = async (filho: Produto, valor: string) => {
     const qtd = parseFloat(valor.replace(",", "."));

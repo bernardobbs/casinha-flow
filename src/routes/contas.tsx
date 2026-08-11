@@ -147,8 +147,9 @@ function ContasPage() {
 
   useEffect(() => {
     if (familyId) loadAccounts();
+    else if (!familyLoading) setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [familyId]);
+  }, [familyId, familyLoading]);
 
   const parseNum = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
 

@@ -57,7 +57,10 @@ function ContasAPagarPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
       // Gerar lembretes do mês a partir dos recorrentes
@@ -72,7 +75,7 @@ function ContasAPagarPage() {
       setAccounts((a.data ?? []) as Acc[]);
       setLoading(false);
     })();
-  }, [user, familyId]);
+  }, [user, familyId, authLoading, familyLoading]);
 
   const reload = async () => {
     if (!familyId) return;

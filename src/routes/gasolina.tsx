@@ -94,7 +94,10 @@ function GasolinaPage() {
   }, [user, authLoading, navigate]);
 
   const reload = async () => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from("v_vehicle_status" as any)
@@ -106,7 +109,7 @@ function GasolinaPage() {
     setLoading(false);
   };
 
-  useEffect(() => { reload(); }, [user, familyId]);
+  useEffect(() => { reload(); }, [user, familyId, authLoading, familyLoading]);
 
   if (authLoading || familyLoading || loading) return <SkeletonGasolina />;
 
@@ -407,7 +410,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, editing, o
     } else if (open && vehicles.length && !vehicleId) {
       setVehicleId(vehicles[0].id ?? "");
       setHodometro(String(vehicles[0].odometro_atual ?? ""));
-      setCombustivel(vehicles[0].ultimo_combustivel ?? "gasolina");
+      setCombustivel(vehicles[0].combustivel ?? "gasolina");
     }
     if (open && familyId) {
       supabase.from("accounts").select("id, nome, tipo")

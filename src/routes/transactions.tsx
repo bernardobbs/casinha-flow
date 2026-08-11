@@ -712,7 +712,7 @@ function TransactionsPage() {
     };
 
     load();
-  }, [user, familyId]);
+  }, [user, familyId, authLoading]);
 
   const totals = useMemo(() => {
     let income = 0;

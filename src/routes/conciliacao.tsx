@@ -146,7 +146,10 @@ function ConciliacaoPage() {
   }, [user, authLoading, navigate]);
 
   const load = async () => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
     const [{ data: pend }, { data: cs }, { data: as }, { count: semCat }, { count: cConc }] = await Promise.all([
       supabase.from("transactions").select("*")
@@ -170,7 +173,10 @@ function ConciliacaoPage() {
   };
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       await load();
       // Auto-aplicar regras conhecidas ao abrir
@@ -178,7 +184,7 @@ function ConciliacaoPage() {
       await load();
     })();
     /* eslint-disable-next-line */
-  }, [familyId]);
+  }, [familyId, familyLoading]);
 
   const updateTx = async (id: string, patch: Partial<Tx>) => {
     const { error } = await supabase.from("transactions").update(patch).eq("id", id);

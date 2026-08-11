@@ -68,7 +68,10 @@ function RevisaoSemanalPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
       const fid = familyId;
@@ -109,7 +112,7 @@ function RevisaoSemanalPage() {
       setAccounts((a.data ?? []) as Acc[]);
       setLoading(false);
     })();
-  }, [user, familyId]);
+  }, [user, familyId, authLoading, familyLoading]);
 
   const totalSemana = txWeek.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
   const totalSemAnt = txPrev.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);

@@ -37,9 +37,12 @@ function MembrosPage() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     load();
-  }, [familyId]);
+  }, [familyId, familyLoading]);
 
   const load = async () => {
     if (!familyId) return;

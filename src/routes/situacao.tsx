@@ -71,7 +71,10 @@ function SituacaoPage() {
   }, [authLoading, user, navigate]);
 
   const load = async () => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
 
     const [s, c, sa, cr, fs] = await Promise.all([
@@ -96,7 +99,7 @@ function SituacaoPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [user, familyId]);
+  useEffect(() => { load(); }, [user, familyId, authLoading, familyLoading]);
 
   const ativarCrise = async () => {
     if (!familyId) return;

@@ -22,7 +22,7 @@ const CAT_REC = ["Receita — Salário","Receita — Aluguel","Receita — Outro
 
 function DrePage() {
   const { user, loading: authLoading } = useAuth();
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
   const navigate = useNavigate();
   const [dados, setDados] = useState<any[]>([]);
   const [recorrentes, setRecorrentes] = useState<any[]>([]);
@@ -39,7 +39,10 @@ function DrePage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
     Promise.all([
       supabase
@@ -72,7 +75,7 @@ function DrePage() {
       setFaturas((bills ?? []) as any[]);
       setLoading(false);
     });
-  }, [familyId, anoAtual]);
+  }, [familyId, anoAtual, familyLoading]);
 
   // Agrupar por mês e categoria
   const porMes = useMemo(() => {

@@ -63,7 +63,7 @@ const fmtBRL = (n: number | null | undefined) =>
 function ComprasPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [itemsByList, setItemsByList] = useState<Record<string, ShoppingItem[]>>({});
   const [pendingByList, setPendingByList] = useState<Record<string, { total: number; pendentes: number }>>({});
@@ -110,7 +110,10 @@ function ComprasPage() {
   }, [user, authLoading, navigate]);
 
   const reload = async () => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
 
     const [{ data }, { data: prods }, { data: accs }, { data: cats }] = await Promise.all([
@@ -141,7 +144,7 @@ function ComprasPage() {
     }
     setLoading(false);
   };
-  useEffect(() => { reload(); }, [familyId]);
+  useEffect(() => { reload(); }, [familyId, familyLoading]);
 
   const loadItems = async (listId: string) => {
     const { data, error } = await supabase
