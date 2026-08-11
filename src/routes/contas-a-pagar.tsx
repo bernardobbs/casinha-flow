@@ -124,6 +124,7 @@ function ContasAPagarPage() {
 
     try {
       // 1. Criar transação de saída
+      const dataPagamento = new Date().toISOString().slice(0, 10);
       const { error: txErr } = await supabase.from("transactions").insert({
         family_id: familyId,
         user_id: user.id,
@@ -132,7 +133,11 @@ function ContasAPagarPage() {
         type: "expense",
         amount: payOpen.valor,
         description: payOpen.descricao,
-        date: new Date().toISOString().slice(0, 10),
+        date: dataPagamento,
+        tipo: "despesa",
+        valor: payOpen.valor,
+        descricao: payOpen.descricao,
+        data: dataPagamento,
         source: "manual",
         tipo_especial: "normal",
         conciliado: true,

@@ -672,7 +672,11 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
           account_id: acc?.id ?? null, category_id: cat?.id ?? null,
           type: "expense", amount: v,
           description: `Manutenção: ${selectedType?.nome ?? ""}`,
-          date: data, is_essencial: true, source: "manual", tipo_especial: "normal",
+          date: data,
+          tipo: "despesa", valor: v,
+          descricao: `Manutenção: ${selectedType?.nome ?? ""}`,
+          data: data,
+          is_essencial: true, source: "manual", tipo_especial: "normal",
         }).select("id").single();
         if (txErr) throw txErr;
         txId = tx?.id ?? null;

@@ -142,11 +142,14 @@ function RevisaoSemanalPage() {
 
   const pagar = async () => {
     if (!payOpen || !familyId || !user || !payAccount) return toast.error("Selecione a conta");
+    const dataPagamento = new Date().toISOString().slice(0, 10);
     const { error: txErr } = await supabase.from("transactions").insert({
       family_id: familyId, user_id: user.id, account_id: payAccount,
       category_id: payOpen.category_id, type: "expense",
       amount: payOpen.valor, description: payOpen.descricao,
-      date: new Date().toISOString().slice(0, 10),
+      date: dataPagamento,
+      tipo: "despesa", valor: payOpen.valor, descricao: payOpen.descricao,
+      data: dataPagamento,
       source: "manual", tipo_especial: "normal",
     });
     if (txErr) return toast.error(txErr.message);

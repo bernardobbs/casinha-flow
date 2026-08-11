@@ -736,6 +736,10 @@ function TransactionsPage() {
         family_id: familyId,
         user_id: user.id,
         ...payload,
+        data: payload.date,
+        descricao: payload.description,
+        tipo: payload.type === "income" ? "receita" : "despesa",
+        valor: payload.amount,
         category: cat?.nome ?? null,
       })
       .select()
@@ -1268,6 +1272,10 @@ function TransactionsPage() {
         description: r.description,
         amount: Math.abs(r.amount),
         type: r.type,
+        data: r.date,
+        descricao: r.description,
+        tipo: r.type === "income" ? "receita" : "despesa",
+        valor: Math.abs(r.amount),
         source: "importado" as const,
         scope: importScope,
         account_id: importAccountId,
