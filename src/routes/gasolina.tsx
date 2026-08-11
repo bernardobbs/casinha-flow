@@ -440,10 +440,17 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, editing, o
     if (!v || !p || !h) { toast.error("Preencha valor, preço/L e hodômetro"); return; }
     setSaving(true);
     try {
-      const [{ data: cat }] = await Promise.all([
-        supabase.from("categories").select("id")
-          .eq("family_id", familyId).ilike("nome", "%gasolina%").maybeSingle(),
-      ]);
+      // Casa a categoria de combustível com o veículo — pode haver mais de
+      // uma "Gasolina" cadastrada (ex.: Carro e Moto), então um ilike cego
+      // pegava a errada ou dava erro de "mais de uma linha". Mesma lógica
+      // usada em api/hermes-atualiza.ts.
+      const veiculoSelecionado = vehicles.find((vv: any) => vv.id === vehicleId);
+      const { data: catsGasolina } = await supabase.from("categories").select("id, nome")
+        .eq("family_id", familyId).eq("tipo", "despesa").ilike("nome", "%gasolina%");
+      let cat = (catsGasolina ?? []).find((c: any) =>
+        veiculoSelecionado && c.nome.toLowerCase().includes(String(veiculoSelecionado.tipo).toLowerCase())
+      );
+      if (!cat && (catsGasolina ?? []).length === 1) cat = catsGasolina![0];
 
       if (editing?.id) {
         const { error } = await supabase.from("fuel_fills" as any).update({

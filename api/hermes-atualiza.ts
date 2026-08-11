@@ -474,6 +474,9 @@ async function atualizarEstoque(familyId: string, userId: string, body: any) {
     await supabase.from("products" as any).update({ estoque_atual: totalMae }).eq("id", item.parent_id);
   }
 
+  // Recalcular consumo médio / dias restantes com o novo histórico de movimentos.
+  await supabase.rpc("recalcular_consumo_estoque" as any, { p_product_id: item.id });
+
   const emoji = modoFinal === "acabou" ? "🔴" : modoFinal === "entrada" ? "📥" : modoFinal === "definir" ? "📝" : "📤";
   return json({
     ok: true,

@@ -90,6 +90,15 @@ function InventarioPage() {
     } else {
       setSaved(prev => new Set([...prev, filho.id]));
       setDirty(prev => { const n = new Set(prev); n.delete(filho.id); return n; });
+      // Registrar movimento e recalcular consumo médio — mesma regra de
+      // estoque.tsx, senão a contagem semanal nunca alimenta o histórico
+      // que calcula dias restantes.
+      const delta = novoEstoque - anterior;
+      supabase.from("stock_movements" as any).insert({
+        product_id: filho.id, family_id: familyId, user_id: user?.id,
+        tipo: delta > 0 ? "entrada" : "saida", quantidade: Math.abs(delta),
+      }).then(() => {}, () => {});
+      supabase.rpc("recalcular_consumo_estoque" as any, { p_product_id: filho.id }).then(() => {}, () => {});
       // Atualizar pai
       if (filho.parent_id) {
         const irmaos = produtos.filter(p => p.parent_id === filho.parent_id && p.id !== filho.id);

@@ -102,6 +102,8 @@ function EstoquePage() {
         product_id: id, family_id: familyId, user_id: user?.id,
         tipo: delta > 0 ? "entrada" : "saida", quantidade: Math.abs(delta),
       }).then(() => {}, () => {});
+      // Recalcular consumo médio / dias restantes com o novo histórico
+      supabase.rpc("recalcular_consumo_estoque" as any, { p_product_id: id }).then(() => {}, () => {});
     }
     setSaving(prev => ({ ...prev, [id]: false }));
   };

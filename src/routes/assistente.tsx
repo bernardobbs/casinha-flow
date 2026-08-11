@@ -77,11 +77,11 @@ Total comprometido: ${fmtBRL(pendentes.reduce((s: number, p: any) => s + Number(
 ${estq.length === 0
   ? "Nenhum produto cadastrado."
   : [
-      ...estq.filter((e: any) => e.status === "zerado").slice(0, 3).map((e: any) =>
+      ...estq.filter((e: any) => e.status_estoque === "zerado").slice(0, 3).map((e: any) =>
         `🔴 ${e.nome}: ZERADO`),
-      ...estq.filter((e: any) => e.status === "critico").slice(0, 3).map((e: any) =>
+      ...estq.filter((e: any) => e.status_estoque === "critico").slice(0, 3).map((e: any) =>
         `🟠 ${e.nome}: ${e.quantidade_atual} ${e.unidade} (crítico)`),
-      ...estq.filter((e: any) => e.dias_restantes !== null && e.dias_restantes <= 7 && e.status === "baixo")
+      ...estq.filter((e: any) => e.dias_restantes !== null && e.dias_restantes <= 7 && e.status_estoque === "baixo")
         .slice(0, 3).map((e: any) =>
         `🟡 ${e.nome}: ~${e.dias_restantes} dias restantes`),
     ].join("\n") || "Estoque em dia."}
