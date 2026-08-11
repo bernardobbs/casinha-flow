@@ -295,6 +295,7 @@ function ComprasPage() {
     const l = finalizarDialog.list;
     if (!l || !familyId || !user) return;
     if (!finalizarAccount) { toast.error("Selecione a conta"); return; }
+    if (!finalizarCategory) { toast.error("Selecione uma categoria"); return; }
 
     setFinalizarLoading(true);
     try {
@@ -303,7 +304,7 @@ function ComprasPage() {
         p_family_id: familyId,
         p_user_id: user.id,
         p_account_id: finalizarAccount,
-        p_category_id: finalizarCategory || null,
+        p_category_id: finalizarCategory,
         p_data: new Date().toISOString().slice(0, 10),
       });
       if (error) { toast.error(error.message); return; }
