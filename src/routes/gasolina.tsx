@@ -450,7 +450,9 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, editing, o
         }).eq("id", editing.id);
         if (error) throw error;
         if (editing.transaction_id)
-          await supabase.from("transactions").update({ amount: v, date: data }).eq("id", editing.transaction_id);
+          await supabase.from("transactions").update({
+            amount: v, date: data, valor: v, data: data,
+          }).eq("id", editing.transaction_id);
         toast.success("✅ Abastecimento atualizado");
       } else {
         const { data: result, error } = await supabase.rpc("registrar_abastecimento" as any, {

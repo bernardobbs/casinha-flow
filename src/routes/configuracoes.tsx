@@ -146,7 +146,7 @@ function ConfigPage() {
       setLoading(true);
       const { data: profile } = await supabase
         .from("profiles")
-        .select("family_id, families(name)")
+        .select("family_id, families(nome)")
         .eq("id", user.id)
         .maybeSingle();
       const fid = profile?.family_id ?? null;
@@ -155,7 +155,7 @@ function ConfigPage() {
         return;
       }
       const famName =
-        (profile as unknown as { families?: { name?: string } })?.families?.name ?? "";
+        (profile as unknown as { families?: { nome?: string } })?.families?.nome ?? "";
 
       const { data: settings } = await supabase
         .from("family_settings")
