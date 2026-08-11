@@ -26,7 +26,7 @@ type CatProj = {
   category_id: string; nome: string; icone: string;
   valor_planejado: number; valor_gasto: number; valor_projetado: number; status_proj: string;
 };
-type BillRow = { id: string; descricao: string; valor: number; data_vencimento: string; status: string; category_id: string | null };
+type BillRow = { id: string; descricao: string; valor: number; data_vencimento: string; status: string };
 type Acc = { id: string; nome: string };
 
 const fmtBRL = (n: number) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -91,10 +91,10 @@ function RevisaoSemanalPage() {
           .or("tipo_especial.is.null,tipo_especial.eq.normal"),
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
         supabase.from("bills_reminders")
-          .select("id, descricao, valor, data_vencimento, status, category_id")
+          .select("id, descricao, valor, data_vencimento, status")
           .eq("family_id", fid).gte("data_vencimento", iso(start7)).lte("data_vencimento", iso(today)),
         supabase.from("bills_reminders")
-          .select("id, descricao, valor, data_vencimento, status, category_id")
+          .select("id, descricao, valor, data_vencimento, status")
           .eq("family_id", fid).or("status.is.null,status.eq.pendente")
           .gt("data_vencimento", iso(today)).lte("data_vencimento", iso(in7))
           .order("data_vencimento", { ascending: true }),
@@ -145,7 +145,7 @@ function RevisaoSemanalPage() {
     const dataPagamento = new Date().toISOString().slice(0, 10);
     const { error: txErr } = await supabase.from("transactions").insert({
       family_id: familyId, user_id: user.id, account_id: payAccount,
-      category_id: payOpen.category_id, type: "expense",
+      category_id: null, type: "expense",
       amount: payOpen.valor, description: payOpen.descricao,
       date: dataPagamento,
       tipo: "despesa", valor: payOpen.valor, descricao: payOpen.descricao,

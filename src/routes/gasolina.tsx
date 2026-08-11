@@ -164,7 +164,7 @@ function GasolinaPage() {
         )}
       </main>
 
-      <FillDialog open={openFill} onOpenChange={(o) => { setOpenFill(o); if (!o) setEditingFill(null); }} familyId={familyId} userId={user?.id ?? ""} vehicles={vehicles} editing={editingFill} onSaved={reload} />
+      <FillDialog open={openFill} onOpenChange={(o: boolean) => { setOpenFill(o); if (!o) setEditingFill(null); }} familyId={familyId} userId={user?.id ?? ""} vehicles={vehicles} editing={editingFill} onSaved={reload} />
 
       <AlertDialog open={!!deletingFill} onOpenChange={(o) => !o && setDeletingFill(null)}>
         <AlertDialogContent>

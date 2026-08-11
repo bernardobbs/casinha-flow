@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ChevronDown, ChevronRight, Package, Plus, Minus, Search, ShoppingCart, Loader2, ClipboardList } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import EstoqueRevisao from "./estoque.revisao-semanal";
 import { toast } from "sonner";
 import { SkeletonPage } from "@/components/skeletons";
 
@@ -99,7 +98,7 @@ function EstoquePage() {
       supabase.from("stock_movements" as any).insert({
         product_id: id, family_id: familyId, user_id: user?.id,
         tipo: delta > 0 ? "entrada" : "saida", quantidade: Math.abs(delta),
-      }).then(() => {}).catch(() => {});
+      }).then(() => {}, () => {});
     }
     setSaving(prev => ({ ...prev, [id]: false }));
   };

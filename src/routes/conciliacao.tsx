@@ -117,7 +117,7 @@ function ConciliacaoPage() {
                   p_family_id: familyId, p_description: tx.description,
                   p_category_id: r.category_id, p_account_id: r.account_id ?? null,
                   p_tipo: tx.type, p_origem: 'ia',
-                }).then(() => {}).catch(() => {});
+                }).then(() => {}, () => {});
               }
             }
           }
@@ -196,7 +196,7 @@ function ConciliacaoPage() {
           p_account_id: updated.account_id ?? null,
           p_tipo: tx.type,
           p_origem: 'manual',
-        }).then(() => {}).catch(() => {});
+        }).then(() => {}, () => {});
       }
     }
   };

@@ -596,7 +596,7 @@ Deseja continuar mesmo assim?`);
           p_family_id: familyId, p_description: item.nome_original,
           p_category_id: "c931bce9-bb3e-4335-8891-dea9488b0b90", // Alimentação — Supermercado
           p_account_id: importConta || null, p_tipo: "expense", p_origem: "importacao",
-        }).then(() => {}).catch(() => {});
+        }).then(() => {}, () => {});
       }
     }
 
