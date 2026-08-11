@@ -17,11 +17,6 @@ export const Route = createFileRoute("/dre")({
 const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-const SALARIO = 10942.85;
-const ALUGUEL_REC = 2169.57;
-const PARC_FATURA = 2543.37; // termina set/26 (parcela 13/13)
-const PARC_FIM = "2026-09"; // último mês com parcelamento
-
 // Categorias de receita
 const CAT_REC = ["Receita — Salário","Receita — Aluguel","Receita — Outros","Outras Receitas","Salário / Proventos"];
 
@@ -31,6 +26,8 @@ function DrePage() {
   const navigate = useNavigate();
   const [dados, setDados] = useState<any[]>([]);
   const [recorrentes, setRecorrentes] = useState<any[]>([]);
+  const [parcelas, setParcelas] = useState<any[]>([]);
+  const [faturas, setFaturas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mesAtual] = useState(() => {
     const d = new Date();
@@ -57,9 +54,22 @@ function DrePage() {
         .select("descricao, valor, tipo, dia_do_mes")
         .eq("family_id", familyId)
         .eq("ativo", true),
-    ]).then(([{ data: txs }, { data: recs }]) => {
+      supabase
+        .from("installments" as any)
+        .select("mes_competencia, valor, status")
+        .eq("family_id", familyId)
+        .gte("mes_competencia", `${mesAtual}-01`),
+      supabase
+        .from("credit_card_bills" as any)
+        .select("mes_referencia, valor_total")
+        .eq("family_id", familyId)
+        .order("mes_referencia", { ascending: false })
+        .limit(3),
+    ]).then(([{ data: txs }, { data: recs }, { data: parc }, { data: bills }]) => {
       setDados((txs ?? []) as any[]);
       setRecorrentes((recs ?? []) as any[]);
+      setParcelas((parc ?? []) as any[]);
+      setFaturas((bills ?? []) as any[]);
       setLoading(false);
     });
   }, [familyId, anoAtual]);
@@ -96,6 +106,22 @@ function DrePage() {
     [recorrentes]
   );
 
+  // Parcelas ativas (não pagas) agrupadas por mês de competência
+  const parcelasPorMes = useMemo(() => {
+    const m: Record<string, number> = {};
+    parcelas.filter((p: any) => p.status !== "pago").forEach((p: any) => {
+      const mes = String(p.mes_competencia).slice(0, 7);
+      m[mes] = (m[mes] ?? 0) + Number(p.valor);
+    });
+    return m;
+  }, [parcelas]);
+
+  // Média das últimas faturas de cartão registradas, usada como estimativa
+  const mediaFaturaCartao = useMemo(() => {
+    if (faturas.length === 0) return 0;
+    return faturas.reduce((s: number, f: any) => s + Number(f.valor_total ?? 0), 0) / faturas.length;
+  }, [faturas]);
+
   // Cálculo por mês
   const resumoMes = useMemo(() => {
     return Object.entries(porMes).map(([mes, { receitas, despesas }]) => {
@@ -115,10 +141,11 @@ function DrePage() {
     for (let i = 0; i < 13; i++) {
       const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
       const mesStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const temParc = mesStr <= PARC_FIM;
-      const receitaProj = SALARIO + ALUGUEL_REC;
+      const parcelaMes = parcelasPorMes[mesStr] ?? 0;
+      const temParc = parcelaMes > 0;
+      const receitaProj = totalRecorrentesReceita;
       const despFixaProj = totalRecorrentesDespesa;
-      const faturaEstimada = 5000 + (temParc ? PARC_FATURA : 0);
+      const faturaEstimada = mediaFaturaCartao + parcelaMes;
       const totalDespProj = despFixaProj + faturaEstimada;
       const resultado = receitaProj - totalDespProj;
       meses.push({
@@ -127,6 +154,7 @@ function DrePage() {
         receitaProj,
         despFixaProj,
         faturaEstimada,
+        parcelaMes,
         totalDespProj,
         resultado,
         temParc,
@@ -134,7 +162,7 @@ function DrePage() {
       });
     }
     return meses;
-  }, [totalRecorrentesDespesa, mesAtual]);
+  }, [totalRecorrentesReceita, totalRecorrentesDespesa, mediaFaturaCartao, parcelasPorMes, mesAtual]);
 
   const toggle = (k: string) => setExpandidos(prev => {
     const n = new Set(prev);
@@ -183,7 +211,7 @@ function DrePage() {
               // Projeção do mês
               const mediaDesp = m.totalDesp / Math.max(1, diaAtual);
               const projDesp = mediaDesp * diasMes;
-              const projRec = m.totalRec > 0 ? m.totalRec : SALARIO + ALUGUEL_REC;
+              const projRec = m.totalRec > 0 ? m.totalRec : totalRecorrentesReceita;
               const projResultado = projRec - projDesp;
 
               return (
@@ -240,10 +268,10 @@ function DrePage() {
                           </div>
                         ))}
                         {/* Receitas projetadas ainda não recebidas */}
-                        {m.totalRec < SALARIO && (
+                        {totalRecorrentesReceita > 0 && m.totalRec < totalRecorrentesReceita && (
                           <div className="flex justify-between px-4 py-2 text-sm bg-emerald-50/50 dark:bg-emerald-950/20">
-                            <span className="text-muted-foreground italic">Salário (previsto)</span>
-                            <span className="tabular-nums font-medium text-emerald-400">{fmt(SALARIO)}</span>
+                            <span className="text-muted-foreground italic">Receita fixa restante (previsto)</span>
+                            <span className="tabular-nums font-medium text-emerald-400">{fmt(totalRecorrentesReceita - m.totalRec)}</span>
                           </div>
                         )}
                       </div>
@@ -355,9 +383,9 @@ function DrePage() {
             <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 border">
               <CardContent className="py-3 px-4 text-sm text-amber-800 dark:text-amber-300 space-y-1">
                 <p className="font-semibold">📌 Base da projeção</p>
-                <p>Receita fixa: Salário {fmt(SALARIO)} + Aluguel {fmt(ALUGUEL_REC)}</p>
+                <p>Receita fixa: recorrentes cadastrados ({fmt(totalRecorrentesReceita)}/mês)</p>
                 <p>Despesas fixas: recorrentes cadastrados ({fmt(totalRecorrentesDespesa)}/mês)</p>
-                <p>Parcelas fatura: {fmt(PARC_FATURA)}/mês até Set/2026 → zeram em Out/2026 🎉</p>
+                <p>Fatura de cartão: média das últimas {faturas.length || 0} faturas registradas ({fmt(mediaFaturaCartao)}/mês) + parcelas ativas</p>
               </CardContent>
             </Card>
 
@@ -384,14 +412,12 @@ function DrePage() {
 
                   {expandidos.has("fut-" + m.mes) && (
                     <div className="border-t border-border/50 px-4 py-3 space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Salário</span>
-                        <span className="text-emerald-600 tabular-nums">{fmt(SALARIO)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Aluguel recebido</span>
-                        <span className="text-emerald-600 tabular-nums">{fmt(ALUGUEL_REC)}</span>
-                      </div>
+                      {recorrentes.filter(r => r.tipo === "receita").map((r: any, idx: number) => (
+                        <div className="flex justify-between" key={idx}>
+                          <span className="text-muted-foreground">{r.descricao}</span>
+                          <span className="text-emerald-600 tabular-nums">{fmt(Number(r.valor))}</span>
+                        </div>
+                      ))}
                       <div className="border-t border-border/30 my-1" />
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Recorrentes fixos</span>
@@ -401,11 +427,6 @@ function DrePage() {
                         <span className="text-muted-foreground">Fatura cartão estimada{m.temParc ? " (c/ parcela)" : ""}</span>
                         <span className="text-red-500 tabular-nums">−{fmt(m.faturaEstimada)}</span>
                       </div>
-                      {!m.temParc && (
-                        <div className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded mt-1">
-                          ✅ Parcela de R$ {fmt(PARC_FATURA)} não existe mais — economia de {fmt(PARC_FATURA)}/mês
-                        </div>
-                      )}
                       <div className="border-t border-border/30 my-1" />
                       <div className="flex justify-between font-semibold">
                         <span>Resultado projetado</span>
