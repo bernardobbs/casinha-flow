@@ -545,10 +545,10 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
     if (editing) {
       setNome(editing.apelido ?? "");
       setTipo(editing.tipo ?? "carro");
-      setCombustivel(editing.ultimo_abastec_combustivel ?? "gasolina");
-      setFlex(!!editing.flex);
-      setTanque(String(editing.capacidade_tanque ?? "50"));
-      setConsumo(String(editing.consumo_medio_kml ?? "10"));
+      setCombustivel(editing.combustivel ?? "gasolina");
+      setFlex(editing.combustivel === "flex");
+      setTanque(String(editing.tanque_capacidade ?? "50"));
+      setConsumo(String(editing.consumo_medio_km_l ?? "10"));
       setOdometro(String(editing.odometro_atual ?? "0"));
     }
   }, [open, editing]);

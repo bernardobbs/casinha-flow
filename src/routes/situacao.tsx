@@ -102,7 +102,7 @@ function SituacaoPage() {
     if (!familyId) return;
     setCrisisLoading(true);
     const { error } = await supabase.rpc("activate_crisis" as any, {
-      p_family_id: familyId, p_motivo: "Ativado manualmente", p_estagio: 1,
+      p_family_id: familyId, p_motivo: "Ativado manualmente",
     });
     setCrisisLoading(false);
     if (error) { toast.error(error.message); return; }
