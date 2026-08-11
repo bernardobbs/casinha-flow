@@ -147,7 +147,7 @@ export function QuickAddButton() {
       const first = (data ?? [])[0];
       if (first) {
         setSuggestion(first as typeof suggestion);
-        if (first.auto_apply) setCategoryId(first.category_id);
+        if (first.nivel === 1) setCategoryId(first.category_id);
       } else {
         setSuggestion(null);
       }

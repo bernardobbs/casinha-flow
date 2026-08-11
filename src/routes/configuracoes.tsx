@@ -283,7 +283,7 @@ function ConfigPage() {
 
     // Se nome mudou, atualiza tabela families
     if (keys.includes("family_name") && values.family_name) {
-      await supabase.from("families").update({ name: values.family_name }).eq("id", familyId);
+      await supabase.from("families").update({ nome: values.family_name }).eq("id", familyId);
     }
 
     setSaving(false);

@@ -967,7 +967,6 @@ function TransactionsPage() {
         cor: newCatCor,
         icone: newCatIcone || "📦",
         is_essencial: newCatTipo === "despesa" ? newCatEssencial : false,
-        is_default: false,
       })
       .select()
       .single();
@@ -1102,7 +1101,7 @@ function TransactionsPage() {
                   ...r,
                   category: cat?.nome ?? r.category,
                   suggested_category_id: sug.category_id,
-                  suggested_origem: sug.origem,
+                  suggested_origem: sug.origem as "manual" | "ia" | "keyword" | null | undefined,
                   suggested_nivel: sug.nivel,
                   suggested_confianca: Number(sug.confianca),
                 };

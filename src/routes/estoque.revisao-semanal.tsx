@@ -55,7 +55,7 @@ function InventarioPage() {
         .select("id, nome, categoria, unidade, estoque_atual, quantidade_por_embalagem, unidade_embalagem, parent_id")
         .eq("family_id", familyId).eq("ativo", true)
         .order("categoria").order("nome");
-      const list = ((data ?? []) as Produto[]);
+      const list = ((data ?? []) as unknown as Produto[]);
       setProdutos(list);
       // Pré-preencher com valores atuais
       const init: Record<string, string> = {};

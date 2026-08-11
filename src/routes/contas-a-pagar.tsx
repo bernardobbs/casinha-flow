@@ -110,7 +110,7 @@ function ContasAPagarPage() {
     const v = Number(valor.replace(",", "."));
     if (!descricao || !v || v <= 0) return toast.error("Preencha descrição e valor");
     const { error } = await supabase.from("bills_reminders").insert({
-      family_id: familyId, user_id: user.id, descricao, valor: v, data_vencimento: data, status: "pendente",
+      family_id: familyId, descricao, valor_estimado: v, data_vencimento: data, status: "pendente",
     });
     if (error) return toast.error(error.message);
     toast.success("Lembrete criado");

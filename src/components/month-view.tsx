@@ -55,14 +55,11 @@ interface Acc {
 }
 interface Tx {
   id: string;
-  family_id: string;
-  user_id: string;
   date: string;
   description: string;
   amount: number;
   type: "income" | "expense";
   source: string;
-  scope: string;
   category_id: string | null;
   account_id: string | null;
   tipo_especial: "normal" | "transferencia" | "pagamento_fatura";
@@ -70,9 +67,9 @@ interface Tx {
 }
 interface MonthSummary {
   mes: string;
-  total_receita: number;
-  total_despesa: number;
-  qtd: number;
+  saldo: number;
+  receita: number;
+  despesa: number;
 }
 
 const MESES = [
@@ -193,11 +190,16 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const loadSummary = async () => {
-    const { data } = await supabase.rpc("get_monthly_summary", { p_family_id: familyId });
+    // p_months disambiguates the two get_monthly_summary overloads on the
+    // live DB and picks the one shaped { mes, saldo, receita, despesa }
+    const { data } = await supabase.rpc("get_monthly_summary", {
+      p_family_id: familyId,
+      p_months: 12,
+    });
     setSummary(((data ?? []) as MonthSummary[]).map((r) => ({
       ...r,
-      total_receita: Number(r.total_receita),
-      total_despesa: Number(r.total_despesa),
+      receita: Number(r.receita),
+      despesa: Number(r.despesa),
     })));
   };
 
@@ -320,7 +322,7 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {fmt(s.total_receita)} recebido · {fmt(s.total_despesa)} gasto
+                        {fmt(s.receita)} recebido · {fmt(s.despesa)} gasto
                       </div>
                     </div>
                   </button>
@@ -542,7 +544,7 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
         .eq("id", tx.recorrente_id)
         .maybeSingle()
         .then(({ data }) => {
-          if (data) setRecurringInfo({ description: data.description, frequencia: data.frequencia });
+          if (data) setRecurringInfo({ description: data.description ?? "", frequencia: data.frequencia ?? "mensal" });
         });
     }
   }, [tx]);

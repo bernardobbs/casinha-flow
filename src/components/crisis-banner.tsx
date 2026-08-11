@@ -6,9 +6,9 @@ import { AlertTriangle } from "lucide-react";
 
 interface CrisisRow {
   id: string;
-  estagio_atual: number;
+  estagio_atual: number | null;
   data_inicio: string;
-  ativo: boolean;
+  ativo: boolean | null;
 }
 
 export function CrisisBanner() {
@@ -73,7 +73,7 @@ export function CrisisBanner() {
           </span>
           <AlertTriangle className="h-4 w-4 text-destructive" />
           <p className="text-sm font-medium">
-            ⚠️ MODO CRISE ATIVO — Estágio {crisis.estagio_atual}
+            ⚠️ MODO CRISE ATIVO — Estágio {crisis.estagio_atual ?? 1}
           </p>
         </div>
         <p className="text-xs text-muted-foreground hidden sm:block">
