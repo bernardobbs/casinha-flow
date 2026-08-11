@@ -3,7 +3,7 @@ description: Adiciona item na lista de compras, lança uma transação rápida (
 triggers:
   - pedido pra adicionar item na lista ("adiciona leite na lista", "põe arroz e ovo pra comprar")
   - relato de gasto ou receita ("gastei 50 no mercado", "recebi 200 de reembolso")
-  - relato de abastecimento ("abasteci o carro, 30 litros a 5,20", "enchi o tanque da moto")
+  - relato de abastecimento ("abasteci o carro, 30 litros a 5,20", "enchi o tanque da moto", "abasteci o Cronos, paguei 156 a 5,20 no débito, hodômetro 45230, tanque cheio")
 
 ---
 
@@ -27,13 +27,18 @@ Content-Type: application/json
 ## Regra de ouro: confirmar antes de gravar
 
 ```
-1. Pessoa manda "gastei 50 no mercado"
+1. Pessoa manda "gastei 50 no mercado no débito"
 2. Hermes NÃO chama o endpoint ainda. Responde:
-   "Confirma: despesa de R$ 50,00 — 'mercado' — na conta BB Conta Corrente?"
+   "Confirma: despesa de R$ 50,00 — 'mercado' — no débito (BB Conta Corrente)?"
 3. Pessoa responde "sim" / "confirma" / "isso"
-4. SÓ AGORA Hermes chama casinha_atualiza {acao:'lancar_transacao', ...}
+4. SÓ AGORA Hermes chama casinha_atualiza {acao:'lancar_transacao', forma_pagamento:'debito', ...}
 5. Devolve o resumo_wa da resposta
 ```
+
+Se a pessoa disser "no crédito" sem nomear o cartão, o passo 2 já fica em
+aberto até o endpoint responder — chame com `forma_pagamento:'credito'`
+depois da confirmação; se vier `ambiguo:true` (mais de um cartão), passe a
+`mensagem_wa` adiante e peça o nome do cartão antes de tentar de novo.
 
 Exceção: se a mensagem já vier com todos os dados MUITO explícitos e sem
 ambiguidade nenhuma (ex.: alguém respondendo a uma pergunta direta do próprio
@@ -64,11 +69,18 @@ Resposta: `{"ok": true, "lista": "...", "item": {...}, "resumo_wa": "✅ ..."}`
 
 ### 2. `lancar_transacao`
 ```json
-{ "acao": "lancar_transacao", "descricao": "Mercado", "valor": 50.00, "tipo": "despesa" }
+{ "acao": "lancar_transacao", "descricao": "Mercado", "valor": 50.00, "tipo": "despesa", "forma_pagamento": "debito" }
 ```
 - `tipo`: `"despesa"` (default) ou `"receita"`.
-- `conta` (opcional): nome da conta; sem isso, usa a conta corrente padrão
-  (não escolhe cartão de crédito sozinho).
+- `conta` (opcional): nome exato da conta/cartão (ex.: "Nubank Roxinho") —
+  use quando a pessoa citar o nome.
+- `forma_pagamento` (opcional): `"debito"` ou `"credito"` — use quando a
+  pessoa disser só "no débito"/"no crédito" sem nomear a conta. `"debito"`
+  (ou nem `conta` nem `forma_pagamento` informados) cai na conta corrente
+  padrão; `"credito"` restringe às contas tipo cartão — esta família tem
+  **dois cartões** (BB visa Black, Nubank Roxinho), então "no crédito"
+  sozinho fica ambíguo e o endpoint devolve `{ambiguo:true}` perguntando
+  qual cartão.
 - `categoria` (opcional): se não vier, tenta categorizar automaticamente só
   quando há uma regra já aprendida com alta confiança — senão fica sem
   categoria (a pessoa classifica depois no app; **melhor sem categoria do
@@ -80,14 +92,23 @@ mencione no resumo que falta classificar).
 
 ### 3. `registrar_abastecimento`
 ```json
-{ "acao": "registrar_abastecimento", "litros": 30, "valor_pago": 156.00, "hodometro": 45230, "veiculo": "Cronos" }
+{ "acao": "registrar_abastecimento", "valor_pago": 156.00, "preco_litro": 5.20, "hodometro": 45230, "veiculo": "Cronos", "forma_pagamento": "debito", "tanque_cheio": true }
 ```
-- `preco_litro` (opcional): se não vier, calcula `valor_pago / litros`.
+Forma normal de relato desta família: **hodômetro, valor pago, valor da
+gasolina (preço/litro), débito ou crédito, se completou o tanque** — sem
+falar quantos litros. Por isso `litros` e `preco_litro` são
+intercambiáveis:
+- Informe **um dos dois**: `litros` (o endpoint calcula `preco_litro =
+  valor_pago / litros`) ou `preco_litro` (o endpoint calcula `litros =
+  valor_pago / preco_litro`). Se a pessoa só disser "abasteci e paguei
+  R$156" sem preço nem litros, pergunte o preço do litro antes de confirmar.
 - `veiculo`: nome (ou parte) do veículo — **obrigatório sempre que a família
   tiver mais de um veículo ativo** (é o caso normal aqui: carro e moto).
+- `forma_pagamento` (opcional): `"debito"` ou `"credito"`, mesmo
+  comportamento/ambiguidade de dois cartões descrito em `lancar_transacao`.
+  `conta` (opcional) também aceito se a pessoa nomear a conta/cartão.
 - `combustivel` (opcional, default `"gasolina"`), `posto` (opcional),
-  `tanque_cheio` (opcional, default `true`), `conta` (opcional, mesmo
-  padrão de `lancar_transacao`), `data` (opcional, default hoje).
+  `tanque_cheio` (opcional, default `true`), `data` (opcional, default hoje).
 - A categoria de despesa é resolvida automaticamente por veículo (existe uma
   categoria "Gasolina" por veículo) — não precisa perguntar isso pra pessoa.
 

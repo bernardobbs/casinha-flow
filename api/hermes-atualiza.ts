@@ -73,6 +73,31 @@ function resolverUnico<T extends { nome: string }>(
   };
 }
 
+// ── conta de pagamento: por nome explícito, ou por "débito"/"crédito".
+// "débito" (ou nada informado) cai na conta corrente padrão (nunca escolhe
+// cartão sozinho); "crédito" restringe às contas tipo=cartao — se houver
+// mais de um cartão (caso normal aqui: BB visa Black e Nubank Roxinho),
+// fica ambíguo e pergunta qual. ──
+function resolverConta(
+  contas: { id: string; nome: string; tipo: string }[],
+  opts: { conta?: string; forma_pagamento?: string }
+) {
+  if (opts.conta) return resolverUnico(contas, opts.conta, "conta");
+  const fp = opts.forma_pagamento?.trim().toLowerCase();
+  if (fp === "credito" || fp === "crédito" || fp === "cartao" || fp === "cartão") {
+    return resolverUnico(
+      contas.filter((c) => c.tipo === "cartao"),
+      undefined,
+      "cartão de crédito"
+    );
+  }
+  return resolverUnico(
+    contas.filter((c) => c.tipo !== "cartao"),
+    undefined,
+    "conta de débito"
+  );
+}
+
 // ── 1. adicionar_item_lista ──────────────────────────────────────────────
 async function adicionarItemLista(familyId: string, body: any) {
   const { nome, quantidade, unidade, preco_estimado, lista } = body ?? {};
@@ -140,7 +165,7 @@ async function adicionarItemLista(familyId: string, body: any) {
 
 // ── 2. lancar_transacao ──────────────────────────────────────────────────
 async function lancarTransacao(familyId: string, userId: string, body: any) {
-  const { descricao, valor, tipo, conta, categoria, data } = body ?? {};
+  const { descricao, valor, tipo, conta, forma_pagamento, categoria, data } = body ?? {};
   if (!descricao || !valor) return json({ error: "descricao e valor são obrigatórios" }, 400);
   const tipoFinal: "despesa" | "receita" = tipo === "receita" ? "receita" : "despesa";
   const tipoEn = tipoFinal === "receita" ? "income" : "expense";
@@ -152,22 +177,9 @@ async function lancarTransacao(familyId: string, userId: string, body: any) {
     .eq("ativo", true);
   if (contasErr) throw contasErr;
 
-  let contaResolvida;
-  if (conta) {
-    const r = resolverUnico(contas ?? [], conta, "conta");
-    if ("ambiguo" in r || "naoEncontrado" in r) return json({ ok: false, ...r });
-    contaResolvida = r.item;
-  } else {
-    const naoCartao = (contas ?? []).filter((c: any) => c.tipo !== "cartao");
-    if (naoCartao.length === 0) {
-      return json({
-        ok: false,
-        naoEncontrado: true,
-        mensagem_wa: "Não encontrei uma conta padrão (não-cartão). Diga o nome da conta.",
-      });
-    }
-    contaResolvida = naoCartao[0];
-  }
+  const rConta = resolverConta(contas ?? [], { conta, forma_pagamento });
+  if ("ambiguo" in rConta || "naoEncontrado" in rConta) return json({ ok: false, ...rConta });
+  const contaResolvida = rConta.item;
 
   let categoryId: string | null = null;
   let categoriaNome: string | null = null;
@@ -240,10 +252,24 @@ async function lancarTransacao(familyId: string, userId: string, body: any) {
 
 // ── 3. registrar_abastecimento ───────────────────────────────────────────
 async function registrarAbastecimento(familyId: string, userId: string, body: any) {
-  const { litros, valor_pago, preco_litro, hodometro, veiculo, combustivel, posto, tanque_cheio, conta, data } =
-    body ?? {};
-  if (!litros || !valor_pago || !hodometro) {
-    return json({ error: "litros, valor_pago e hodometro são obrigatórios" }, 400);
+  const {
+    litros,
+    valor_pago,
+    preco_litro,
+    hodometro,
+    veiculo,
+    combustivel,
+    posto,
+    tanque_cheio,
+    conta,
+    forma_pagamento,
+    data,
+  } = body ?? {};
+  if (!valor_pago || !hodometro || (!litros && !preco_litro)) {
+    return json(
+      { error: "valor_pago, hodometro e (litros ou preco_litro) são obrigatórios" },
+      400
+    );
   }
 
   const { data: veiculos, error: veicErr } = await supabase
@@ -263,18 +289,9 @@ async function registrarAbastecimento(familyId: string, userId: string, body: an
     .eq("family_id", familyId)
     .eq("ativo", true);
   if (contasErr) throw contasErr;
-  let contaResolvida: any;
-  if (conta) {
-    const r = resolverUnico(contas ?? [], conta, "conta");
-    if ("ambiguo" in r || "naoEncontrado" in r) return json({ ok: false, ...r });
-    contaResolvida = r.item;
-  } else {
-    const naoCartao = (contas ?? []).filter((c: any) => c.tipo !== "cartao");
-    if (naoCartao.length === 0) {
-      return json({ ok: false, naoEncontrado: true, mensagem_wa: "Não encontrei uma conta padrão. Diga o nome da conta." });
-    }
-    contaResolvida = naoCartao[0];
-  }
+  const rConta = resolverConta(contas ?? [], { conta, forma_pagamento });
+  if ("ambiguo" in rConta || "naoEncontrado" in rConta) return json({ ok: false, ...rConta });
+  const contaResolvida: any = rConta.item;
 
   // Categoria: precisa bater com "gasolina" E o tipo do veículo (esta
   // família tem "Transporte — Gasolina Carro" e "... Moto" separadas — um
@@ -299,6 +316,7 @@ async function registrarAbastecimento(familyId: string, userId: string, body: an
   }
 
   const precoLitroFinal = preco_litro ?? Number(valor_pago) / Number(litros);
+  const litrosFinal = litros ?? Number(valor_pago) / Number(preco_litro);
   const dataFinal = data ?? hoje();
 
   const { data: result, error } = await supabase.rpc("registrar_abastecimento" as any, {
@@ -310,7 +328,7 @@ async function registrarAbastecimento(familyId: string, userId: string, body: an
     p_data: dataFinal,
     p_valor_pago: valor_pago,
     p_preco_litro: precoLitroFinal,
-    p_litros: litros,
+    p_litros: litrosFinal,
     p_hodometro: hodometro,
     p_combustivel_usado: combustivel ?? "gasolina",
     p_posto: posto ?? null,
@@ -322,14 +340,14 @@ async function registrarAbastecimento(familyId: string, userId: string, body: an
     ok: true,
     abastecimento: {
       veiculo: veiculoResolvido.nome,
-      litros,
+      litros: litrosFinal,
       preco_litro: precoLitroFinal,
       valor_pago,
       hodometro,
       conta: (contaResolvida as any).nome,
     },
     resultado: result,
-    resumo_wa: `⛽ Abastecimento registrado: ${litros}L a ${fmtBRL(precoLitroFinal)}/L (${fmtBRL(valor_pago)}) no ${veiculoResolvido.nome} — hodômetro ${hodometro}km.`,
+    resumo_wa: `⛽ Abastecimento registrado: ${litrosFinal.toFixed(2)}L a ${fmtBRL(precoLitroFinal)}/L (${fmtBRL(valor_pago)}) no ${veiculoResolvido.nome} — hodômetro ${hodometro}km — pago em ${(contaResolvida as any).nome}.`,
   });
 }
 
