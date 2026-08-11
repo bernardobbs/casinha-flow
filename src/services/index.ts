@@ -51,9 +51,9 @@ export async function learnCategorizationRule(
   categoryId: string
 ): Promise<void> {
   await supabase.rpc('learn_categorization_rule' as any, {
-    _family_id: familyId,
-    _termo: termo.toLowerCase().slice(0, 60),
-    _category_id: categoryId,
+    p_family_id: familyId,
+    p_termo: termo.toLowerCase().slice(0, 60),
+    p_category_id: categoryId,
   });
 }
 

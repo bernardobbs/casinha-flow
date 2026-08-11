@@ -151,7 +151,7 @@ function RevisaoSemanalPage() {
     });
     if (txErr) return toast.error(txErr.message);
     await supabase.from("bills_reminders").update({ status: "pago" }).eq("id", payOpen.id);
-    await supabase.rpc("recalc_account_balance", { _account_id: payAccount });
+    await supabase.rpc("recalc_account_balance", { p_account_id: payAccount });
     toast.success("Pago");
     setBillsWeek((p) => p.map((b) => b.id === payOpen.id ? { ...b, status: "pago" } : b));
     setBillsNext((p) => p.filter((b) => b.id !== payOpen.id));

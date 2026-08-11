@@ -109,9 +109,9 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
       const tx = items.find(t => t.id === id);
       if (tx?.description && familyId) {
         void supabase.rpc("learn_categorization_rule" as any, {
-          _family_id: familyId,
-          _termo: tx.description.toLowerCase().slice(0, 60),
-          _category_id: patch.category_id,
+          p_family_id: familyId,
+          p_termo: tx.description.toLowerCase().slice(0, 60),
+          p_category_id: patch.category_id,
         });
       }
     }
@@ -121,7 +121,7 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
         .filter((t) => !t.category_id || !t.account_id),
     );
     if (patch.account_id) {
-      void supabase.rpc("recalc_account_balance", { _account_id: patch.account_id });
+      void supabase.rpc("recalc_account_balance", { p_account_id: patch.account_id });
     }
     onChanged?.();
   };

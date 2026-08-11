@@ -192,15 +192,15 @@ export function QuickAddButton() {
     // Aprende regra
     if (categoryId && description.trim()) {
       await supabase.rpc("learn_categorization_rule", {
-        _family_id: familyId,
-        _termo: description.trim(),
-        _category_id: categoryId,
-        _origem: "manual",
+        p_family_id: familyId,
+        p_termo: description.trim(),
+        p_category_id: categoryId,
+        p_origem: "manual",
       });
     }
     // Recalcula saldo da conta
     if (accountId) {
-      await supabase.rpc("recalc_account_balance", { _account_id: accountId });
+      await supabase.rpc("recalc_account_balance", { p_account_id: accountId });
     }
     // Alertas
     await supabase.rpc("check_transaction_alerts", { _transaction_id: inserted.id });

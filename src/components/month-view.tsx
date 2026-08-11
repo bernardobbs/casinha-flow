@@ -575,7 +575,7 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Salvo");
-    if (accountId) void supabase.rpc("recalc_account_balance", { _account_id: accountId });
+    if (accountId) void supabase.rpc("recalc_account_balance", { p_account_id: accountId });
     onSaved();
   };
 
@@ -584,7 +584,7 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
     const { error } = await supabase.from("transactions").delete().eq("id", tx.id);
     if (error) return toast.error(error.message);
     toast.success("Removida");
-    if (tx.account_id) void supabase.rpc("recalc_account_balance", { _account_id: tx.account_id });
+    if (tx.account_id) void supabase.rpc("recalc_account_balance", { p_account_id: tx.account_id });
     onSaved();
   };
 

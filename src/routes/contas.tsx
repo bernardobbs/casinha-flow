@@ -134,7 +134,7 @@ function ContasPage() {
 
     // Recalc todos os saldos
     for (const a of accs) {
-      await supabase.rpc("recalc_account_balance", { _account_id: a.id });
+      await supabase.rpc("recalc_account_balance", { p_account_id: a.id });
     }
     const { data: refreshed } = await supabase
       .from("accounts")

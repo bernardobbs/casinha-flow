@@ -676,7 +676,7 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
         }).select("id").single();
         if (txErr) throw txErr;
         txId = tx?.id ?? null;
-        if (acc?.id) await supabase.rpc("recalc_account_balance", { _account_id: acc.id });
+        if (acc?.id) await supabase.rpc("recalc_account_balance", { p_account_id: acc.id });
       }
       const { error } = await supabase.from("vehicle_maintenance_log" as any).insert({
         family_id: familyId, user_id: userId, vehicle_id: vehicleId,

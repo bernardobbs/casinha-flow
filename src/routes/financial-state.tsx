@@ -97,16 +97,27 @@ function FinancialStatePage() {
     if (!familyId) return;
     setLoading(true);
 
-    // 1) call recalc to make sure totals are fresh
-    const args: { _family_id: string; _mes: string; _renda?: number } = {
-      _family_id: familyId,
-      _mes: mes,
-    };
-    if (typeof opts?.renda === "number") args._renda = opts.renda;
-    const { data: rpc, error: rpcErr } = await supabase.rpc(
-      "recalc_financial_state",
-      args,
-    );
+    // 0) if a new renda was provided, persist it before recalculating
+    if (typeof opts?.renda === "number") {
+      const { error: rendaErr } = await supabase
+        .from("financial_state")
+        .upsert(
+          { family_id: familyId, mes, renda_mensal: opts.renda },
+          { onConflict: "family_id,mes" },
+        );
+      if (rendaErr) {
+        toast.error(`Erro ao salvar renda: ${rendaErr.message}`);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // 1) call recalc to make sure totals are fresh (recalc_financial_state
+    // upserts into financial_state and returns void, so we re-fetch after)
+    const { error: rpcErr } = await supabase.rpc("recalc_financial_state", {
+      p_family_id: familyId,
+      p_mes: mes,
+    });
 
     if (rpcErr) {
       toast.error(`Erro ao calcular estado: ${rpcErr.message}`);
@@ -114,7 +125,13 @@ function FinancialStatePage() {
       return;
     }
 
-    const row = (Array.isArray(rpc) ? rpc[0] : rpc) as FinancialState | null;
+    const { data: row } = await supabase
+      .from("financial_state")
+      .select("*")
+      .eq("family_id", familyId)
+      .eq("mes", mes)
+      .maybeSingle<FinancialState>();
+
     if (row) {
       const normalized: FinancialState = {
         ...row,
@@ -145,12 +162,11 @@ function FinancialStatePage() {
 
     // Auto-ativação de crise: verifica critérios após recalc
     try {
-      const { data: check } = await supabase.rpc("check_crisis_activation", {
-        _family_id: familyId,
-        _mes: mes,
-      });
-      const result = Array.isArray(check) ? check[0] : check;
-      if (result?.should_activate && result?.criterio) {
+      const { data: shouldActivate } = await supabase.rpc(
+        "check_crisis_activation",
+        { p_family_id: familyId, p_mes: mes },
+      );
+      if (shouldActivate) {
         const { data: existing } = await supabase
           .from("crisis_events")
           .select("id")
@@ -159,11 +175,10 @@ function FinancialStatePage() {
           .maybeSingle();
         if (!existing) {
           await supabase.rpc("activate_crisis", {
-            _family_id: familyId,
-            _motivo: "automatico",
-            _criterio: result.criterio,
+            p_family_id: familyId,
+            p_motivo: "Ativado automaticamente com base no estado financeiro do mês",
           });
-          toast.warning(`Modo Crise ativado: ${result.criterio}`);
+          toast.warning("Modo Crise ativado automaticamente");
         }
       }
     } catch {

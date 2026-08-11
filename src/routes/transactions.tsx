@@ -756,10 +756,10 @@ function TransactionsPage() {
     // Aprende a regra de categorização (se categoria foi escolhida manualmente)
     if (payload.category_id && payload.description) {
       void supabase.rpc("learn_categorization_rule", {
-        _family_id: familyId,
-        _termo: payload.description,
-        _category_id: payload.category_id,
-        _origem: "manual",
+        p_family_id: familyId,
+        p_termo: payload.description,
+        p_category_id: payload.category_id,
+        p_origem: "manual",
       });
     }
 
@@ -774,7 +774,7 @@ function TransactionsPage() {
     await recalcMonth(payload.date);
     // Recalc balance da conta
     if (payload.account_id) {
-      await supabase.rpc("recalc_account_balance", { _account_id: payload.account_id });
+      await supabase.rpc("recalc_account_balance", { p_account_id: payload.account_id });
     }
     // Trigger alert checks (budget thresholds, negative balance, microspending)
     if (data?.id) {
@@ -789,8 +789,8 @@ function TransactionsPage() {
       .toISOString()
       .slice(0, 10);
     await supabase.rpc("recalc_financial_state", {
-      _family_id: familyId,
-      _mes: firstDay,
+      p_family_id: familyId,
+      p_mes: firstDay,
     });
   };
 
@@ -829,14 +829,13 @@ function TransactionsPage() {
       }
       setSubmitting(true);
       const { error: instErr } = await supabase.rpc("create_installment_plan", {
-        _family_id: familyId,
-        _account_id: accountId,
-        _description: parsed.data.description,
-        _valor_total: parsed.data.amount,
-        _total_parcelas: numParcelas,
-        _data_compra: parsed.data.date,
-        _category_id: parsed.data.category_id ?? undefined,
-        _is_essencial: parsed.data.is_essencial,
+        p_family_id: familyId,
+        p_account_id: accountId,
+        p_descricao: parsed.data.description,
+        p_valor_total: parsed.data.amount,
+        p_num_parcelas: numParcelas,
+        p_data_compra: parsed.data.date,
+        p_category_id: parsed.data.category_id ?? "",
       });
       setSubmitting(false);
       if (instErr) {
@@ -1319,7 +1318,7 @@ function TransactionsPage() {
         description: `💰 ${entradas} entradas · 💸 ${saidas} saídas · 🔄 ${transfers} transferências · ⚠️ ${duplicates} duplicatas ignoradas`,
       }
     );
-    await supabase.rpc("recalc_account_balance", { _account_id: importAccountId });
+    await supabase.rpc("recalc_account_balance", { p_account_id: importAccountId });
     setImportOpen(false);
     setParsedRows([]);
 

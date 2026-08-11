@@ -146,9 +146,7 @@ function ContasAPagarPage() {
       } else if (payOpen.origem === "fatura_cartao") {
         await supabase.rpc("pay_credit_card_bill" as any, {
           p_bill_id: payOpen.id,
-          p_account_id: payAccount,
-          p_family_id: familyId,
-          p_user_id: user.id,
+          p_account_pagamento_id: payAccount,
         });
       } else if (payOpen.origem === "parcela") {
         await (supabase.from("installments") as any)
@@ -156,7 +154,7 @@ function ContasAPagarPage() {
       }
 
       // 3. Recalcular saldo da conta
-      await supabase.rpc("recalc_account_balance", { _account_id: payAccount });
+      await supabase.rpc("recalc_account_balance", { p_account_id: payAccount });
 
       toast.success("✅ Pago com sucesso!");
     } catch (e) {

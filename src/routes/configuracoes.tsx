@@ -304,7 +304,7 @@ function ConfigPage() {
   const handleRestoreKeywords = async () => {
     if (!familyId) return;
     const { error } = await supabase.rpc("seed_default_categorization_keywords", {
-      _family_id: familyId,
+      p_family_id: familyId,
     });
     if (error) {
       toast.error(error.message);

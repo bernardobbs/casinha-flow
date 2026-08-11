@@ -178,9 +178,8 @@ function CrisisPage() {
     if (!familyId) return;
     setActing(true);
     const { error } = await supabase.rpc("activate_crisis", {
-      _family_id: familyId,
-      _motivo: "manual",
-      _criterio: "Declarada manualmente pelo usuário",
+      p_family_id: familyId,
+      p_motivo: "Declarada manualmente pelo usuário",
     });
     setActing(false);
     setShowDeclare(false);
@@ -196,7 +195,7 @@ function CrisisPage() {
     if (!active) return;
     setActing(true);
     const { error } = await supabase.rpc("advance_crisis_stage", {
-      _crisis_id: active.id,
+      p_crisis_id: active.id,
     });
     setActing(false);
     if (error) {
@@ -211,7 +210,7 @@ function CrisisPage() {
     if (!active) return;
     setActing(true);
     const { error } = await supabase.rpc("resolve_crisis", {
-      _crisis_id: active.id,
+      p_crisis_id: active.id,
     });
     setActing(false);
     setShowResolve(false);
