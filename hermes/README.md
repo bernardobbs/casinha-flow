@@ -7,7 +7,7 @@ precisa ser alcançado de fora.
 
 ```
 Hermes ──POST──▶ /api/hermes-consulta   (saldo_categorias | estoque | lista_compras)
-Hermes ──POST──▶ /api/hermes-atualiza   (adicionar_item_lista | lancar_transacao | registrar_abastecimento)
+Hermes ──POST──▶ /api/hermes-atualiza   (adicionar_item_lista | lancar_transacao | registrar_abastecimento | atualizar_estoque)
 ```
 
 Diferença em relação ao Sime: o Casinha Hub é de uma família só (não
@@ -59,10 +59,10 @@ curl -sS -X POST https://<seu-deploy>.vercel.app/api/hermes-atualiza \
 ## Segurança
 
 - `/api/hermes-consulta` é só leitura. `/api/hermes-atualiza` escreve no
-  banco (lista de compras, transações, abastecimentos) — a responsabilidade
-  de confirmar com a pessoa antes de chamar é do Hermes, descrita na skill
-  `CASINHA_hermes_skill_atualiza.md`; o endpoint em si não pede confirmação,
-  só executa.
+  banco (lista de compras, transações, abastecimentos, estoque) — a
+  responsabilidade de confirmar com a pessoa antes de chamar é do Hermes,
+  descrita na skill `CASINHA_hermes_skill_atualiza.md`; o endpoint em si
+  não pede confirmação, só executa.
 - `HERMES_SECRET_CASINHA` não filtra por família (só existe uma) — mas trate
   como qualquer outro segredo: nunca commitado, nunca em log.
 - Os dois endpoints usam a `SUPABASE_SERVICE_ROLE_KEY` (já configurada na

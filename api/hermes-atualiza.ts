@@ -3,9 +3,9 @@
 // e api/hermes-consulta.ts).
 //
 // Endpoint de ESCRITA para o Hermes Agent: adicionar item na lista de
-// compras, lançar uma transação rápida, registrar abastecimento. Mesma
-// autenticação (Bearer HERMES_SECRET_CASINHA) e mesmo family_id fixo via
-// env var — nunca vem do payload.
+// compras, lançar uma transação rápida, registrar abastecimento, atualizar
+// estoque. Mesma autenticação (Bearer HERMES_SECRET_CASINHA) e mesmo
+// family_id fixo via env var — nunca vem do payload.
 //
 // Ao contrário de hermes-consulta.ts, estas ações GRAVAM no banco. A
 // responsabilidade de confirmar com a pessoa antes de chamar é do Hermes
@@ -96,6 +96,59 @@ function resolverConta(
     undefined,
     "conta de débito"
   );
+}
+
+type ProdutoEstoque = {
+  id: string;
+  nome: string;
+  parent_id: string | null;
+  estoque_atual: number;
+  unidade: string;
+};
+
+// ── produto de estoque: aqui ~60% dos produtos têm uma "mãe" genérica
+// (ex.: "Arroz", "Achocolatado") com "filhos" de marca (ex.: "Arroz Tio
+// João 1kg", "Nescau 900g") — é assim que o estoque_atual de verdade é
+// guardado e editado (só filhos e mães-sem-filho são editáveis; a mãe com
+// filhos é só a soma, recalculada a cada edição de filho). Mas as pessoas
+// no grupo falam pelo nome genérico ("acabou o arroz"), quase nunca pela
+// marca — então resolve pela mãe primeiro, e só desambigua por marca
+// quando a mãe tem mais de um filho cadastrado. ──
+function resolverProdutoEstoque(
+  produtos: ProdutoEstoque[],
+  nomeBuscado: string
+):
+  | { item: ProdutoEstoque }
+  | { ambiguo: true; opcoes: string[]; mensagem_wa: string }
+  | { naoEncontrado: true; mensagem_wa: string } {
+  const filhosPorMae = new Map<string, ProdutoEstoque[]>();
+  for (const p of produtos) {
+    if (p.parent_id) {
+      const arr = filhosPorMae.get(p.parent_id) ?? [];
+      arr.push(p);
+      filhosPorMae.set(p.parent_id, arr);
+    }
+  }
+
+  const maes = produtos.filter((p) => !p.parent_id);
+  const rMae = resolverUnico(maes, nomeBuscado, "produto");
+  if (!("naoEncontrado" in rMae)) {
+    if ("ambiguo" in rMae) return rMae;
+    const mae = rMae.item;
+    const filhos = filhosPorMae.get(mae.id) ?? [];
+    if (filhos.length === 0) return { item: mae };
+    if (filhos.length === 1) return { item: filhos[0] };
+    return {
+      ambiguo: true,
+      opcoes: filhos.map((f) => f.nome),
+      mensagem_wa: `Tenho mais de uma marca de "${mae.nome}": ${filhos.map((f) => f.nome).join(", ")}. Qual delas?`,
+    };
+  }
+
+  // Nome genérico não bateu com nenhuma mãe — tenta como nome de marca
+  // direto (ex.: alguém falou "Nescau" em vez de "achocolatado").
+  const filhos = produtos.filter((p) => p.parent_id);
+  return resolverUnico(filhos, nomeBuscado, "produto");
 }
 
 // ── 1. adicionar_item_lista ──────────────────────────────────────────────
@@ -351,6 +404,88 @@ async function registrarAbastecimento(familyId: string, userId: string, body: an
   });
 }
 
+// ── 4. atualizar_estoque ─────────────────────────────────────────────────
+const fmtQtd = (n: number, und: string) =>
+  `${n.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} ${und}`;
+
+async function atualizarEstoque(familyId: string, userId: string, body: any) {
+  const { produto, quantidade, modo } = body ?? {};
+  if (!produto) return json({ error: "produto é obrigatório" }, 400);
+  const modoFinal: "acabou" | "entrada" | "consumo" | "definir" =
+    modo === "entrada" || modo === "definir" || modo === "acabou"
+      ? modo
+      : quantidade == null
+        ? "acabou"
+        : "consumo";
+  if (modoFinal !== "acabou" && (quantidade == null || Number(quantidade) < 0)) {
+    return json({ error: "quantidade (>= 0) é obrigatória para modo diferente de 'acabou'" }, 400);
+  }
+
+  const { data: produtos, error: prodErr } = await supabase
+    .from("products" as any)
+    .select("id, nome, parent_id, estoque_atual, unidade")
+    .eq("family_id", familyId)
+    .eq("ativo", true);
+  if (prodErr) throw prodErr;
+
+  const r = resolverProdutoEstoque((produtos ?? []) as any, produto);
+  if ("ambiguo" in r || "naoEncontrado" in r) return json({ ok: false, ...r });
+  const item = r.item;
+
+  const atual = Number(item.estoque_atual);
+  let novo: number;
+  if (modoFinal === "acabou") novo = 0;
+  else if (modoFinal === "entrada") novo = atual + Number(quantidade);
+  else if (modoFinal === "definir") novo = Number(quantidade);
+  else novo = Math.max(0, atual - Number(quantidade)); // consumo
+
+  const delta = novo - atual;
+  if (delta === 0) {
+    return json({
+      ok: true,
+      produto: item.nome,
+      estoque_atual: atual,
+      alterado: false,
+      resumo_wa: `${item.nome} já está em ${fmtQtd(atual, item.unidade)} — nada mudou.`,
+    });
+  }
+
+  const { error: updErr } = await supabase
+    .from("products" as any)
+    .update({ estoque_atual: novo })
+    .eq("id", item.id);
+  if (updErr) throw updErr;
+
+  await supabase.from("stock_movements" as any).insert({
+    product_id: item.id,
+    family_id: familyId,
+    user_id: userId,
+    tipo: delta > 0 ? "entrada" : "saida",
+    quantidade: Math.abs(delta),
+  });
+
+  // Item é "filho" (variante de marca) — recalcula a mãe como soma dos filhos,
+  // mesma regra do app (estoque.tsx / revisão semanal).
+  if (item.parent_id) {
+    const irmaos = ((produtos ?? []) as any[]).filter(
+      (p) => p.parent_id === item.parent_id && p.id !== item.id
+    );
+    const totalMae = irmaos.reduce((s, p) => s + Number(p.estoque_atual), 0) + novo;
+    await supabase.from("products" as any).update({ estoque_atual: totalMae }).eq("id", item.parent_id);
+  }
+
+  const emoji = modoFinal === "acabou" ? "🔴" : modoFinal === "entrada" ? "📥" : modoFinal === "definir" ? "📝" : "📤";
+  return json({
+    ok: true,
+    produto: item.nome,
+    estoque_anterior: atual,
+    estoque_atual: novo,
+    modo: modoFinal,
+    alterado: true,
+    resumo_wa: `${emoji} ${item.nome}: ${fmtQtd(atual, item.unidade)} → ${fmtQtd(novo, item.unidade)}.`,
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 export default async function handler(req: Request) {
   if (!autenticado(req)) return json({ error: "Unauthorized" }, 401);
@@ -375,8 +510,12 @@ export default async function handler(req: Request) {
     if (acao === "adicionar_item_lista") return await adicionarItemLista(familyId, body);
     if (acao === "lancar_transacao") return await lancarTransacao(familyId, userId, body);
     if (acao === "registrar_abastecimento") return await registrarAbastecimento(familyId, userId, body);
+    if (acao === "atualizar_estoque") return await atualizarEstoque(familyId, userId, body);
     return json(
-      { error: "acao é obrigatória (adicionar_item_lista|lancar_transacao|registrar_abastecimento)" },
+      {
+        error:
+          "acao é obrigatória (adicionar_item_lista|lancar_transacao|registrar_abastecimento|atualizar_estoque)",
+      },
       400
     );
   } catch (err: any) {

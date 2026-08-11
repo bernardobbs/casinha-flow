@@ -114,7 +114,7 @@ Sem lista aberta → `resumo_wa` diz "Nenhuma lista de compras aberta no momento
 
 ## Ações de escrita
 
-Adicionar item na lista, lançar transação e registrar abastecimento vivem na
-skill `casinha_atualiza` (`/api/hermes-atualiza`), com etapa de confirmação
-antes de gravar. Marcar item como comprado ainda não tem skill — fora de
-escopo por ora.
+Adicionar item na lista, lançar transação, registrar abastecimento e
+atualizar estoque vivem na skill `casinha_atualiza` (`/api/hermes-atualiza`),
+com etapa de confirmação antes de gravar. Marcar item como comprado ainda
+não tem skill — fora de escopo por ora.

@@ -1,20 +1,21 @@
 # SKILL: casinha_atualiza
-description: Adiciona item na lista de compras, lança uma transação rápida (gasto/receita) e registra abastecimento de veículo no Casinha Hub, a partir de mensagens do grupo de WhatsApp.
+description: Adiciona item na lista de compras, lança uma transação rápida (gasto/receita), registra abastecimento de veículo e atualiza o estoque da despensa no Casinha Hub, a partir de mensagens do grupo de WhatsApp.
 triggers:
   - pedido pra adicionar item na lista ("adiciona leite na lista", "põe arroz e ovo pra comprar")
   - relato de gasto ou receita ("gastei 50 no mercado", "recebi 200 de reembolso")
   - relato de abastecimento ("abasteci o carro, 30 litros a 5,20", "enchi o tanque da moto", "abasteci o Cronos, paguei 156 a 5,20 no débito, hodômetro 45230, tanque cheio")
+  - relato de estoque acabando/mudando ("acabou o café", "usei metade do arroz", "comprei mais 2kg de açúcar fora da lista", "tem 3 rolos de papel higiênico sobrando")
 
 ---
 
 ## Objetivo
 
-Complementa `casinha_consulta` (só leitura) com três ações de **escrita**. Ao
-contrário do Sime, aqui **o Hermes é responsável por confirmar com a pessoa
-antes de chamar o endpoint** — ele não tem uma etapa própria de confirmação
-(diferente do `confirmar`/`recusar` do `sime_mesarios`, que grava na hora).
-Motivo: aqui a IA extrai valor/item/veículo de texto livre, que erra mais
-fácil que "SIM/NÃO" — vale a pena confirmar antes.
+Complementa `casinha_consulta` (só leitura) com quatro ações de **escrita**.
+Ao contrário do Sime, aqui **o Hermes é responsável por confirmar com a
+pessoa antes de chamar o endpoint** — ele não tem uma etapa própria de
+confirmação (diferente do `confirmar`/`recusar` do `sime_mesarios`, que
+grava na hora). Motivo: aqui a IA extrai valor/item/veículo de texto livre,
+que erra mais fácil que "SIM/NÃO" — vale a pena confirmar antes.
 
 ## Endpoint alvo
 
@@ -112,9 +113,41 @@ intercambiáveis:
 - A categoria de despesa é resolvida automaticamente por veículo (existe uma
   categoria "Gasolina" por veículo) — não precisa perguntar isso pra pessoa.
 
+### 4. `atualizar_estoque`
+```json
+{ "acao": "atualizar_estoque", "produto": "café", "modo": "acabou" }
+```
+- `produto`: nome do item, do jeito que a pessoa fala normalmente — o nome
+  **genérico** ("arroz", "café", "papel higiênico"), não a marca. O
+  endpoint resolve pelo nome genérico primeiro; só pede pra especificar a
+  marca se houver **mais de uma marca cadastrada** para aquele item (ex.:
+  "arroz" bate com Arroz Ideal 5kg, Arroz Tio João 1kg, Arroz Painho 1kg —
+  aí vem `ambiguo:true` perguntando qual). Com uma marca só (caso mais
+  comum), resolve direto.
+- `modo`:
+  - `"acabou"` (default se `quantidade` não vier) — zera o estoque. Pra
+    "acabou o café", "zerou o desodorante".
+  - `"consumo"` (default se `quantidade` vier sem `modo`) — subtrai
+    `quantidade` do estoque atual (nunca fica negativo). Pra "usei 200g de
+    café", "gastei uns 2 rolos de papel higiênico".
+  - `"entrada"` — soma `quantidade` ao estoque atual. Pra reposição fora do
+    fluxo normal de lista de compras (ex.: "minha mãe trouxe 3kg de arroz").
+  - `"definir"` — define o estoque como `quantidade` exata. Pra quando a
+    pessoa contou fisicamente ("tem 3 rolos de papel higiênico sobrando").
+- `quantidade`: **no mesmo tipo de unidade que o produto usa** (kg, g, L,
+  ml, un, rolos etc. — mesma unidade que aparece em `casinha_consulta
+  {acao:'estoque'}`). Se não tiver certeza da unidade, pergunte antes de
+  confirmar, ou consulte o estoque primeiro.
+- Resposta inclui `resumo_wa` tipo `"📤 Café Moído: 500g → 300g."` — use
+  quase verbatim.
+
+**Nota**: comprar tudo de uma lista de compras (marcar itens como
+comprados e dar entrada em massa) é feito **no app**, não por esta ação —
+`atualizar_estoque` é pra ajustes pontuais fora desse fluxo.
+
 ## CRÍTICO
 
-- **Sempre confirme antes de gravar** (ver seção acima) — as três ações
+- **Sempre confirme antes de gravar** (ver seção acima) — as quatro ações
   desta skill escrevem no banco de verdade, sem desfazer automático.
 - **Nunca resolva ambiguidade sozinho.** Se vier `ambiguo` ou `naoEncontrado`,
   devolva a `mensagem_wa` e espere resposta.
