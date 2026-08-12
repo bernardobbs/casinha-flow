@@ -14,6 +14,9 @@ Diferença em relação ao Sime: o Casinha Hub é de uma família só (não
 multi-tenant por "zona"), então não existe segredo por família — só um
 `HERMES_SECRET_CASINHA`, uma `HERMES_FAMILY_ID` e um `HERMES_USER_ID` fixos.
 
+Referência completa de todas as ações e como a comunicação funciona:
+ver `FUNCOES.md`.
+
 ## Configuração
 
 Três env vars na Vercel (Project Settings → Environment Variables):
