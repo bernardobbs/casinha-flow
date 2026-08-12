@@ -17,7 +17,15 @@ export function RecurringAutoGen() {
       const fid = profile?.family_id;
       if (!fid) return;
       try {
-        await supabase.rpc("generate_recurring_transactions", { p_family_id: fid });
+        // generate_recurring_transactions foi removido daqui de propósito:
+        // ele criava uma transação já "paga" assim que a data do mês
+        // chegava, sem nenhuma confirmação — e quando a pessoa confirmava o
+        // pagamento de verdade em /contas-a-pagar, uma segunda transação
+        // era criada pro mesmo item (contas-a-pagar.tsx's `pagar()`).
+        // Resultado: toda conta recorrente confirmada acabava contada duas
+        // vezes. Recorrente agora só vira transação real através do fluxo
+        // de confirmação de pagamento — generate_bills_reminders cuida só
+        // do lembrete pendente, que é o que deve acontecer automaticamente.
         await supabase.rpc("generate_bills_reminders" as any, { p_family_id: fid });
         sessionStorage.setItem(FLAG, "1");
       } catch {
