@@ -55,6 +55,14 @@ interface BudgetStatus {
   responsavel?: string | null;
 }
 
+interface BudgetFlag {
+  category_id: string;
+  meses_avaliados: number;
+  meses_estourou: number;
+  meses_folga: number;
+  media_pct: number;
+}
+
 const formatCurrency = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -80,6 +88,7 @@ function BudgetsPage() {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [statuses, setStatuses] = useState<BudgetStatus[]>([]);
+  const [flags, setFlags] = useState<Record<string, BudgetFlag>>({});
   const [crisisActive, setCrisisActive] = useState(false);
   const [mes, setMes] = useState<string>(() => {
     const d = new Date();
@@ -126,7 +135,7 @@ function BudgetsPage() {
     (async () => {
       setLoading(true);
 
-      const [{ data: cats }, { data: crisis }, { data: mems }] = await Promise.all([
+      const [{ data: cats }, { data: crisis }, { data: mems }, { data: flagsData }] = await Promise.all([
         supabase
           .from("categories")
           .select("id, nome, tipo, cor, icone, is_essencial, parent_id")
@@ -145,10 +154,14 @@ function BudgetsPage() {
           .select("id, nome, icone, cor")
           .eq("family_id", familyId)
           .order("nome"),
+        supabase.rpc("get_budget_flags" as any, { p_family_id: familyId, p_meses_historico: 3 }),
       ]);
       setCategories((cats ?? []) as Category[]);
       setCrisisActive(!!crisis);
       setMembros((mems ?? []) as unknown as {id: string; nome: string; icone: string; cor: string}[]);
+      const flagsMap: Record<string, BudgetFlag> = {};
+      for (const f of (flagsData ?? []) as BudgetFlag[]) flagsMap[f.category_id] = f;
+      setFlags(flagsMap);
       await loadStatuses(familyId, mes);
       setLoading(false);
     })();
@@ -520,6 +533,10 @@ function BudgetsPage() {
                           const pct = Math.min(100, s.pct_atingido);
                           // Mostrar nome curto (sem prefixo do pai)
                           const nomeExibido = pai ? s.category_nome.replace(`${pai.nome} — `, '') : s.category_nome;
+                          // Sinaliza padrão consistente nos últimos meses — nunca ajusta sozinho, só aponta
+                          const flag = flags[s.category_id];
+                          const flagEstourou = flag && flag.meses_avaliados >= 2 && flag.meses_estourou >= 2;
+                          const flagFolga = flag && flag.meses_avaliados >= 2 && flag.meses_folga >= 2 && !flagEstourou;
                           return (
                             <li key={s.category_id} className="space-y-1.5">
                               <div className="flex items-center justify-between gap-2">
@@ -542,6 +559,25 @@ function BudgetsPage() {
                                       color: membros.find(m => m.nome === s.responsavel)?.cor ?? '#6366F1',
                                     }}>
                                       {membros.find(m => m.nome === s.responsavel)?.icone ?? '👤'} {s.responsavel}
+                                    </Badge>
+                                  )}
+                                  {flagEstourou && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] py-0 h-4 gap-0.5"
+                                      style={{ borderColor: "var(--destructive)", color: "var(--destructive)" }}
+                                      title={`Estourou em ${flag.meses_estourou} dos últimos ${flag.meses_avaliados} meses (média ${flag.media_pct.toFixed(0)}% do planejado) — considere aumentar o valor.`}
+                                    >
+                                      ⚠️ Estoura {flag.meses_estourou}/{flag.meses_avaliados} meses
+                                    </Badge>
+                                  )}
+                                  {flagFolga && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] py-0 h-4 gap-0.5 text-muted-foreground"
+                                      title={`Usou menos de 50% do planejado em ${flag.meses_folga} dos últimos ${flag.meses_avaliados} meses (média ${flag.media_pct.toFixed(0)}%) — considere reduzir o valor.`}
+                                    >
+                                      💤 Sobra {flag.meses_folga}/{flag.meses_avaliados} meses
                                     </Badge>
                                   )}
                                 </div>
