@@ -75,12 +75,52 @@ página. Achados novos, todos já corrigidos exceto onde marcado:
   provavelmente nunca funcionou pra nenhum lembrete vinculado a uma
   recorrência (a maioria deles). Corrigido repetindo o `WHERE` do índice na
   cláusula `ON CONFLICT`.
+- ✅ **31 transações com `type`≠`tipo` corrigidas.** Legado de uma
+  importação de 2026-05-11: `type='expense'` (correto, valor negativo,
+  descrições reais de posto/restaurante/telefone) mas `tipo='receita'` —
+  qualquer leitura que use a coluna em português classificava como
+  receita. Alinhado `tipo='despesa'` nas 31 linhas.
 - 📝 Nota de documentação: a entrada de B-06 dizia que `month-view.tsx` usa a
   sobrecarga de 1 argumento de `get_monthly_summary` — na verdade usa a de 2
   argumentos (`p_family_id, p_months`), igual `relatorios.tsx`. Não muda o
   fix (a sobrecarga de 2 args foi corrigida do mesmo jeito), só a nota
   estava imprecisa.
-- Observação sem ação: `v_vehicle_status.consumo_efetivo_km_l` (fix do B-25)
+### Backlog opcional (achados reais, mas de baixa urgência — não corrigidos)
+
+- **1 `family_members.user_id` órfão** (`tipo='local'` apontando pra um
+  `auth.users.id` que não existe) — provavelmente inofensivo, mas vale
+  confirmar se membros locais deveriam ter `user_id` preenchido.
+- **11 funções RPC sem nenhuma chamada real no app** (`categorizar_produto`,
+  `check_ai_credits`, `check_crisis_stage`, `check_crisis_trigger`,
+  `check_fuel_alerts`, `check_stock_alerts`, `gerar_lista_reposicao`,
+  `get_comparativo_marcas`, `insert_subproduto`, `register_stock_entry`,
+  `seed_default_products`) — código morto ou funcionalidade que deveria
+  estar ligada e não está.
+- **Índices ausentes** em `fuel_fills`/`stock_movements`/`shopping_items`
+  pra `family_id` (coluna usada em toda policy de RLS) — sem impacto hoje
+  com poucos dados, vira gargalo de performance conforme cresce.
+- **`recurring_transactions` replica o padrão de colunas PT/EN de
+  `transactions` sem trigger de sincronização** — hoje só funciona porque
+  todo ponto de escrita no frontend grava os dois lados manualmente; sem
+  rede de segurança no banco pra futuros pontos de escrita.
+- **Triggers redundantes em `fuel_fills`** atualizando `vehicles.odometro_atual`
+  duas vezes (funções diferentes, lógica ligeiramente divergente) — mesmo
+  resultado hoje, risco de divergência se só uma for corrigida no futuro.
+- **Ordem alfabética implícita de triggers em `transactions`** mascarando
+  como `auto_classify_transfer` (roda antes, traduz `type`→`tipo`
+  corretamente) e `sync_transaction_columns` (roda depois, copia sem
+  tradução) interagem — funciona hoje só por acidente de nome, não por
+  design documentado. Foi a causa raiz provável do achado dos 31 registros
+  acima.
+- **FKs ausentes** em `user_id` de 7 tabelas (`ai_logs`, `family_members`,
+  `products`, `recurring_transactions`, `stock_movements`, `transactions`,
+  `vehicle_maintenance_log`) e em `product_price_history.shopping_list_id`
+  — zero órfãos hoje, mas sem proteção contra o futuro.
+- **55 funções sem `search_path` fixado** — boa prática de segurança
+  recomendada pelo linter do Supabase (mitigação de search_path hijacking),
+  risco baixo neste ambiente gerenciado.
+
+Observação sem ação: `v_vehicle_status.consumo_efetivo_km_l` (fix do B-25)
   calcula a média sobre todo o histórico sem excluir outliers conhecidos
   (dois registros de hodômetro duplicado e um salto de 38,88 km/L, prováveis
   erros de digitação nos dados originais) — caiu de 42 pra 11,02 km/L, bem
