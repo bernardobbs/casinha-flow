@@ -85,6 +85,28 @@ página. Achados novos, todos já corrigidos exceto onde marcado:
   argumentos (`p_family_id, p_months`), igual `relatorios.tsx`. Não muda o
   fix (a sobrecarga de 2 args foi corrigida do mesmo jeito), só a nota
   estava imprecisa.
+### Terceira rodada — varredura de todas as funções SECURITY DEFINER
+
+Pedido do usuário: conferir sistematicamente se sobrou alguma outra função
+com a mesma classe de falha (recebe família/dono como parâmetro sem checar
+quem chamou). Resultado: só restam 6 funções `SECURITY DEFINER` no schema
+`public` — `accept_invite` (valida token própria, sem `p_family_id`),
+`adjust_account_balance` (já tinha o padrão certo), `get_user_family_id` e
+`is_family_admin` (helpers de leitura, não fazem mutação privilegiada),
+`handle_new_user` e `trg_recorrente_to_lembrete` (triggers, não chamáveis
+via RPC). Nenhuma nova falha da mesma classe encontrada. Dois ajustes:
+
+- ✅ As 4 funções corrigidas na rodada anterior tinham perdido o
+  `SECURITY DEFINER` sem querer ao serem recriadas (viraram
+  `SECURITY INVOKER`). Não quebrou nada na prática — as tabelas que tocam
+  têm RLS permissiva o bastante pra um usuário autenticado operar dentro
+  da própria família, então a checagem explícita + RLS dava proteção
+  dupla — mas restaurado o `SECURITY DEFINER` original por clareza e
+  consistência com o que o commit anterior documentou.
+- ✅ `is_family_admin` (criada nesta sessão) tinha `EXECUTE` liberado pro
+  role `anon` por padrão — deixava qualquer visitante não-logado descobrir
+  se um `user_id` arbitrário é admin de alguma família. Revogado.
+
 ### Backlog opcional (achados reais, mas de baixa urgência — não corrigidos)
 
 - **1 `family_members.user_id` órfão** (`tipo='local'` apontando pra um
