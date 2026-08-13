@@ -62,7 +62,7 @@ interface Tx {
   source: string;
   category_id: string | null;
   account_id: string | null;
-  tipo_especial: "normal" | "transferencia" | "pagamento_fatura";
+  tipo_especial: "normal" | "transferencia" | "pagamento_fatura" | "ajuste_saldo";
   recorrente_id?: string | null;
 }
 interface MonthSummary {
@@ -229,6 +229,7 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
   const totals = useMemo(() => {
     let inc = 0, exp = 0;
     for (const t of txs) {
+      if ((t.tipo_especial ?? "normal") !== "normal") continue;
       if (t.type === "income") inc += t.amount;
       else exp += t.amount;
     }

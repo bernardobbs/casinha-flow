@@ -116,7 +116,7 @@ function RelatoriosPage() {
       .select("id, date, description, amount, type, category, tipo_especial")
       .eq("family_id", familyId)
       .gte("date", inicio).lte("date", fim)
-      .or("tipo_especial.is.null,tipo_especial.neq.transferencia")
+      .or("tipo_especial.is.null,tipo_especial.eq.normal")
       .order("date", { ascending: true });
     if (accountId !== "todas") q = q.eq("account_id", accountId);
     const { data } = await q;
@@ -165,7 +165,7 @@ function RelatoriosPage() {
     if (!familyId) return;
     setLoadingBu(true);
     const { data } = await supabase.rpc("get_budget_status" as any, {
-      p_family_id: familyId, p_mes: mes + "-01",
+      _family_id: familyId, _mes: mes + "-01",
     });
     setBudget((data ?? []) as BudgetRow[]);
     setLoadingBu(false);

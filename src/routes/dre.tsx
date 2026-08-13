@@ -28,6 +28,7 @@ function DrePage() {
   const [recorrentes, setRecorrentes] = useState<any[]>([]);
   const [parcelas, setParcelas] = useState<any[]>([]);
   const [faturas, setFaturas] = useState<any[]>([]);
+  const [rendaMensal, setRendaMensal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [mesAtual] = useState(() => {
     const d = new Date();
@@ -47,7 +48,7 @@ function DrePage() {
     Promise.all([
       supabase
         .from("transactions" as any)
-        .select("date, amount, type, categories(nome, tipo)")
+        .select("date, amount, type, tipo_especial, categories(nome, tipo)")
         .eq("family_id", familyId)
         .gte("date", `${anoAtual}-01-01`)
         .lte("date", `${anoAtual}-12-31`)
@@ -68,11 +69,18 @@ function DrePage() {
         .eq("family_id", familyId)
         .order("mes_referencia", { ascending: false })
         .limit(3),
-    ]).then(([{ data: txs }, { data: recs }, { data: parc }, { data: bills }]) => {
+      supabase
+        .from("financial_state" as any)
+        .select("mes, renda_mensal")
+        .eq("family_id", familyId)
+        .order("mes", { ascending: false })
+        .limit(1),
+    ]).then(([{ data: txs }, { data: recs }, { data: parc }, { data: bills }, { data: fs }]) => {
       setDados((txs ?? []) as any[]);
       setRecorrentes((recs ?? []) as any[]);
       setParcelas((parc ?? []) as any[]);
       setFaturas((bills ?? []) as any[]);
+      setRendaMensal(Number(((fs ?? []) as any[])[0]?.renda_mensal ?? 0));
       setLoading(false);
     });
   }, [familyId, anoAtual, familyLoading]);
@@ -85,6 +93,7 @@ function DrePage() {
       m[k] = { receitas: {}, despesas: {} };
     }
     dados.forEach((t: any) => {
+      if ((t.tipo_especial ?? "normal") !== "normal") return;
       const mes = t.date.slice(0, 7);
       if (!m[mes]) return;
       const cat = t.categories?.nome ?? "Sem categoria";
@@ -101,11 +110,6 @@ function DrePage() {
   // Total recorrentes despesa
   const totalRecorrentesDespesa = useMemo(() =>
     recorrentes.filter(r => r.tipo === "despesa").reduce((s: number, r: any) => s + Number(r.valor), 0),
-    [recorrentes]
-  );
-
-  const totalRecorrentesReceita = useMemo(() =>
-    recorrentes.filter(r => r.tipo === "receita").reduce((s: number, r: any) => s + Number(r.valor), 0),
     [recorrentes]
   );
 
@@ -146,7 +150,7 @@ function DrePage() {
       const mesStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const parcelaMes = parcelasPorMes[mesStr] ?? 0;
       const temParc = parcelaMes > 0;
-      const receitaProj = totalRecorrentesReceita;
+      const receitaProj = rendaMensal;
       const despFixaProj = totalRecorrentesDespesa;
       const faturaEstimada = mediaFaturaCartao + parcelaMes;
       const totalDespProj = despFixaProj + faturaEstimada;
@@ -165,7 +169,7 @@ function DrePage() {
       });
     }
     return meses;
-  }, [totalRecorrentesReceita, totalRecorrentesDespesa, mediaFaturaCartao, parcelasPorMes, mesAtual]);
+  }, [rendaMensal, totalRecorrentesDespesa, mediaFaturaCartao, parcelasPorMes, mesAtual]);
 
   const toggle = (k: string) => setExpandidos(prev => {
     const n = new Set(prev);
@@ -214,7 +218,7 @@ function DrePage() {
               // Projeção do mês
               const mediaDesp = m.totalDesp / Math.max(1, diaAtual);
               const projDesp = mediaDesp * diasMes;
-              const projRec = m.totalRec > 0 ? m.totalRec : totalRecorrentesReceita;
+              const projRec = m.totalRec > 0 ? m.totalRec : rendaMensal;
               const projResultado = projRec - projDesp;
 
               return (
@@ -271,10 +275,10 @@ function DrePage() {
                           </div>
                         ))}
                         {/* Receitas projetadas ainda não recebidas */}
-                        {totalRecorrentesReceita > 0 && m.totalRec < totalRecorrentesReceita && (
+                        {rendaMensal > 0 && m.totalRec < rendaMensal && (
                           <div className="flex justify-between px-4 py-2 text-sm bg-emerald-50/50 dark:bg-emerald-950/20">
-                            <span className="text-muted-foreground italic">Receita fixa restante (previsto)</span>
-                            <span className="tabular-nums font-medium text-emerald-400">{fmt(totalRecorrentesReceita - m.totalRec)}</span>
+                            <span className="text-muted-foreground italic">Renda mensal restante (previsto)</span>
+                            <span className="tabular-nums font-medium text-emerald-400">{fmt(rendaMensal - m.totalRec)}</span>
                           </div>
                         )}
                       </div>
@@ -386,7 +390,7 @@ function DrePage() {
             <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 border">
               <CardContent className="py-3 px-4 text-sm text-amber-800 dark:text-amber-300 space-y-1">
                 <p className="font-semibold">📌 Base da projeção</p>
-                <p>Receita fixa: recorrentes cadastrados ({fmt(totalRecorrentesReceita)}/mês)</p>
+                <p>Receita: renda mensal cadastrada em Situação Financeira ({fmt(rendaMensal)}/mês)</p>
                 <p>Despesas fixas: recorrentes cadastrados ({fmt(totalRecorrentesDespesa)}/mês)</p>
                 <p>Fatura de cartão: média das últimas {faturas.length || 0} faturas registradas ({fmt(mediaFaturaCartao)}/mês) + parcelas ativas</p>
               </CardContent>
