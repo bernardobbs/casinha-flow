@@ -45,16 +45,36 @@ página. Achados novos, todos já corrigidos exceto onde marcado:
   verificar um comentário em `contas-a-pagar.tsx` que afirmava (errado) que a
   RPC recalculava os saldos. Corrigido: a RPC agora chama
   `recalc_account_balance` pras duas contas (pagadora e cartão).
-- ⚠️ **Não corrigido, precisa de decisão do usuário — `get_previsao_mes` (B-10)
-  expôs ~R$154 mil em faturas de cartão "fantasma".** A correção do B-10
-  (parar de esconder atrasos) combinada com o gap de dado já documentado
-  (faturas antigas com status `aberta` nunca reconciliadas com pagamentos
-  reais fora do app, voltando a maio/2025) faz a seção "🔴 Atrasadas" de
-  `/contas-a-pagar` listar ~20 faturas antigas que provavelmente já foram
-  pagas de verdade, só que nunca foram marcadas como pagas no sistema.
-  Preciso confirmar com o usuário quais dessas já estão quitadas antes de
-  marcá-las — não vou adivinhar isso sozinho, mesmo padrão de cuidado usado
-  na reconciliação de saldos de conta mais cedo hoje.
+- ✅ **`get_previsao_mes` (B-10) expôs ~R$154 mil em faturas de cartão
+  "fantasma" — usuário confirmou que já estavam pagas.** 16 faturas de
+  `credit_card_bills` com `data_vencimento` já vencida (voltando a
+  maio/2025) foram marcadas `status='paga', valor_pago=valor_total`. Não
+  mexeu em `accounts.saldo_atual` nem criou transação nova (saldo já
+  reconciliado hoje via ajuste manual) — só corrigiu o status de
+  rastreamento. A fatura atual (BB visa Black, vence 25/08) e as futuras
+  continuam em aberto.
+- ✅ **Mesmo problema em `bills_reminders`, achado ao investigar o de cima —
+  43 lembretes recorrentes "atrasados" desde maio (aluguel, diarista,
+  escola, água, luz...), R$22.519 no total.** `gerar_lembretes_recorrentes`
+  cria a linha do mês seguinte automaticamente, mas nada nunca fechava o
+  ciclo do mês anterior. Usuário confirmou que são pagos normalmente fora
+  do app — marcados `status='pago'` (mesma regra: só os com
+  `data_vencimento` já vencida, sem mexer em saldo/transação).
+- ✅ **Bug novo achado no meio da reconciliação acima — trigger
+  `trg_bill_paid_next_month` quebrava ao marcar QUALQUER lembrete
+  recorrente como pago.** A trigger (dispara ao marcar um lembrete
+  vinculado a uma recorrência como `'pago'`, pra já criar o lembrete do mês
+  seguinte) usa `ON CONFLICT (recorrente_id, mes_referencia) DO NOTHING`,
+  mas o único índice único nessas colunas é **parcial**
+  (`idx_bills_reminders_recorrente_mes`, `WHERE recorrente_id IS NOT NULL
+  AND mes_referencia IS NOT NULL`) — Postgres não aceita um índice parcial
+  como alvo de inferência do `ON CONFLICT` sem repetir o mesmo `WHERE` na
+  cláusula. Isso quebrava (`there is no unique or exclusion constraint
+  matching the ON CONFLICT specification`) e desfazia a transação inteira
+  — o botão "Marcar como pago" de `contas-a-pagar.tsx` pra origem=lembrete
+  provavelmente nunca funcionou pra nenhum lembrete vinculado a uma
+  recorrência (a maioria deles). Corrigido repetindo o `WHERE` do índice na
+  cláusula `ON CONFLICT`.
 - 📝 Nota de documentação: a entrada de B-06 dizia que `month-view.tsx` usa a
   sobrecarga de 1 argumento de `get_monthly_summary` — na verdade usa a de 2
   argumentos (`p_family_id, p_months`), igual `relatorios.tsx`. Não muda o
