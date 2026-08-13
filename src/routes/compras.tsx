@@ -587,6 +587,7 @@ Deseja continuar mesmo assim?`);
     }
 
     // 3. Dar entrada no estoque dos vinculados
+    const paisAfetados = new Set<string>();
     for (const item of importItens) {
       if (!item.sub_produto_id) continue;
       const novaQtd = item.qtd * item.qtd_emb;
@@ -595,6 +596,7 @@ Deseja continuar mesmo assim?`);
       if (prod) {
         const novo = Number((prod as any).estoque_atual) + novaQtd;
         await supabase.from("products" as any).update({ estoque_atual: novo }).eq("id", item.sub_produto_id);
+        if ((prod as any).parent_id) paisAfetados.add((prod as any).parent_id);
         // Salvar regra de categorização pelo nome
         await supabase.rpc("save_transaction_rule" as any, {
           p_family_id: familyId, p_description: item.nome_original,
@@ -602,6 +604,13 @@ Deseja continuar mesmo assim?`);
           p_account_id: importConta || null, p_tipo: "expense", p_origem: "importacao",
         }).then(() => {}, () => {});
       }
+    }
+    // Recalcular o total de cada mãe afetada como soma (fresca) dos filhos
+    for (const paiId of paisAfetados) {
+      const { data: filhos } = await supabase.from("products" as any)
+        .select("estoque_atual").eq("parent_id", paiId);
+      const totalMae = ((filhos ?? []) as any[]).reduce((s, f) => s + Number(f.estoque_atual ?? 0), 0);
+      await supabase.from("products" as any).update({ estoque_atual: totalMae }).eq("id", paiId);
     }
 
     // 3. Criar transação financeira

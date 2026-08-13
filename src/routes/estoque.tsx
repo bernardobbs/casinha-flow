@@ -104,6 +104,13 @@ function EstoquePage() {
       }).then(() => {}, () => {});
       // Recalcular consumo médio / dias restantes com o novo histórico
       supabase.rpc("recalcular_consumo_estoque" as any, { p_product_id: id }).then(() => {}, () => {});
+      // Persistir o total da mãe no banco (a UI otimista acima só mexeu no estado local)
+      if (prod.parent_id) {
+        const irmãos = produtos.filter(p => p.parent_id === prod.parent_id && p.id !== id);
+        const totalFilhos = irmãos.reduce((s, p) => s + (p.estoque_atual ?? 0), 0) + novoEstoque;
+        await supabase.from("products" as any)
+          .update({ estoque_atual: totalFilhos }).eq("id", prod.parent_id);
+      }
     }
     setSaving(prev => ({ ...prev, [id]: false }));
   };
@@ -142,7 +149,6 @@ function EstoquePage() {
   const categorias = useMemo(() => ["Todas", ...Array.from(new Set(maes.map(p => p.categoria))).sort()], [maes]);
 
   const maesFiltradas = useMemo(() => maes.filter(p => {
-    if (p.estoque_atual <= 0) return false;
     if (categoriaFiltro !== "Todas" && p.categoria !== categoriaFiltro) return false;
     if (statusFiltro !== "todos" && p.status !== statusFiltro) return false;
     if (search && !p.nome.toLowerCase().includes(search.toLowerCase())) return false;
