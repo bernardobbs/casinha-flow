@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
@@ -31,6 +31,10 @@ function MembrosPage() {
   const [novoNome, setNovoNome] = useState("");
   const [convidandoNome, setConvidandoNome] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const isAdmin = useMemo(
+    () => membros.find((m) => m.user_id === user?.id)?.role === "admin",
+    [membros, user?.id],
+  );
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -132,24 +136,26 @@ function MembrosPage() {
           </CardContent>
         </Card>
 
-        {/* Convidar */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Convidar membro</CardTitle>
-            <CardDescription>Gera um link válido por 7 dias. A pessoa cria a conta e entra automaticamente na família.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex gap-2">
-              <Input placeholder="Nome do convidado (ex: Daniella)"
-                value={convidandoNome} onChange={e => setConvidandoNome(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && gerarConvite()} />
-              <Button onClick={gerarConvite} disabled={salvando || !convidandoNome.trim()} className="gap-1 shrink-0">
-                <Copy className="h-4 w-4" /> Copiar link
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">💡 O link será copiado — envie pelo WhatsApp ou email.</p>
-          </CardContent>
-        </Card>
+        {/* Convidar — só admin */}
+        {isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Convidar membro</CardTitle>
+              <CardDescription>Gera um link válido por 7 dias. A pessoa cria a conta e entra automaticamente na família.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2">
+                <Input placeholder="Nome do convidado (ex: Daniella)"
+                  value={convidandoNome} onChange={e => setConvidandoNome(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && gerarConvite()} />
+                <Button onClick={gerarConvite} disabled={salvando || !convidandoNome.trim()} className="gap-1 shrink-0">
+                  <Copy className="h-4 w-4" /> Copiar link
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">💡 O link será copiado — envie pelo WhatsApp ou email.</p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Membro local */}
         <Card>

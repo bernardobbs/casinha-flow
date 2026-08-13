@@ -92,6 +92,10 @@ function ConfigPage() {
   const [aiToday, setAiToday] = useState(0);
   const [rules, setRules] = useState<Rule[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
+  const isAdmin = useMemo(
+    () => members.find((m) => m.user_id === user?.id)?.role === "admin",
+    [members, user?.id],
+  );
   const [inviteEmail, setInviteEmail] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -422,25 +426,27 @@ function ConfigPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="border-t pt-4 space-y-3">
-                  <div>
-                    <Label>Convidar membro</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Gera um link válido por 7 dias. A pessoa cria a conta e entra na sua família automaticamente.
+                {isAdmin && (
+                  <div className="border-t pt-4 space-y-3">
+                    <div>
+                      <Label>Convidar membro</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Gera um link válido por 7 dias. A pessoa cria a conta e entra na sua família automaticamente.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input type="text" placeholder="Nome (ex: Daniella)" value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleInviteMember()} />
+                      <Button onClick={handleInviteMember}>
+                        <UserPlus className="h-4 w-4 mr-1" />Convidar
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      💡 Link copiado automaticamente — envie pelo WhatsApp ou email.
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Input type="text" placeholder="Nome (ex: Daniella)" value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleInviteMember()} />
-                    <Button onClick={handleInviteMember}>
-                      <UserPlus className="h-4 w-4 mr-1" />Convidar
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    💡 Link copiado automaticamente — envie pelo WhatsApp ou email.
-                  </p>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -520,24 +526,28 @@ function ConfigPage() {
                   </Button>
                 </div>
 
-                <Separator className="my-6" />
+                {isAdmin && (
+                  <>
+                    <Separator className="my-6" />
 
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-destructive">
-                    Zona de perigo
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Apaga todas as transações, veículos, estoque e histórico
-                    da família. Categorias e orçamentos são mantidos.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setResetOpen(true)}
-                  >
-                    🗑️ Resetar dados da família
-                  </Button>
-                </div>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-destructive">
+                        Zona de perigo
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Apaga todas as transações, veículos, estoque e histórico
+                        da família. Categorias e orçamentos são mantidos.
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => setResetOpen(true)}
+                      >
+                        🗑️ Resetar dados da família
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 

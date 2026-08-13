@@ -34,11 +34,11 @@ Legenda de categoria:
 
 | ID | Página/tabela | Bug | Cat |
 |---|---|---|---|
-| B-15 | RPC `reset_family_data` + `configuracoes.tsx` | Qualquer membro (não só admin) pode apagar todos os dados financeiros da família — sem checagem de `role` na UI nem na RPC. | 🔒 DECISÃO |
-| B-16 | RLS `family_members` | Policy só checa `family_id`, não `role` — qualquer membro autenticado pode se auto-promover a admin ou remover o admin via API direta do Supabase (fora da UI). | 🔒 DECISÃO |
-| B-17 | RLS `family_invites` | Qualquer membro (não só admin) pode gerar convites para novas pessoas entrarem na família. | 🔒 DECISÃO |
-| B-18 | Postgres Auth config | "Leaked password protection" desabilitada — combinado com validação de senha só no cliente, permite criar conta com senha comprometida via chamada direta à API. | 🔒 DECISÃO (mas de baixo esforço pra ligar) |
-| B-19 | RPCs `accept_invite`, `get_user_family_id`, `reset_family_data` | Expostas ao role `anon` (não autenticado) — `reset_family_data` já se protege internamente, mas é gap de *defense-in-depth*. | 🔒 DECISÃO (hardening, baixo risco hoje) |
+| B-15 | ✅ RPC `reset_family_data` + `configuracoes.tsx` | Qualquer membro (não só admin) podia apagar todos os dados financeiros da família. **Decisão do usuário**: restringir a admin. **Corrigido**: RPC agora exige `is_family_admin(auth.uid())`; botão "Resetar dados" só aparece pra admin na UI. | 🔒 DECISÃO → aplicada |
+| B-16 | ✅ RLS `family_members` | Policy só checava `family_id`, não `role` — qualquer membro podia se auto-promover a admin ou remover o admin via API direta. **Corrigido**: policy `FOR ALL` dividida em SELECT (livre pra família)/INSERT (admin, ou membro comum inserindo só `role=member,tipo=local` — mantém "Adicionar membro local" funcionando pra todos)/UPDATE/DELETE (admin only). | 🔒 DECISÃO → aplicada |
+| B-17 | ✅ RLS `family_invites` | Qualquer membro podia gerar convites pra família. **Corrigido**: policy dividida, INSERT/UPDATE/DELETE agora exigem admin; SELECT continua livre. Botões de convite escondidos da UI pra não-admin em `configuracoes.tsx` e `membros.tsx`. | 🔒 DECISÃO → aplicada |
+| B-18 | ⏳ Postgres Auth config | "Leaked password protection" desabilitada. **Não corrigido** — é uma configuração do painel do Supabase (Authentication → Policies), não uma migration de SQL; nenhuma ferramenta disponível nesta sessão consegue ligar isso. Fica pendente pro usuário habilitar manualmente. | 🔒 DECISÃO (ação manual necessária) |
+| B-19 | ✅ RPCs `accept_invite`, `get_user_family_id`, `reset_family_data` | Expostas ao role `anon`. **Corrigido**: `REVOKE EXECUTE ... FROM anon` nas 3 — continuam funcionando normalmente pra usuários autenticados (que é como sempre foram chamadas), só deixam de estar tecnicamente alcançáveis por uma sessão anônima. | 🔒 DECISÃO → aplicada |
 
 ## 🟡 Altos (funcionalidade quebrada ou número enganoso, sem risco de segurança)
 
