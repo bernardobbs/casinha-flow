@@ -72,7 +72,9 @@ function GasolinaPage() {
     const { error } = await supabase.from("fuel_fills" as any).delete().eq("id", deletingFill.id);
     if (error) { toast.error(error.message); return; }
     if (deletingFill.transaction_id) {
+      const { data: tx } = await supabase.from("transactions").select("account_id").eq("id", deletingFill.transaction_id).maybeSingle();
       await supabase.from("transactions").delete().eq("id", deletingFill.transaction_id);
+      if (tx?.account_id) await supabase.rpc("recalc_account_balance", { p_account_id: tx.account_id });
     }
     toast.success("Abastecimento apagado");
     setDeletingFill(null);
@@ -347,9 +349,16 @@ function MaintenanceList({ vehicleId, onRegister }: { vehicleId: string; onRegis
   }, [vehicleId]);
   const statusBadge = (s: string) => {
     if (s === "vencido") return <Badge variant="destructive">🔴 Vencido</Badge>;
-    if (s === "em_breve") return <Badge variant="secondary">⚠️ Em breve</Badge>;
-    if (s === "pendente") return <Badge variant="outline">Sem registro</Badge>;
+    if (s === "proximo") return <Badge variant="secondary">⚠️ Próximo</Badge>;
+    if (s === "sem_registro") return <Badge variant="outline">Sem registro</Badge>;
     return <Badge variant="secondary">✅ OK</Badge>;
+  };
+  const motivo = (r: any) => {
+    if (r.status === "sem_registro") return "nunca registrado";
+    if (r.status === "vencido" && r.km_restante != null) return `${Math.abs(r.km_restante)} km atrasado`;
+    if (r.status === "proximo" && r.meses_restante != null) return `vence em ~${r.meses_restante} ${r.meses_restante === 1 ? "mês" : "meses"}`;
+    if (r.km_restante != null) return `faltam ${r.km_restante} km`;
+    return "";
   };
   return (
     <Card className="border-border/60">
@@ -363,14 +372,14 @@ function MaintenanceList({ vehicleId, onRegister }: { vehicleId: string; onRegis
         ) : (
           <ul className="space-y-2">
             {rows.map((r) => (
-              <li key={r.type_id} className="flex items-center justify-between border-b last:border-0 pb-2">
+              <li key={r.id} className="flex items-center justify-between border-b last:border-0 pb-2">
                 <div>
-                  <p className="font-medium">{r.icone} {r.nome}</p>
+                  <p className="font-medium">🔧 {r.nome}</p>
                   <p className="text-xs text-muted-foreground">
                     {r.intervalo_km ? `${r.intervalo_km} km` : ""}
                     {r.intervalo_km && r.intervalo_meses ? " / " : ""}
                     {r.intervalo_meses ? `${r.intervalo_meses} meses` : ""}
-                    {" — "}{r.motivo}
+                    {" — "}{motivo(r)}
                   </p>
                 </div>
                 {statusBadge(r.status)}
@@ -459,10 +468,12 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, editing, o
           posto: posto || null, tanque_cheio: tanqueCheio,
         }).eq("id", editing.id);
         if (error) throw error;
-        if (editing.transaction_id)
-          await supabase.from("transactions").update({
+        if (editing.transaction_id) {
+          const { data: tx } = await supabase.from("transactions").update({
             amount: v, date: data, valor: v, data: data,
-          }).eq("id", editing.transaction_id);
+          }).eq("id", editing.transaction_id).select("account_id").maybeSingle();
+          if (tx?.account_id) await supabase.rpc("recalc_account_balance", { p_account_id: tx.account_id });
+        }
         toast.success("✅ Abastecimento atualizado");
       } else {
         const { data: result, error } = await supabase.rpc("registrar_abastecimento" as any, {

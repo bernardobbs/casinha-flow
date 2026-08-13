@@ -844,6 +844,11 @@ Deseja continuar mesmo assim?`);
                   <p>📦 Estoque atualizado: <strong>{finalizarResult.estoque} produtos</strong></p>
                   <p>🛒 Itens comprados: <strong>{finalizarResult.itens}</strong></p>
                 </div>
+                {finalizarResult.estoque === 0 && finalizarResult.itens > 0 && (
+                  <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 pt-1 border-t border-emerald-200/60">
+                    Nenhum item desta lista está vinculado a um produto do estoque, por isso nada foi atualizado — use "Importar" ou vincule o produto ao adicionar o item.
+                  </p>
+                )}
               </div>
               <Button className="w-full" onClick={() => setFinalizarDialog({ open: false, list: null })}>
                 Fechar

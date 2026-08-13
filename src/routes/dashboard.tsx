@@ -138,25 +138,34 @@ function Dashboard() {
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
         supabase.rpc("get_previsao_mes" as any, { p_family_id: fid }),
       ]);
-      // Buscar recorrentes separadamente
-      const { data: recData } = await supabase
-        .from("recurring_transactions" as any)
-        .select("valor")
-        .eq("family_id", fid)
-        .eq("ativo", true)
-        .eq("tipo", "despesa");
+      // Buscar recorrentes e parcelas pendentes do mês separadamente
+      const mesInicio = new Date(); mesInicio.setDate(1);
+      const mesInicioStr = mesInicio.toISOString().slice(0, 10);
+      const mesFimStr = new Date(mesInicio.getFullYear(), mesInicio.getMonth() + 1, 1).toISOString().slice(0, 10);
+      const [{ data: recData }, { data: parcData }] = await Promise.all([
+        supabase
+          .from("recurring_transactions" as any)
+          .select("valor")
+          .eq("family_id", fid)
+          .eq("ativo", true)
+          .eq("tipo", "despesa"),
+        supabase
+          .from("installments" as any)
+          .select("valor")
+          .eq("family_id", fid)
+          .eq("status", "pendente")
+          .gte("mes_competencia", mesInicioStr)
+          .lt("mes_competencia", mesFimStr),
+      ]);
       const totalRec = ((recData ?? []) as any[]).reduce((s: number, r: any) => s + Number(r.valor), 0);
-      setComprometimento({ recorrentes: totalRec, parcelas: 2543, salario: 11143.20 });
+      const totalParc = ((parcData ?? []) as any[]).reduce((s: number, p: any) => s + Number(p.valor), 0);
 
       const summaryRow = Array.isArray(s.data) ? s.data[0] : s.data;
       if (summaryRow) setSummary(summaryRow as DashSummary);
+      setComprometimento({ recorrentes: totalRec, parcelas: totalParc, salario: Number((summaryRow as any)?.renda_mensal ?? 0) });
       const saldoRow = Array.isArray(sa.data) ? sa.data[0] : sa.data;
       if (saldoRow) setSaldo(saldoRow as Saldo);
       if (c.data) setCats((c.data as CatProj[]).slice(0, 6));
-
-      console.log('[Dashboard] s.error:', s.error, 'sa.error:', sa.error);
-      console.log('[Dashboard] summaryRow:', summaryRow);
-      console.log('[Dashboard] saldoRow:', saldoRow);
 
       if (prev.data) {
         const pendentes = (prev.data as ContaPendente[]).filter((p: any) => p.status !== 'pago');

@@ -174,11 +174,19 @@ function FinancialStatePage() {
           .eq("ativo", true)
           .maybeSingle();
         if (!existing) {
-          await supabase.rpc("activate_crisis", {
+          const { error: activateError } = await supabase.rpc("activate_crisis", {
             p_family_id: familyId,
             p_motivo: "Ativado automaticamente com base no estado financeiro do mês",
           });
-          toast.warning("Modo Crise ativado automaticamente");
+          if (!activateError) {
+            await supabase
+              .from("financial_state")
+              .update({ modo_crise: true })
+              .eq("family_id", familyId)
+              .eq("mes", mes);
+            setState((prev) => (prev ? { ...prev, modo_crise: true } : prev));
+            toast.warning("Modo Crise ativado automaticamente");
+          }
         }
       }
     } catch {
