@@ -4,6 +4,70 @@ Consolidado a partir de 6 investigações paralelas cobrindo as 25 páginas do a
 em 12-13/08/2026. Cada bug tem um ID estável (`B-01`, `B-02`...) pra rastrear
 progresso nas correções. Ordem: mais crítico → mais leve.
 
+## Segunda rodada (13/08/2026) — regressões e achados estruturais
+
+Depois de fechar B-01 a B-54, rodei mais duas investigações: uma conferindo
+se as próprias correções de hoje quebraram algo, e outra olhando o banco
+como um todo (RLS, constraints, índices, triggers) em vez de página por
+página. Achados novos, todos já corrigidos exceto onde marcado:
+
+- ✅ **CRÍTICO — vazamento de dados entre famílias via 10 views.** `v_stock_status`,
+  `v_gastos_categoria_mes`, `v_fuel_monthly_summary`, `v_maintenance_status`,
+  `v_flex_comparison`, `v_fuel_consumption`, `v_contas_pendentes_mes`,
+  `v_stock_consolidated`, `v_stock_review`, `v_vehicle_status` rodavam com o
+  privilégio do dono (`postgres`, que ignora RLS) em vez do privilégio de
+  quem consulta, e tinham `SELECT` liberado pro role `anon` — a chave
+  pública embutida em qualquer bundle do frontend conseguia ler dados
+  financeiros de **qualquer família** sem login. Corrigido: `security_invoker
+  = true` nas 10 views + `REVOKE ALL ... FROM anon`.
+- ✅ **CRÍTICO — 4 RPCs sem checagem de dono, cross-tenant.**
+  `get_transactions_by_month`, `registrar_abastecimento`,
+  `gerar_lembretes_recorrentes`, `copy_budget_from_previous_month` são
+  `SECURITY DEFINER`, recebem `p_family_id` como parâmetro, mas nunca
+  conferiam se quem chama pertence àquela família (IDOR — dava pra ler/escrever
+  dados de qualquer família só passando o UUID). `adjust_account_balance` já
+  tinha o padrão de proteção certo; replicado nas 4. `auth.role()='service_role'`
+  é liberado (usado pelo Hermes via service role key).
+- ✅ **CRÍTICO (regressão de hoje) — `get_maintenance_status` quebrada em runtime.**
+  A correção do B-22 declarou `ultimo_km`/`km_atual`/`km_restante` como
+  `integer`, mas as colunas reais são `numeric` — toda chamada falhava com
+  "structure of query does not match function result type", pior que o bug
+  original (100% das telas de manutenção quebravam, não só o status errado).
+  Corrigido pros tipos reais.
+- ✅ **CRÍTICO (regressão de hoje) — `accept_invite` quebrada pela RLS do B-16.**
+  `accept_invite` é `SECURITY INVOKER`; o `INSERT` que ela faz em
+  `family_members` (`role='member', tipo='auth'`) caía na nova policy de
+  INSERT (só libera admin OU `role=member AND tipo=local`) — todo convite
+  real (não-local) passava a falhar. Corrigido: `accept_invite` marcada
+  `SECURITY DEFINER` (ela já faz sua própria validação de token/expiração/posse,
+  não depende de RLS pra ser segura — mesmo padrão de `handle_new_user`).
+- ✅ **Gap real — `pay_credit_card_bill` nunca recalculava saldo.** Achado ao
+  verificar um comentário em `contas-a-pagar.tsx` que afirmava (errado) que a
+  RPC recalculava os saldos. Corrigido: a RPC agora chama
+  `recalc_account_balance` pras duas contas (pagadora e cartão).
+- ⚠️ **Não corrigido, precisa de decisão do usuário — `get_previsao_mes` (B-10)
+  expôs ~R$154 mil em faturas de cartão "fantasma".** A correção do B-10
+  (parar de esconder atrasos) combinada com o gap de dado já documentado
+  (faturas antigas com status `aberta` nunca reconciliadas com pagamentos
+  reais fora do app, voltando a maio/2025) faz a seção "🔴 Atrasadas" de
+  `/contas-a-pagar` listar ~20 faturas antigas que provavelmente já foram
+  pagas de verdade, só que nunca foram marcadas como pagas no sistema.
+  Preciso confirmar com o usuário quais dessas já estão quitadas antes de
+  marcá-las — não vou adivinhar isso sozinho, mesmo padrão de cuidado usado
+  na reconciliação de saldos de conta mais cedo hoje.
+- 📝 Nota de documentação: a entrada de B-06 dizia que `month-view.tsx` usa a
+  sobrecarga de 1 argumento de `get_monthly_summary` — na verdade usa a de 2
+  argumentos (`p_family_id, p_months`), igual `relatorios.tsx`. Não muda o
+  fix (a sobrecarga de 2 args foi corrigida do mesmo jeito), só a nota
+  estava imprecisa.
+- Observação sem ação: `v_vehicle_status.consumo_efetivo_km_l` (fix do B-25)
+  calcula a média sobre todo o histórico sem excluir outliers conhecidos
+  (dois registros de hodômetro duplicado e um salto de 38,88 km/L, prováveis
+  erros de digitação nos dados originais) — caiu de 42 pra 11,02 km/L, bem
+  melhor, mas ainda acima da faixa limpa (~8,8–9,4 km/L). Não tentei
+  detectar/excluir outliers automaticamente — risco de "corrigir" dado real
+  por engano é maior que o benefício aqui.
+
 Legenda de categoria:
 - 🔒 **DECISÃO** — não é bug de código, é modelo de permissão/produto. Não corrigir sem confirmar com o usuário.
 - 🐛 **AUTO** — bug de lógica com correção clara (bate com padrão já usado em outro lugar do próprio app). Seguro corrigir sem perguntar.
