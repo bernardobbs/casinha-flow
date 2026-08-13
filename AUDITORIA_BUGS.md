@@ -74,21 +74,21 @@ Legenda de categoria:
 
 | ID | Página/arquivo | Bug |
 |---|---|---|
-| B-40 | `transactions.tsx`, `month-view.tsx` | Tipo TS de `tipo_especial` não inclui `'ajuste_saldo'` — badge não aparece pra esses lançamentos. |
-| B-41 | `transactions.tsx` (checagem de duplicata manual) | Usa `.eq("amount", ...)` puro em vez de `COALESCE`; RPC `check_duplicate_transaction` já faz certo. |
-| B-42 | `transactions.tsx` | `totals` (useMemo) calculado mas nunca usado no JSX — código morto. |
-| B-43 | `conciliacao.tsx` | `.limit(100)` em transações pendentes; contador usa `list.length` em vez de count exato — subestima se passar de 100 (hoje 53, sem impacto). |
-| B-44 | `reconciliation-panel.tsx` | Mesmo padrão de B-43 com `.limit(500)` (hoje 50/681, sem impacto). |
-| B-45 | `contas-a-pagar.tsx` | `new Date(r.data_vencimento).getMonth()` sem `"T00:00:00"` — sujeito a bug de fuso horário (nenhum caso ativo hoje). |
-| B-46 | `dre.tsx` | `CAT_REC` declarado e nunca usado — código morto. |
-| B-47 | `relatorios.tsx` | 3 abas declaradas no `TabsList` (Preços, Comprometimento, Estoque) mas os componentes correspondentes nunca são renderizados em `TabsContent` — clicar não mostra nada. |
-| B-48 | `relatorios.tsx` (`ComprometimentoRelatorio`, código morto por B-47) | `salario`/`parcelas` hardcoded — mesma classe de B-30, mas em componente que nem está acessível hoje. |
-| B-49 | `configuracoes.tsx` | Campo `ai_provider` existe no estado mas não tem UI pra editar — sempre Gemini na prática. |
-| B-50 | `use-family.ts` | `clearFamilyCache()` exportada mas nunca chamada — cache pode ficar stale em cenários hoje raros. |
-| B-51 | `crisis.tsx` | Badge "manual" vs "automática" nunca bate com o texto real salvo (latente — crise nunca fica ativa hoje por causa de B-13/B-27). |
-| B-52 | `crisis.tsx` | Alerta de gastos não-essenciais não filtra `tipo_especial` (latente pelo mesmo motivo). |
-| B-53 | `dashboard.tsx` | `console.log` de debug esquecido nas linhas 157-159. |
-| B-54 | RPC `create_installment_plan` | Cria a transação de cada parcela corretamente, mas nunca grava o `id` dela de volta em `installments.transaction_id` (coluna existe, sempre fica NULL). Achado ao investigar B-11. Sem consumidor conhecido desse campo hoje, então não corrompe nada, mas qualquer feature futura que dependa desse vínculo vai encontrar tudo NULL. |
+| B-40 | ✅ `transactions.tsx`, `month-view.tsx` | Tipo TS de `tipo_especial` não incluía `'ajuste_saldo'` — badge não aparecia pra esses lançamentos. **Corrigido de quebra** no commit de B-04/B-08 (`month-view.tsx`); aplicado agora também em `transactions.tsx`. |
+| B-41 | ✅ `transactions.tsx` (checagem de duplicata manual) | Usava `.eq("amount", ...)` puro em vez de checar as duas colunas. **Corrigido**: `.or("amount.eq.X,valor.eq.X")`. | 🐛 AUTO |
+| B-42 | ✅ `transactions.tsx` | `totals` (useMemo) calculado mas nunca usado no JSX — código morto. **Corrigido**: removido. | 🐛 AUTO |
+| B-43 | ✅ `conciliacao.tsx` | `.limit(100)` em transações pendentes; contador usava `list.length` em vez de count exato. **Corrigido**: contador agora vem de uma query `count:"exact"` separada. | 🐛 AUTO |
+| B-44 | ✅ `reconciliation-panel.tsx` | Mesmo padrão de B-43 com `.limit(500)`. **Corrigido**: mesma solução (count exato separado). | 🐛 AUTO |
+| B-45 | ✅ `contas-a-pagar.tsx` | `new Date(r.data_vencimento).getMonth()` sem `"T00:00:00"`. **Corrigido de quebra** no commit de B-09/B-10/B-11. | 🐛 AUTO |
+| B-46 | ✅ `dre.tsx` | `CAT_REC` declarado e nunca usado — código morto. **Corrigido de quebra** no commit de B-04. | 🐛 AUTO |
+| B-47 | ✅ `relatorios.tsx` | 3 abas declaradas no `TabsList` (Preços, Comprometimento, Estoque) mas nunca renderizadas em `TabsContent`. **Corrigido**: `TabsContent` adicionado pras 3, renderizando `ComparativoPrecos`/`ComprometimentoRelatorio`/`RelatorioEstoque` (já existiam prontos no arquivo, só não estavam ligados). De quebra removida uma linha morta em `ComparativoPrecos` (`window.__supabase` inexistente, nunca usada). | 🐛 AUTO |
+| B-48 | ✅ `relatorios.tsx` (`ComprometimentoRelatorio`) | `salario`/`parcelas` hardcoded. **Corrigido**: agora busca `financial_state.renda_mensal` do mês e soma real de `installments` pendentes — os campos continuam editáveis na UI (é uma calculadora "e se"), só o valor inicial deixou de ser fixo. Também adicionada proteção contra divisão por zero na barra visual (salário podia ser 0 agora que não é mais hardcoded). | 📎 DADO |
+| B-49 | ✅ `configuracoes.tsx` | Campo `ai_provider` existia no estado mas não tinha UI pra editar. **Corrigido**: removido (só Gemini é suportado hoje; reintroduzir quando houver de fato mais de um provedor). | 🐛 AUTO |
+| B-50 | ✅ `use-family.ts` | `clearFamilyCache()` exportada mas nunca chamada. **Corrigido**: chamada em `auth.tsx` logo após aceitar um convite com sucesso (cenário real onde o `family_id` do usuário muda). | 🐛 AUTO |
+| B-51 | ✅ `crisis.tsx` | Badge "manual" vs "automática" comparava com a string literal `"manual"`, mas o texto salvo é uma frase completa ("Declarada manualmente pelo usuário"/"Ativado automaticamente...") — nunca batia, badge sempre "automática". **Corrigido**: comparação por `.includes("manual")` (case-insensitive) nos dois lugares (card principal e histórico). | 🐛 AUTO |
+| B-52 | ✅ `crisis.tsx` | Alerta de gastos não-essenciais não filtrava `tipo_especial` **e** usava `transactions.is_essencial` (mesma fonte não sincronizada do B-12) em vez de `categories.is_essencial`. **Corrigido**: filtra `tipo_especial` normal/nulo e passou a fazer join em `categories` pro `is_essencial`, mesmo padrão de B-12. | 🐛 AUTO |
+| B-53 | ✅ `dashboard.tsx` | `console.log` de debug esquecido. **Corrigido de quebra** no commit de B-30. | 🐛 AUTO |
+| B-54 | RPC `create_installment_plan` | Cria a transação de cada parcela corretamente, mas nunca grava o `id` dela de volta em `installments.transaction_id` (coluna existe, sempre fica NULL). Achado ao investigar B-11. Sem consumidor conhecido desse campo hoje, então não corrompe nada, mas qualquer feature futura que dependa desse vínculo vai encontrar tudo NULL. Deixado como está — não é um bug ativo, é uma lacuna pra quando alguém for usar o campo. |
 
 ---
 

@@ -151,7 +151,7 @@ function ConciliacaoPage() {
       return;
     }
     setLoading(true);
-    const [{ data: pend }, { data: cs }, { data: as }, { count: semCat }, { count: cConc }] = await Promise.all([
+    const [{ data: pend }, { data: cs }, { data: as }, { count: semCat }, { count: cConc }, { count: cPend }] = await Promise.all([
       supabase.from("transactions").select("*")
         .eq("family_id", familyId).eq("conciliado", false)
         .order("date", { ascending: false })
@@ -163,12 +163,14 @@ function ConciliacaoPage() {
         .eq("family_id", familyId).is("category_id", null),
       supabase.from("transactions").select("id", { count: "exact", head: true })
         .eq("family_id", familyId).eq("conciliado", true),
+      supabase.from("transactions").select("id", { count: "exact", head: true })
+        .eq("family_id", familyId).eq("conciliado", false),
     ]);
     const list = ((pend ?? []) as unknown as Tx[]).map((t) => ({ ...t, amount: Number(t.amount) }));
     setTxs(list);
     setCats((cs ?? []) as Cat[]);
     setAccs((as ?? []) as Acc[]);
-    setCounts({ semCat: semCat ?? 0, pend: list.length, conc: cConc ?? 0 });
+    setCounts({ semCat: semCat ?? 0, pend: cPend ?? list.length, conc: cConc ?? 0 });
     setLoading(false);
   };
 

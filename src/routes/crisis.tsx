@@ -157,10 +157,11 @@ function CrisisPage() {
       const startISO = start.toISOString().slice(0, 10);
       const { count } = await supabase
         .from("transactions")
-        .select("id", { count: "exact", head: true })
+        .select("id, categories!inner(is_essencial)", { count: "exact", head: true })
         .eq("family_id", fid)
         .eq("type", "expense")
-        .eq("is_essencial", false)
+        .or("tipo_especial.is.null,tipo_especial.eq.normal")
+        .eq("categories.is_essencial", false)
         .gte("date", startISO);
       setNonEssentialAlert(count ?? 0);
     } else {
@@ -321,7 +322,7 @@ function CrisisPage() {
                   </div>
                 </div>
                 <Badge variant="outline" className="font-normal">
-                  {active.motivo_ativacao === "manual"
+                  {active.motivo_ativacao?.toLowerCase().includes("manual")
                     ? "Ativação manual"
                     : "Ativação automática"}
                 </Badge>
@@ -617,7 +618,7 @@ function CrisisPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Motivo:{" "}
-                        {c.motivo_ativacao === "manual"
+                        {c.motivo_ativacao?.toLowerCase().includes("manual")
                           ? "manual"
                           : "automático"}
                       </p>

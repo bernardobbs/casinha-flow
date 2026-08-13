@@ -415,6 +415,21 @@ function RelatoriosPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* ── ABA PREÇOS ─────────────────────────── */}
+            <TabsContent value="precos" className="space-y-4">
+              <ComparativoPrecos familyId={familyId ?? ""} />
+            </TabsContent>
+
+            {/* ── ABA COMPROMETIMENTO ────────────────── */}
+            <TabsContent value="compromisso" className="space-y-4">
+              <ComprometimentoRelatorio familyId={familyId ?? ""} />
+            </TabsContent>
+
+            {/* ── ABA ESTOQUE ────────────────────────── */}
+            <TabsContent value="estoque" className="space-y-4">
+              <RelatorioEstoque familyId={familyId ?? ""} />
+            </TabsContent>
           </Tabs>
         </main>
       </div>
@@ -426,7 +441,6 @@ function ComparativoPrecos({ familyId }: { familyId: string }) {
   const [dados, setDados] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
-  const { supabase: sb } = { supabase: (window as any).__supabase };
 
   useEffect(() => {
     if (!familyId) return;
@@ -534,18 +548,32 @@ function ComparativoPrecos({ familyId }: { familyId: string }) {
 function ComprometimentoRelatorio({ familyId }: { familyId: string }) {
   const [recorrentes, setRecorrentes] = useState<{descricao:string;valor:number;dia_do_mes:number}[]>([]);
   const [loading, setLoading] = useState(false);
-  const [salario, setSalario] = useState(11143.20);
-  const [parcelas, setParcelas] = useState(2543.00);
+  const [salario, setSalario] = useState(0);
+  const [parcelas, setParcelas] = useState(0);
 
   useEffect(() => {
     if (!familyId) return;
     setLoading(true);
     import("@/integrations/supabase/client").then(({ supabase }) => {
-      supabase.from("recurring_transactions" as any)
-        .select("descricao, valor, dia_do_mes, tipo")
-        .eq("family_id", familyId).eq("ativo", true).eq("tipo", "despesa")
-        .order("valor", { ascending: false })
-        .then(({ data }) => { setRecorrentes((data ?? []) as any); setLoading(false); });
+      const mesInicio = new Date(); mesInicio.setDate(1);
+      const mesInicioStr = mesInicio.toISOString().slice(0, 10);
+      const mesFimStr = new Date(mesInicio.getFullYear(), mesInicio.getMonth() + 1, 1).toISOString().slice(0, 10);
+      Promise.all([
+        supabase.from("recurring_transactions" as any)
+          .select("descricao, valor, dia_do_mes, tipo")
+          .eq("family_id", familyId).eq("ativo", true).eq("tipo", "despesa")
+          .order("valor", { ascending: false }),
+        supabase.from("financial_state" as any)
+          .select("renda_mensal").eq("family_id", familyId).eq("mes", mesInicioStr).maybeSingle(),
+        supabase.from("installments" as any)
+          .select("valor").eq("family_id", familyId).eq("status", "pendente")
+          .gte("mes_competencia", mesInicioStr).lt("mes_competencia", mesFimStr),
+      ]).then(([{ data: recs }, { data: fs }, { data: parc }]) => {
+        setRecorrentes((recs ?? []) as any);
+        setSalario(Number((fs as any)?.renda_mensal ?? 0));
+        setParcelas(((parc ?? []) as any[]).reduce((s, p) => s + Number(p.valor), 0));
+        setLoading(false);
+      });
     });
   }, [familyId]);
 
@@ -553,7 +581,8 @@ function ComprometimentoRelatorio({ familyId }: { familyId: string }) {
   const total = totalRec + parcelas;
   const livre = salario - total;
   const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
-  const pct = (n: number) => salario > 0 ? ((n / salario) * 100).toFixed(1) + "%" : "—";
+  const pctNum = (n: number) => salario > 0 ? (n / salario) * 100 : 0;
+  const pct = (n: number) => salario > 0 ? pctNum(n).toFixed(1) + "%" : "—";
 
   return (
     <div className="space-y-4">
@@ -581,16 +610,16 @@ function ComprometimentoRelatorio({ familyId }: { familyId: string }) {
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Distribuição do salário</p>
           <div className="h-6 rounded-full overflow-hidden flex">
             <div className="h-full bg-orange-500 flex items-center justify-center text-xs text-white font-medium transition-all"
-              style={{ width: Math.min(100, (totalRec/salario)*100) + "%" }}>
-              {(totalRec/salario*100) > 8 ? pct(totalRec) : ""}
+              style={{ width: Math.min(100, pctNum(totalRec)) + "%" }}>
+              {pctNum(totalRec) > 8 ? pct(totalRec) : ""}
             </div>
             <div className="h-full bg-red-500 flex items-center justify-center text-xs text-white font-medium transition-all"
-              style={{ width: Math.min(100, (parcelas/salario)*100) + "%" }}>
-              {(parcelas/salario*100) > 8 ? pct(parcelas) : ""}
+              style={{ width: Math.min(100, pctNum(parcelas)) + "%" }}>
+              {pctNum(parcelas) > 8 ? pct(parcelas) : ""}
             </div>
             <div className="h-full bg-emerald-500 flex items-center justify-center text-xs text-white font-medium transition-all"
-              style={{ width: Math.max(0, 100 - (total/salario)*100) + "%" }}>
-              {((salario-total)/salario*100) > 8 ? pct(livre) : ""}
+              style={{ width: Math.max(0, 100 - pctNum(total)) + "%" }}>
+              {pctNum(livre) > 8 ? pct(livre) : ""}
             </div>
           </div>
           <div className="flex gap-4 text-xs text-muted-foreground">

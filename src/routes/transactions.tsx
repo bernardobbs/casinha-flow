@@ -85,7 +85,7 @@ interface Transaction {
   external_id?: string | null;
   is_essencial?: boolean;
   account_id?: string | null;
-  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura";
+  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura" | "ajuste_saldo";
 }
 
 interface AccountLite {
@@ -210,7 +210,7 @@ interface ParsedRow {
   category: string;
   external_id: string;
   selected: boolean;
-  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura";
+  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura" | "ajuste_saldo";
   error?: string;
   // Sugestão da função categorize_transaction
   suggested_category_id?: string | null;
@@ -714,16 +714,6 @@ function TransactionsPage() {
     load();
   }, [user, familyId, authLoading]);
 
-  const totals = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const t of transactions) {
-      if (t.type === "income") income += t.amount;
-      else expense += t.amount;
-    }
-    return { income, expense, balance: income - expense };
-  }, [transactions]);
-
   const insertTransaction = async (payload: z.infer<typeof txSchema>) => {
     if (!user || !familyId) return;
     const cat = payload.category_id
@@ -872,7 +862,7 @@ function TransactionsPage() {
       .select("*")
       .eq("family_id", familyId)
       .eq("date", parsed.data.date)
-      .eq("amount", parsed.data.amount)
+      .or(`amount.eq.${parsed.data.amount},valor.eq.${parsed.data.amount}`)
       .ilike("description", `%${parsed.data.description}%`)
       .limit(5);
 
