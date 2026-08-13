@@ -718,7 +718,7 @@ Deseja continuar mesmo assim?`);
                           <Badge className={cn("border-0", STATUS_VARIANT[l.status])}>{STATUS_LABEL[l.status]}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {counts.total} itens · {comprados} comprados · {fmtBRL(l.status === "concluida" ? l.total_real : l.total_estimado)}
+                          {counts.total} itens · {comprados} comprados · {fmtBRL((l.status === "concluida" ? l.total_real : l.total_estimado) ?? l.total_estimado ?? 0)}
                         </p>
                         {(l.data_prevista || l.local_preferido) && (
                           <p className="text-xs text-muted-foreground mt-0.5">

@@ -647,6 +647,8 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
 
   const [proximoKm, setProximoKm] = useState("");
   const [proximaData, setProximaData] = useState("");
+  const [accounts, setAccounts] = useState<{ id: string; nome: string }[]>([]);
+  const [accountId, setAccountId] = useState("");
 
   useEffect(() => {
     if (!open || !vehicleId) return;
@@ -658,8 +660,17 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
       const { data: vRow } = await supabase.from("vehicles" as any).select("odometro_atual").eq("id", vehicleId).maybeSingle();
       if (vRow) setHodometro(String((vRow as any).odometro_atual ?? ""));
     })();
-    if (!open) { setValor(""); setLocal(""); setTipoOleo(""); setProximoKm(""); setProximaData(""); }
-  }, [open, vehicleId]);
+    if (open && familyId) {
+      supabase.from("accounts").select("id, nome")
+        .eq("family_id", familyId).eq("ativo", true).neq("tipo", "cartao").order("nome")
+        .then(({ data: accsData }) => {
+          const accs = (accsData ?? []) as { id: string; nome: string }[];
+          setAccounts(accs);
+          setAccountId((prev) => prev || accs[0]?.id || "");
+        });
+    }
+    if (!open) { setValor(""); setLocal(""); setTipoOleo(""); setProximoKm(""); setProximaData(""); setAccountId(""); }
+  }, [open, vehicleId, familyId]);
 
   const selectedType = types.find((t: any) => t.id === typeId) as any;
   const isOleo = (selectedType?.nome ?? "").toLowerCase().includes("óleo") || (selectedType?.nome ?? "").toLowerCase().includes("oleo");
@@ -686,13 +697,12 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
     try {
       let txId: string | null = null;
       if (v > 0) {
+        if (!accountId) { toast.error("Selecione a conta de pagamento"); setSaving(false); return; }
         const { data: cat } = await supabase.from("categories").select("id")
           .eq("family_id", familyId).eq("nome", "Transporte").maybeSingle();
-        const { data: acc } = await supabase.from("accounts").select("id")
-          .eq("family_id", familyId).eq("ativo", true).neq("tipo", "cartao").limit(1).maybeSingle();
         const { data: tx, error: txErr } = await supabase.from("transactions").insert({
           family_id: familyId, user_id: userId,
-          account_id: acc?.id ?? null, category_id: cat?.id ?? null,
+          account_id: accountId, category_id: cat?.id ?? null,
           type: "expense", amount: v,
           description: `Manutenção: ${selectedType?.nome ?? ""}`,
           date: data,
@@ -703,7 +713,7 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
         }).select("id").single();
         if (txErr) throw txErr;
         txId = tx?.id ?? null;
-        if (acc?.id) await supabase.rpc("recalc_account_balance", { p_account_id: acc.id });
+        await supabase.rpc("recalc_account_balance", { p_account_id: accountId });
       }
       const { error } = await supabase.from("vehicle_maintenance_log" as any).insert({
         family_id: familyId, user_id: userId, vehicle_id: vehicleId,
@@ -741,6 +751,14 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
             <div><Label>Valor (R$)</Label><Input value={valor} onChange={(e) => setValor(e.target.value)} inputMode="decimal" placeholder="0,00" /></div>
             <div><Label>Local</Label><Input value={local} onChange={(e) => setLocal(e.target.value)} /></div>
           </div>
+          {Number(valor.replace(",", ".")) > 0 && (
+            <div><Label>Pagar com qual conta?</Label>
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          )}
           {isOleo && <div><Label>Tipo de óleo</Label><Input value={tipoOleo} onChange={(e) => setTipoOleo(e.target.value)} placeholder="5W30 sintético..." /></div>}
           <div className="rounded-lg bg-muted/50 p-3 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Próxima manutenção (calculado automaticamente)</p>

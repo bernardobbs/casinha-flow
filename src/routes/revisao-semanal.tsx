@@ -76,9 +76,13 @@ function RevisaoSemanalPage() {
       setLoading(true);
       const fid = familyId;
 
+      // Duas janelas de exatamente 7 dias cada (antes: semana atual tinha 8
+      // dias — ambas as pontas inclusivas — contra 7 da semana anterior,
+      // inflando artificialmente o comparativo).
       const today = new Date();
-      const start7 = new Date(today); start7.setDate(start7.getDate() - 7);
-      const start14 = new Date(today); start14.setDate(start14.getDate() - 14);
+      const start7 = new Date(today); start7.setDate(start7.getDate() - 6);
+      const prevEnd = new Date(today); prevEnd.setDate(prevEnd.getDate() - 7);
+      const prevStart = new Date(today); prevStart.setDate(prevStart.getDate() - 13);
       const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
 
       const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -90,7 +94,7 @@ function RevisaoSemanalPage() {
           .or("tipo_especial.is.null,tipo_especial.eq.normal"),
         supabase.from("transactions")
           .select("id, description, amount, type, category_id, date")
-          .eq("family_id", fid).gte("date", iso(start14)).lt("date", iso(start7))
+          .eq("family_id", fid).gte("date", iso(prevStart)).lte("date", iso(prevEnd))
           .or("tipo_especial.is.null,tipo_especial.eq.normal"),
         supabase.rpc("get_projecao_categorias", { p_family_id: fid }),
         supabase.from("bills_reminders")

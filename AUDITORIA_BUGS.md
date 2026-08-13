@@ -62,13 +62,13 @@ Legenda de categoria:
 
 | ID | Página/arquivo | Bug | Cat |
 |---|---|---|---|
-| B-33 | `get_dashboard_summary` (score de saúde) | Penaliza duas vezes o mesmo fato ("gasto > renda") via duas condições redundantes, sem gradação por severidade. | 🐛 AUTO |
-| B-34 | `revisao-semanal.tsx` | Janela "semana atual" (8 dias, ambos extremos inclusive) vs "semana anterior" (7 dias) — infla o comparativo mesmo sem mudança real de comportamento. | 🐛 AUTO |
-| B-35 | `compras.tsx` (listas concluídas) | `total_real` NULL exibido como "R$ 0,00" sem fallback pro `total_estimado`, em pelo menos 2 listas reais de ~R$326 e ~R$1.549 (parecem ter sido inseridas por integração externa, "endpoint do Hermes" citado em comentário de RPC). | 🐛 AUTO |
-| B-36 | `auth.tsx` | Fluxo de "nova senha" duplicado e morto dentro do arquivo — o fluxo real sempre usa a rota separada `/auth/reset-password`. Risco de manutenção (uma cópia pode ser corrigida e a outra esquecida). | 🐛 AUTO (remover código morto) |
-| B-37 | RPC `accept_invite` | Race condition (TOCTOU) — `SELECT` de convite pendente sem `FOR UPDATE` antes do `UPDATE status='accepted'`. Impacto baixo (token de 64 hex chars). | 🐛 AUTO |
-| B-38 | `gasolina.tsx` (`MaintDialog`) | Escolhe a conta de pagamento automaticamente (primeira conta não-cartão), sem campo de seleção — funciona "por sorte" hoje (só existe 1 conta não-cartão). | 🐛 AUTO (adicionar seletor) |
-| B-39 | Trigger `after_fuel_fill` / view `v_fuel_consumption` | `LIMIT 5` aplicado depois da agregação (não limita nada); cálculo tanque-cheio-a-tanque-cheio ignora litros de reabastecimentos parciais no meio do caminho, subestimando consumo real. | 🐛 AUTO |
+| B-33 | ✅ `get_dashboard_summary` (score de saúde) | Penalizava duas vezes o mesmo fato ("gasto > renda") via duas condições redundantes, sem gradação por severidade. **Corrigido**: consolidado numa única penalidade graduada (−30 se estourou &gt;20%, −20 se estourou até 20%), mantendo a penalidade independente de essenciais&gt;60% da renda. | 🐛 AUTO |
+| B-34 | ✅ `revisao-semanal.tsx` | Janela "semana atual" (8 dias, ambos extremos inclusive) vs "semana anterior" (7 dias) — inflava o comparativo mesmo sem mudança real de comportamento. **Corrigido**: as duas janelas agora têm exatamente 7 dias cada, contíguas. | 🐛 AUTO |
+| B-35 | ✅ `compras.tsx` (listas concluídas) | `total_real` NULL exibido como "R$ 0,00" sem fallback pro `total_estimado`. **Corrigido**: fallback adicionado. | 🐛 AUTO |
+| B-36 | ✅ `auth.tsx` | Fluxo de "nova senha" duplicado e morto dentro do arquivo. **Corrigido**: removido (schema, estado, handler, detecção de hash de recovery e o bloco JSX inteiro) — o fluxo real continua só em `/auth/reset-password`. | 🐛 AUTO |
+| B-37 | ✅ RPC `accept_invite` | Race condition (TOCTOU) — `SELECT` de convite pendente sem `FOR UPDATE`. **Corrigido**: adicionado `FOR UPDATE` na busca do convite. | 🐛 AUTO |
+| B-38 | ✅ `gasolina.tsx` (`MaintDialog`) | Escolhia a conta de pagamento automaticamente, sem campo de seleção. **Corrigido**: adicionado seletor de conta (só aparece quando há valor &gt; 0), igual ao padrão do `FillDialog`. | 🐛 AUTO |
+| B-39 | ✅ Trigger `after_fuel_fill` / view `v_fuel_consumption` | `LIMIT 5` aplicado depois da agregação (não limitava nada); cálculo tanque-cheio-a-tanque-cheio ignorava litros de reabastecimentos parciais no meio do caminho. **Corrigido**: `v_fuel_consumption` agora soma litros de todos os abastecimentos (parciais inclusos) entre dois tanques cheios, mesma lógica de `get_fuel_history` (B-24); `after_fuel_fill` agora usa subquery com `ORDER BY ... LIMIT 5` antes do `avg()`, limitando de verdade às últimas 5 leituras. | 🐛 AUTO |
 
 ## ⚪ Baixos / cosméticos / gaps de dado sem impacto ativo
 
