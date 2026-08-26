@@ -714,8 +714,27 @@ function TransactionsPage() {
     load();
   }, [user, familyId, authLoading]);
 
-  const insertTransaction = async (payload: z.infer<typeof txSchema>) => {
+  const insertTransaction = async (payload: z.infer<typeof txSchema>, skipDuplicateCheck = false) => {
     if (!user || !familyId) return;
+
+    if (!skipDuplicateCheck) {
+      const { data: dup } = await supabase.rpc("find_possible_duplicate_transaction" as any, {
+        p_family_id: familyId,
+        p_account_id: payload.account_id || null,
+        p_data: payload.date,
+        p_valor: payload.amount,
+        p_tipo: payload.type === "income" ? "receita" : "despesa",
+        p_descricao: payload.description,
+      });
+      if (dup && dup.length > 0) {
+        toast.warning(`Já existe um lançamento igual (${payload.description}, ${payload.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} em ${new Date(payload.date + "T00:00:00").toLocaleDateString("pt-BR")})`, {
+          action: { label: "Lançar mesmo assim", onClick: () => insertTransaction(payload, true) },
+          duration: 8000,
+        });
+        return;
+      }
+    }
+
     const cat = payload.category_id
       ? categories.find((c) => c.id === payload.category_id)
       : null;
@@ -773,6 +792,15 @@ function TransactionsPage() {
     // Trigger alert checks (budget thresholds, negative balance, microspending)
     if (data?.id) {
       await supabase.rpc("check_transaction_alerts", { _transaction_id: data.id });
+      // Baixa automática se este lançamento bate com uma conta a pagar pendente
+      if (payload.type === "expense") {
+        const { data: matchedBillId } = await supabase.rpc("match_transaction_to_bill" as any, {
+          p_transaction_id: data.id,
+        });
+        if (matchedBillId) {
+          toast.success("Baixou uma conta a pagar pendente automaticamente");
+        }
+      }
     }
   };
 

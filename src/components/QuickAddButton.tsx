@@ -162,6 +162,29 @@ export function QuickAddButton() {
       toast.error("Selecione uma categoria");
       return;
     }
+
+    const dataHoje = new Date().toISOString().slice(0, 10);
+    const { data: dup } = await supabase.rpc("find_possible_duplicate_transaction" as any, {
+      p_family_id: familyId,
+      p_account_id: accountId || null,
+      p_data: dataHoje,
+      p_valor: amt,
+      p_tipo: type === "income" ? "receita" : "despesa",
+      p_descricao: description.trim(),
+    });
+    if (dup && dup.length > 0) {
+      toast.warning(`Já existe um lançamento igual a este hoje (${description.trim()}, ${fmt(amt)})`, {
+        action: { label: "Lançar mesmo assim", onClick: () => doInsert(amt) },
+        duration: 8000,
+      });
+      return;
+    }
+
+    await doInsert(amt);
+  };
+
+  const doInsert = async (amt: number) => {
+    if (!familyId || !user) return;
     setSubmitting(true);
     const cat = categories.find((c) => c.id === categoryId);
     const { data: inserted, error } = await supabase
@@ -208,6 +231,19 @@ export function QuickAddButton() {
     }
     // Alertas
     await supabase.rpc("check_transaction_alerts", { _transaction_id: inserted.id });
+    // Baixa automática se este lançamento bate com uma conta pendente
+    if (type === "expense") {
+      const { data: matchedBillId } = await supabase.rpc("match_transaction_to_bill" as any, {
+        p_transaction_id: inserted.id,
+      });
+      if (matchedBillId) {
+        toast.success(`✅ ${fmt(amt)} salvo — baixou uma conta pendente automaticamente`);
+        setSubmitting(false);
+        reset();
+        setOpen(false);
+        return;
+      }
+    }
 
     setSubmitting(false);
     toast.success(`✅ ${fmt(amt)} salvo`);
