@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Settings as SettingsIcon, Trash2, Wallet, Crown, UserPlus } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
+import { OpenFinancePanel } from "@/components/OpenFinancePanel";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -356,6 +357,7 @@ function ConfigPage() {
             <TabsTrigger value="familia">Família</TabsTrigger>
             <TabsTrigger value="geral">Geral</TabsTrigger>
             <TabsTrigger value="ia">IA</TabsTrigger>
+            <TabsTrigger value="openfinance">Open Finance</TabsTrigger>
             <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
             <TabsTrigger value="categorias">Categorias</TabsTrigger>
           </TabsList>
@@ -626,6 +628,10 @@ function ConfigPage() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="openfinance" className="mt-6">
+            {familyId && <OpenFinancePanel familyId={familyId} />}
           </TabsContent>
 
           {/* NOTIFICAÇÕES */}
