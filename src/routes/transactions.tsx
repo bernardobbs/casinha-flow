@@ -85,7 +85,7 @@ interface Transaction {
   external_id?: string | null;
   is_essencial?: boolean;
   account_id?: string | null;
-  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura";
+  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura" | "ajuste_saldo";
 }
 
 interface AccountLite {
@@ -210,7 +210,7 @@ interface ParsedRow {
   category: string;
   external_id: string;
   selected: boolean;
-  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura";
+  tipo_especial?: "normal" | "transferencia" | "pagamento_fatura" | "ajuste_saldo";
   error?: string;
   // Sugestão da função categorize_transaction
   suggested_category_id?: string | null;
@@ -712,20 +712,29 @@ function TransactionsPage() {
     };
 
     load();
-  }, [user, familyId]);
+  }, [user, familyId, authLoading]);
 
-  const totals = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const t of transactions) {
-      if (t.type === "income") income += t.amount;
-      else expense += t.amount;
-    }
-    return { income, expense, balance: income - expense };
-  }, [transactions]);
-
-  const insertTransaction = async (payload: z.infer<typeof txSchema>) => {
+  const insertTransaction = async (payload: z.infer<typeof txSchema>, skipDuplicateCheck = false) => {
     if (!user || !familyId) return;
+
+    if (!skipDuplicateCheck) {
+      const { data: dup } = await supabase.rpc("find_possible_duplicate_transaction" as any, {
+        p_family_id: familyId,
+        p_account_id: payload.account_id || null,
+        p_data: payload.date,
+        p_valor: payload.amount,
+        p_tipo: payload.type === "income" ? "receita" : "despesa",
+        p_descricao: payload.description,
+      });
+      if (dup && dup.length > 0) {
+        toast.warning(`Já existe um lançamento igual (${payload.description}, ${payload.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} em ${new Date(payload.date + "T00:00:00").toLocaleDateString("pt-BR")})`, {
+          action: { label: "Lançar mesmo assim", onClick: () => insertTransaction(payload, true) },
+          duration: 8000,
+        });
+        return;
+      }
+    }
+
     const cat = payload.category_id
       ? categories.find((c) => c.id === payload.category_id)
       : null;
@@ -736,6 +745,10 @@ function TransactionsPage() {
         family_id: familyId,
         user_id: user.id,
         ...payload,
+        data: payload.date,
+        descricao: payload.description,
+        tipo: payload.type === "income" ? "receita" : "despesa",
+        valor: payload.amount,
         category: cat?.nome ?? null,
       })
       .select()
@@ -756,10 +769,10 @@ function TransactionsPage() {
     // Aprende a regra de categorização (se categoria foi escolhida manualmente)
     if (payload.category_id && payload.description) {
       void supabase.rpc("learn_categorization_rule", {
-        _family_id: familyId,
-        _termo: payload.description,
-        _category_id: payload.category_id,
-        _origem: "manual",
+        p_family_id: familyId,
+        p_termo: payload.description,
+        p_category_id: payload.category_id,
+        p_origem: "manual",
       });
     }
 
@@ -774,11 +787,20 @@ function TransactionsPage() {
     await recalcMonth(payload.date);
     // Recalc balance da conta
     if (payload.account_id) {
-      await supabase.rpc("recalc_account_balance", { _account_id: payload.account_id });
+      await supabase.rpc("recalc_account_balance", { p_account_id: payload.account_id });
     }
     // Trigger alert checks (budget thresholds, negative balance, microspending)
     if (data?.id) {
       await supabase.rpc("check_transaction_alerts", { _transaction_id: data.id });
+      // Baixa automática se este lançamento bate com uma conta a pagar pendente
+      if (payload.type === "expense") {
+        const { data: matchedBillId } = await supabase.rpc("match_transaction_to_bill" as any, {
+          p_transaction_id: data.id,
+        });
+        if (matchedBillId) {
+          toast.success("Baixou uma conta a pagar pendente automaticamente");
+        }
+      }
     }
   };
 
@@ -789,8 +811,8 @@ function TransactionsPage() {
       .toISOString()
       .slice(0, 10);
     await supabase.rpc("recalc_financial_state", {
-      _family_id: familyId,
-      _mes: firstDay,
+      p_family_id: familyId,
+      p_mes: firstDay,
     });
   };
 
@@ -829,14 +851,13 @@ function TransactionsPage() {
       }
       setSubmitting(true);
       const { error: instErr } = await supabase.rpc("create_installment_plan", {
-        _family_id: familyId,
-        _account_id: accountId,
-        _description: parsed.data.description,
-        _valor_total: parsed.data.amount,
-        _total_parcelas: numParcelas,
-        _data_compra: parsed.data.date,
-        _category_id: parsed.data.category_id ?? undefined,
-        _is_essencial: parsed.data.is_essencial,
+        p_family_id: familyId,
+        p_account_id: accountId,
+        p_descricao: parsed.data.description,
+        p_valor_total: parsed.data.amount,
+        p_num_parcelas: numParcelas,
+        p_data_compra: parsed.data.date,
+        p_category_id: parsed.data.category_id ?? "",
       });
       setSubmitting(false);
       if (instErr) {
@@ -869,7 +890,7 @@ function TransactionsPage() {
       .select("*")
       .eq("family_id", familyId)
       .eq("date", parsed.data.date)
-      .eq("amount", parsed.data.amount)
+      .or(`amount.eq.${parsed.data.amount},valor.eq.${parsed.data.amount}`)
       .ilike("description", `%${parsed.data.description}%`)
       .limit(5);
 
@@ -964,7 +985,6 @@ function TransactionsPage() {
         cor: newCatCor,
         icone: newCatIcone || "📦",
         is_essencial: newCatTipo === "despesa" ? newCatEssencial : false,
-        is_default: false,
       })
       .select()
       .single();
@@ -1099,7 +1119,7 @@ function TransactionsPage() {
                   ...r,
                   category: cat?.nome ?? r.category,
                   suggested_category_id: sug.category_id,
-                  suggested_origem: sug.origem,
+                  suggested_origem: sug.origem as "manual" | "ia" | "keyword" | null | undefined,
                   suggested_nivel: sug.nivel,
                   suggested_confianca: Number(sug.confianca),
                 };
@@ -1269,6 +1289,10 @@ function TransactionsPage() {
         description: r.description,
         amount: Math.abs(r.amount),
         type: r.type,
+        data: r.date,
+        descricao: r.description,
+        tipo: r.type === "income" ? "receita" : "despesa",
+        valor: Math.abs(r.amount),
         source: "importado" as const,
         scope: importScope,
         account_id: importAccountId,
@@ -1319,7 +1343,7 @@ function TransactionsPage() {
         description: `💰 ${entradas} entradas · 💸 ${saidas} saídas · 🔄 ${transfers} transferências · ⚠️ ${duplicates} duplicatas ignoradas`,
       }
     );
-    await supabase.rpc("recalc_account_balance", { _account_id: importAccountId });
+    await supabase.rpc("recalc_account_balance", { p_account_id: importAccountId });
     setImportOpen(false);
     setParsedRows([]);
 

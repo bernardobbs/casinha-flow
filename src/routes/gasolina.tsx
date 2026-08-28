@@ -72,7 +72,9 @@ function GasolinaPage() {
     const { error } = await supabase.from("fuel_fills" as any).delete().eq("id", deletingFill.id);
     if (error) { toast.error(error.message); return; }
     if (deletingFill.transaction_id) {
+      const { data: tx } = await supabase.from("transactions").select("account_id").eq("id", deletingFill.transaction_id).maybeSingle();
       await supabase.from("transactions").delete().eq("id", deletingFill.transaction_id);
+      if (tx?.account_id) await supabase.rpc("recalc_account_balance", { p_account_id: tx.account_id });
     }
     toast.success("Abastecimento apagado");
     setDeletingFill(null);
@@ -94,7 +96,10 @@ function GasolinaPage() {
   }, [user, authLoading, navigate]);
 
   const reload = async () => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from("v_vehicle_status" as any)
@@ -106,7 +111,7 @@ function GasolinaPage() {
     setLoading(false);
   };
 
-  useEffect(() => { reload(); }, [user, familyId]);
+  useEffect(() => { reload(); }, [user, familyId, authLoading, familyLoading]);
 
   if (authLoading || familyLoading || loading) return <SkeletonGasolina />;
 
@@ -164,7 +169,7 @@ function GasolinaPage() {
         )}
       </main>
 
-      <FillDialog open={openFill} onOpenChange={(o) => { setOpenFill(o); if (!o) setEditingFill(null); }} familyId={familyId} userId={user?.id ?? ""} vehicles={vehicles} editing={editingFill} onSaved={reload} />
+      <FillDialog open={openFill} onOpenChange={(o: boolean) => { setOpenFill(o); if (!o) setEditingFill(null); }} familyId={familyId} userId={user?.id ?? ""} vehicles={vehicles} editing={editingFill} onSaved={reload} />
 
       <AlertDialog open={!!deletingFill} onOpenChange={(o) => !o && setDeletingFill(null)}>
         <AlertDialogContent>
@@ -344,9 +349,16 @@ function MaintenanceList({ vehicleId, onRegister }: { vehicleId: string; onRegis
   }, [vehicleId]);
   const statusBadge = (s: string) => {
     if (s === "vencido") return <Badge variant="destructive">🔴 Vencido</Badge>;
-    if (s === "em_breve") return <Badge variant="secondary">⚠️ Em breve</Badge>;
-    if (s === "pendente") return <Badge variant="outline">Sem registro</Badge>;
+    if (s === "proximo") return <Badge variant="secondary">⚠️ Próximo</Badge>;
+    if (s === "sem_registro") return <Badge variant="outline">Sem registro</Badge>;
     return <Badge variant="secondary">✅ OK</Badge>;
+  };
+  const motivo = (r: any) => {
+    if (r.status === "sem_registro") return "nunca registrado";
+    if (r.status === "vencido" && r.km_restante != null) return `${Math.abs(r.km_restante)} km atrasado`;
+    if (r.status === "proximo" && r.meses_restante != null) return `vence em ~${r.meses_restante} ${r.meses_restante === 1 ? "mês" : "meses"}`;
+    if (r.km_restante != null) return `faltam ${r.km_restante} km`;
+    return "";
   };
   return (
     <Card className="border-border/60">
@@ -360,14 +372,14 @@ function MaintenanceList({ vehicleId, onRegister }: { vehicleId: string; onRegis
         ) : (
           <ul className="space-y-2">
             {rows.map((r) => (
-              <li key={r.type_id} className="flex items-center justify-between border-b last:border-0 pb-2">
+              <li key={r.id} className="flex items-center justify-between border-b last:border-0 pb-2">
                 <div>
-                  <p className="font-medium">{r.icone} {r.nome}</p>
+                  <p className="font-medium">🔧 {r.nome}</p>
                   <p className="text-xs text-muted-foreground">
                     {r.intervalo_km ? `${r.intervalo_km} km` : ""}
                     {r.intervalo_km && r.intervalo_meses ? " / " : ""}
                     {r.intervalo_meses ? `${r.intervalo_meses} meses` : ""}
-                    {" — "}{r.motivo}
+                    {" — "}{motivo(r)}
                   </p>
                 </div>
                 {statusBadge(r.status)}
@@ -407,7 +419,7 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, editing, o
     } else if (open && vehicles.length && !vehicleId) {
       setVehicleId(vehicles[0].id ?? "");
       setHodometro(String(vehicles[0].odometro_atual ?? ""));
-      setCombustivel(vehicles[0].ultimo_combustivel ?? "gasolina");
+      setCombustivel(vehicles[0].combustivel ?? "gasolina");
     }
     if (open && familyId) {
       supabase.from("accounts").select("id, nome, tipo")
@@ -437,10 +449,17 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, editing, o
     if (!v || !p || !h) { toast.error("Preencha valor, preço/L e hodômetro"); return; }
     setSaving(true);
     try {
-      const [{ data: cat }] = await Promise.all([
-        supabase.from("categories").select("id")
-          .eq("family_id", familyId).ilike("nome", "%gasolina%").maybeSingle(),
-      ]);
+      // Casa a categoria de combustível com o veículo — pode haver mais de
+      // uma "Gasolina" cadastrada (ex.: Carro e Moto), então um ilike cego
+      // pegava a errada ou dava erro de "mais de uma linha". Mesma lógica
+      // usada em api/hermes-atualiza.ts.
+      const veiculoSelecionado = vehicles.find((vv: any) => vv.id === vehicleId);
+      const { data: catsGasolina } = await supabase.from("categories").select("id, nome")
+        .eq("family_id", familyId).eq("tipo", "despesa").ilike("nome", "%gasolina%");
+      let cat = (catsGasolina ?? []).find((c: any) =>
+        veiculoSelecionado && c.nome.toLowerCase().includes(String(veiculoSelecionado.tipo).toLowerCase())
+      );
+      if (!cat && (catsGasolina ?? []).length === 1) cat = catsGasolina![0];
 
       if (editing?.id) {
         const { error } = await supabase.from("fuel_fills" as any).update({
@@ -449,8 +468,12 @@ function FillDialog({ open, onOpenChange, familyId, userId, vehicles, editing, o
           posto: posto || null, tanque_cheio: tanqueCheio,
         }).eq("id", editing.id);
         if (error) throw error;
-        if (editing.transaction_id)
-          await supabase.from("transactions").update({ amount: v, date: data }).eq("id", editing.transaction_id);
+        if (editing.transaction_id) {
+          const { data: tx } = await supabase.from("transactions").update({
+            amount: v, date: data, valor: v, data: data,
+          }).eq("id", editing.transaction_id).select("account_id").maybeSingle();
+          if (tx?.account_id) await supabase.rpc("recalc_account_balance", { p_account_id: tx.account_id });
+        }
         toast.success("✅ Abastecimento atualizado");
       } else {
         const { data: result, error } = await supabase.rpc("registrar_abastecimento" as any, {
@@ -545,10 +568,10 @@ function VehicleDialog({ open, onOpenChange, familyId, userId, editing, onSaved 
     if (editing) {
       setNome(editing.apelido ?? "");
       setTipo(editing.tipo ?? "carro");
-      setCombustivel(editing.ultimo_abastec_combustivel ?? "gasolina");
-      setFlex(!!editing.flex);
-      setTanque(String(editing.capacidade_tanque ?? "50"));
-      setConsumo(String(editing.consumo_medio_kml ?? "10"));
+      setCombustivel(editing.combustivel ?? "gasolina");
+      setFlex(editing.combustivel === "flex");
+      setTanque(String(editing.tanque_capacidade ?? "50"));
+      setConsumo(String(editing.consumo_medio_km_l ?? "10"));
       setOdometro(String(editing.odometro_atual ?? "0"));
     }
   }, [open, editing]);
@@ -624,6 +647,8 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
 
   const [proximoKm, setProximoKm] = useState("");
   const [proximaData, setProximaData] = useState("");
+  const [accounts, setAccounts] = useState<{ id: string; nome: string }[]>([]);
+  const [accountId, setAccountId] = useState("");
 
   useEffect(() => {
     if (!open || !vehicleId) return;
@@ -635,8 +660,17 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
       const { data: vRow } = await supabase.from("vehicles" as any).select("odometro_atual").eq("id", vehicleId).maybeSingle();
       if (vRow) setHodometro(String((vRow as any).odometro_atual ?? ""));
     })();
-    if (!open) { setValor(""); setLocal(""); setTipoOleo(""); setProximoKm(""); setProximaData(""); }
-  }, [open, vehicleId]);
+    if (open && familyId) {
+      supabase.from("accounts").select("id, nome")
+        .eq("family_id", familyId).eq("ativo", true).neq("tipo", "cartao").order("nome")
+        .then(({ data: accsData }) => {
+          const accs = (accsData ?? []) as { id: string; nome: string }[];
+          setAccounts(accs);
+          setAccountId((prev) => prev || accs[0]?.id || "");
+        });
+    }
+    if (!open) { setValor(""); setLocal(""); setTipoOleo(""); setProximoKm(""); setProximaData(""); setAccountId(""); }
+  }, [open, vehicleId, familyId]);
 
   const selectedType = types.find((t: any) => t.id === typeId) as any;
   const isOleo = (selectedType?.nome ?? "").toLowerCase().includes("óleo") || (selectedType?.nome ?? "").toLowerCase().includes("oleo");
@@ -663,20 +697,23 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
     try {
       let txId: string | null = null;
       if (v > 0) {
+        if (!accountId) { toast.error("Selecione a conta de pagamento"); setSaving(false); return; }
         const { data: cat } = await supabase.from("categories").select("id")
           .eq("family_id", familyId).eq("nome", "Transporte").maybeSingle();
-        const { data: acc } = await supabase.from("accounts").select("id")
-          .eq("family_id", familyId).eq("ativo", true).neq("tipo", "cartao").limit(1).maybeSingle();
         const { data: tx, error: txErr } = await supabase.from("transactions").insert({
           family_id: familyId, user_id: userId,
-          account_id: acc?.id ?? null, category_id: cat?.id ?? null,
+          account_id: accountId, category_id: cat?.id ?? null,
           type: "expense", amount: v,
           description: `Manutenção: ${selectedType?.nome ?? ""}`,
-          date: data, is_essencial: true, source: "manual", tipo_especial: "normal",
+          date: data,
+          tipo: "despesa", valor: v,
+          descricao: `Manutenção: ${selectedType?.nome ?? ""}`,
+          data: data,
+          is_essencial: true, source: "manual", tipo_especial: "normal",
         }).select("id").single();
         if (txErr) throw txErr;
         txId = tx?.id ?? null;
-        if (acc?.id) await supabase.rpc("recalc_account_balance", { _account_id: acc.id });
+        await supabase.rpc("recalc_account_balance", { p_account_id: accountId });
       }
       const { error } = await supabase.from("vehicle_maintenance_log" as any).insert({
         family_id: familyId, user_id: userId, vehicle_id: vehicleId,
@@ -714,6 +751,14 @@ function MaintDialog({ open, onOpenChange, familyId, userId, vehicleId, onSaved 
             <div><Label>Valor (R$)</Label><Input value={valor} onChange={(e) => setValor(e.target.value)} inputMode="decimal" placeholder="0,00" /></div>
             <div><Label>Local</Label><Input value={local} onChange={(e) => setLocal(e.target.value)} /></div>
           </div>
+          {Number(valor.replace(",", ".")) > 0 && (
+            <div><Label>Pagar com qual conta?</Label>
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          )}
           {isOleo && <div><Label>Tipo de óleo</Label><Input value={tipoOleo} onChange={(e) => setTipoOleo(e.target.value)} placeholder="5W30 sintético..." /></div>}
           <div className="rounded-lg bg-muted/50 p-3 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Próxima manutenção (calculado automaticamente)</p>

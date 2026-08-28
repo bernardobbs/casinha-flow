@@ -64,14 +64,17 @@ function SituacaoPage() {
   const [crisis, setCrisis] = useState<CrisisEvent | null>(null);
   const [crisisDialog, setCrisisDialog] = useState(false);
   const [crisisLoading, setCrisisLoading] = useState(false);
-  const [financialState, setFinancialState] = useState<{ total_reserva: number; patrimonio_liquido: number } | null>(null);
+  const [financialState, setFinancialState] = useState<{ total_reserva: number } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [authLoading, user, navigate]);
 
   const load = async () => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
 
     const [s, c, sa, cr, fs] = await Promise.all([
@@ -82,7 +85,7 @@ function SituacaoPage() {
         .select("id,family_id,data_inicio,data_fim,estagio_atual,ativo")
         .eq("family_id", familyId).eq("ativo", true).maybeSingle(),
       supabase.from("financial_state" as any)
-        .select("total_reserva,patrimonio_liquido").eq("family_id", familyId).maybeSingle(),
+        .select("total_reserva").eq("family_id", familyId).maybeSingle(),
     ]);
 
     const sRow = Array.isArray(s.data) ? s.data[0] : s.data;
@@ -96,13 +99,13 @@ function SituacaoPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [user, familyId]);
+  useEffect(() => { load(); }, [user, familyId, authLoading, familyLoading]);
 
   const ativarCrise = async () => {
     if (!familyId) return;
     setCrisisLoading(true);
     const { error } = await supabase.rpc("activate_crisis" as any, {
-      p_family_id: familyId, p_motivo: "Ativado manualmente", p_estagio: 1,
+      p_family_id: familyId, p_motivo: "Ativado manualmente",
     });
     setCrisisLoading(false);
     if (error) { toast.error(error.message); return; }
@@ -305,9 +308,17 @@ function SituacaoPage() {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                       <TrendingUp className="h-3.5 w-3.5" />Patrimônio líquido
                     </div>
-                    <p className={`text-lg font-semibold ${(financialState.patrimonio_liquido ?? 0) < 0 ? "text-destructive" : ""}`}>
-                      {fmtBRL(financialState.patrimonio_liquido ?? 0)}
-                    </p>
+                    {(() => {
+                      // Saldo em contas − dívida de cartões + reserva guardada.
+                      // Não existe coluna própria pra isso — computado aqui a
+                      // partir do que já é buscado (get_saldo_total + financial_state).
+                      const patrimonioLiquido = (saldo?.saldo_total ?? 0) + (financialState.total_reserva ?? 0);
+                      return (
+                        <p className={`text-lg font-semibold ${patrimonioLiquido < 0 ? "text-destructive" : ""}`}>
+                          {fmtBRL(patrimonioLiquido)}
+                        </p>
+                      );
+                    })()}
                   </div>
                 </>
               )}

@@ -134,7 +134,7 @@ function ContasPage() {
 
     // Recalc todos os saldos
     for (const a of accs) {
-      await supabase.rpc("recalc_account_balance", { _account_id: a.id });
+      await supabase.rpc("recalc_account_balance", { p_account_id: a.id });
     }
     const { data: refreshed } = await supabase
       .from("accounts")
@@ -147,8 +147,9 @@ function ContasPage() {
 
   useEffect(() => {
     if (familyId) loadAccounts();
+    else if (!familyLoading) setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [familyId]);
+  }, [familyId, familyLoading]);
 
   const parseNum = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
 
@@ -202,6 +203,10 @@ function ContasPage() {
         type: "expense",
         date: transfer.date,
         description: transfer.description,
+        data: transfer.date,
+        descricao: transfer.description,
+        tipo: "despesa",
+        valor: amt,
         tipo_especial: "transferencia",
         source: "manual",
       },
@@ -213,6 +218,10 @@ function ContasPage() {
         type: "income",
         date: transfer.date,
         description: transfer.description,
+        data: transfer.date,
+        descricao: transfer.description,
+        tipo: "receita",
+        valor: amt,
         tipo_especial: "transferencia",
         source: "manual",
       },

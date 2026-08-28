@@ -48,14 +48,17 @@ function InventarioPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
       const { data } = await supabase.from("products" as any)
         .select("id, nome, categoria, unidade, estoque_atual, quantidade_por_embalagem, unidade_embalagem, parent_id")
         .eq("family_id", familyId).eq("ativo", true)
         .order("categoria").order("nome");
-      const list = ((data ?? []) as Produto[]);
+      const list = ((data ?? []) as unknown as Produto[]);
       setProdutos(list);
       // Pré-preencher com valores atuais
       const init: Record<string, string> = {};
@@ -66,7 +69,7 @@ function InventarioPage() {
       setInputs(init);
       setLoading(false);
     })();
-  }, [familyId]);
+  }, [familyId, familyLoading]);
 
   const salvarItem = async (filho: Produto, valor: string) => {
     const qtd = parseFloat(valor.replace(",", "."));
@@ -87,6 +90,15 @@ function InventarioPage() {
     } else {
       setSaved(prev => new Set([...prev, filho.id]));
       setDirty(prev => { const n = new Set(prev); n.delete(filho.id); return n; });
+      // Registrar movimento e recalcular consumo médio — mesma regra de
+      // estoque.tsx, senão a contagem semanal nunca alimenta o histórico
+      // que calcula dias restantes.
+      const delta = novoEstoque - anterior;
+      supabase.from("stock_movements" as any).insert({
+        product_id: filho.id, family_id: familyId, user_id: user?.id,
+        tipo: delta > 0 ? "entrada" : "saida", quantidade: Math.abs(delta),
+      }).then(() => {}, () => {});
+      supabase.rpc("recalcular_consumo_estoque" as any, { p_product_id: filho.id }).then(() => {}, () => {});
       // Atualizar pai
       if (filho.parent_id) {
         const irmaos = produtos.filter(p => p.parent_id === filho.parent_id && p.id !== filho.id);

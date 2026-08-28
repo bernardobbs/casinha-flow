@@ -84,7 +84,7 @@ export function CreditCardBillsTab({ familyId }: { familyId: string }) {
   const load = async () => {
     setLoading(true);
     // Dispara alertas de fatura
-    await supabase.rpc("check_credit_card_bill_alerts", { _family_id: familyId });
+    await supabase.rpc("check_credit_card_bill_alerts", { p_family_id: familyId });
 
     const [{ data: accs }, { data: allBills }] = await Promise.all([
       supabase
@@ -136,10 +136,9 @@ export function CreditCardBillsTab({ familyId }: { familyId: string }) {
     }
     setPaying(true);
     const { error } = await supabase.rpc("pay_credit_card_bill", {
-      _bill_id: payingBill.id,
-      _from_account: payAccount,
-      _amount: amt,
-      _date: new Date().toISOString().slice(0, 10),
+      p_bill_id: payingBill.id,
+      p_account_pagamento_id: payAccount,
+      p_valor: amt,
     });
     setPaying(false);
     if (error) {

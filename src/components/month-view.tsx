@@ -55,24 +55,21 @@ interface Acc {
 }
 interface Tx {
   id: string;
-  family_id: string;
-  user_id: string;
   date: string;
   description: string;
   amount: number;
   type: "income" | "expense";
   source: string;
-  scope: string;
   category_id: string | null;
   account_id: string | null;
-  tipo_especial: "normal" | "transferencia" | "pagamento_fatura";
+  tipo_especial: "normal" | "transferencia" | "pagamento_fatura" | "ajuste_saldo";
   recorrente_id?: string | null;
 }
 interface MonthSummary {
   mes: string;
-  total_receita: number;
-  total_despesa: number;
-  qtd: number;
+  saldo: number;
+  receita: number;
+  despesa: number;
 }
 
 const MESES = [
@@ -193,11 +190,16 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const loadSummary = async () => {
-    const { data } = await supabase.rpc("get_monthly_summary", { p_family_id: familyId });
+    // p_months disambiguates the two get_monthly_summary overloads on the
+    // live DB and picks the one shaped { mes, saldo, receita, despesa }
+    const { data } = await supabase.rpc("get_monthly_summary", {
+      p_family_id: familyId,
+      p_months: 12,
+    });
     setSummary(((data ?? []) as MonthSummary[]).map((r) => ({
       ...r,
-      total_receita: Number(r.total_receita),
-      total_despesa: Number(r.total_despesa),
+      receita: Number(r.receita),
+      despesa: Number(r.despesa),
     })));
   };
 
@@ -227,6 +229,7 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
   const totals = useMemo(() => {
     let inc = 0, exp = 0;
     for (const t of txs) {
+      if ((t.tipo_especial ?? "normal") !== "normal") continue;
       if (t.type === "income") inc += t.amount;
       else exp += t.amount;
     }
@@ -320,7 +323,7 @@ export function MonthView({ familyId, userId, categories, accounts }: Props) {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {fmt(s.total_receita)} recebido · {fmt(s.total_despesa)} gasto
+                        {fmt(s.receita)} recebido · {fmt(s.despesa)} gasto
                       </div>
                     </div>
                   </button>
@@ -542,7 +545,7 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
         .eq("id", tx.recorrente_id)
         .maybeSingle()
         .then(({ data }) => {
-          if (data) setRecurringInfo({ description: data.description, frequencia: data.frequencia });
+          if (data) setRecurringInfo({ description: data.description ?? "", frequencia: data.frequencia ?? "mensal" });
         });
     }
   }, [tx]);
@@ -567,6 +570,10 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
         description: description.trim(),
         amount: amt,
         date,
+        descricao: description.trim(),
+        valor: amt,
+        data: date,
+        tipo: tx.type === "income" ? "receita" : "despesa",
         category_id: categoryId || null,
         account_id: accountId || null,
         tipo_especial: tipoEspecial,
@@ -575,7 +582,7 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Salvo");
-    if (accountId) void supabase.rpc("recalc_account_balance", { _account_id: accountId });
+    if (accountId) void supabase.rpc("recalc_account_balance", { p_account_id: accountId });
     onSaved();
   };
 
@@ -584,7 +591,7 @@ function EditDrawer({ tx, categories, accounts, familyId, userId, onClose, onSav
     const { error } = await supabase.from("transactions").delete().eq("id", tx.id);
     if (error) return toast.error(error.message);
     toast.success("Removida");
-    if (tx.account_id) void supabase.rpc("recalc_account_balance", { _account_id: tx.account_id });
+    if (tx.account_id) void supabase.rpc("recalc_account_balance", { p_account_id: tx.account_id });
     onSaved();
   };
 

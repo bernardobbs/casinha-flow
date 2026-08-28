@@ -54,7 +54,10 @@ function RecorrentesPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
       const [r, a, c] = await Promise.all([
@@ -69,7 +72,7 @@ function RecorrentesPage() {
       setCategories((c.data ?? []) as Cat[]);
       setLoading(false);
     })();
-  }, [user, familyId]);
+  }, [user, familyId, authLoading, familyLoading]);
 
   const reload = async () => {
     if (!familyId) return;

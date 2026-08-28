@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Settings as SettingsIcon, Trash2, Wallet, Crown, UserPlus } from "lucide-react";
 import { SkeletonPage } from "@/components/skeletons";
+import { OpenFinancePanel } from "@/components/OpenFinancePanel";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -55,7 +56,6 @@ const SETTING_KEYS = [
   "dia_fechamento",
   "num_adultos",
   "num_criancas",
-  "ai_provider",
   "ai_daily_limit",
   "notif_orcamento",
   "notif_estoque",
@@ -93,6 +93,10 @@ function ConfigPage() {
   const [aiToday, setAiToday] = useState(0);
   const [rules, setRules] = useState<Rule[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
+  const isAdmin = useMemo(
+    () => members.find((m) => m.user_id === user?.id)?.role === "admin",
+    [members, user?.id],
+  );
   const [inviteEmail, setInviteEmail] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -128,7 +132,6 @@ function ConfigPage() {
     dia_fechamento: "1",
     num_adultos: "2",
     num_criancas: "0",
-    ai_provider: "gemini",
     ai_daily_limit: "5",
     notif_orcamento: "true",
     notif_estoque: "true",
@@ -146,7 +149,7 @@ function ConfigPage() {
       setLoading(true);
       const { data: profile } = await supabase
         .from("profiles")
-        .select("family_id, families(name)")
+        .select("family_id, families(nome)")
         .eq("id", user.id)
         .maybeSingle();
       const fid = profile?.family_id ?? null;
@@ -155,7 +158,7 @@ function ConfigPage() {
         return;
       }
       const famName =
-        (profile as unknown as { families?: { name?: string } })?.families?.name ?? "";
+        (profile as unknown as { families?: { nome?: string } })?.families?.nome ?? "";
 
       const { data: settings } = await supabase
         .from("family_settings")
@@ -170,7 +173,6 @@ function ConfigPage() {
         dia_fechamento: map.get("dia_fechamento") ?? "1",
         num_adultos: map.get("num_adultos") ?? "2",
         num_criancas: map.get("num_criancas") ?? "0",
-        ai_provider: map.get("ai_provider") ?? "gemini",
         ai_daily_limit: map.get("ai_daily_limit") ?? "5",
         notif_orcamento: map.get("notif_orcamento") ?? "true",
         notif_estoque: map.get("notif_estoque") ?? "true",
@@ -283,7 +285,7 @@ function ConfigPage() {
 
     // Se nome mudou, atualiza tabela families
     if (keys.includes("family_name") && values.family_name) {
-      await supabase.from("families").update({ name: values.family_name }).eq("id", familyId);
+      await supabase.from("families").update({ nome: values.family_name }).eq("id", familyId);
     }
 
     setSaving(false);
@@ -304,7 +306,7 @@ function ConfigPage() {
   const handleRestoreKeywords = async () => {
     if (!familyId) return;
     const { error } = await supabase.rpc("seed_default_categorization_keywords", {
-      _family_id: familyId,
+      p_family_id: familyId,
     });
     if (error) {
       toast.error(error.message);
@@ -355,6 +357,7 @@ function ConfigPage() {
             <TabsTrigger value="familia">Família</TabsTrigger>
             <TabsTrigger value="geral">Geral</TabsTrigger>
             <TabsTrigger value="ia">IA</TabsTrigger>
+            <TabsTrigger value="openfinance">Open Finance</TabsTrigger>
             <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
             <TabsTrigger value="categorias">Categorias</TabsTrigger>
           </TabsList>
@@ -425,25 +428,27 @@ function ConfigPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="border-t pt-4 space-y-3">
-                  <div>
-                    <Label>Convidar membro</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Gera um link válido por 7 dias. A pessoa cria a conta e entra na sua família automaticamente.
+                {isAdmin && (
+                  <div className="border-t pt-4 space-y-3">
+                    <div>
+                      <Label>Convidar membro</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Gera um link válido por 7 dias. A pessoa cria a conta e entra na sua família automaticamente.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input type="text" placeholder="Nome (ex: Daniella)" value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleInviteMember()} />
+                      <Button onClick={handleInviteMember}>
+                        <UserPlus className="h-4 w-4 mr-1" />Convidar
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      💡 Link copiado automaticamente — envie pelo WhatsApp ou email.
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Input type="text" placeholder="Nome (ex: Daniella)" value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleInviteMember()} />
-                    <Button onClick={handleInviteMember}>
-                      <UserPlus className="h-4 w-4 mr-1" />Convidar
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    💡 Link copiado automaticamente — envie pelo WhatsApp ou email.
-                  </p>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -523,24 +528,28 @@ function ConfigPage() {
                   </Button>
                 </div>
 
-                <Separator className="my-6" />
+                {isAdmin && (
+                  <>
+                    <Separator className="my-6" />
 
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-destructive">
-                    Zona de perigo
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Apaga todas as transações, veículos, estoque e histórico
-                    da família. Categorias e orçamentos são mantidos.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    onClick={() => setResetOpen(true)}
-                  >
-                    🗑️ Resetar dados da família
-                  </Button>
-                </div>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-destructive">
+                        Zona de perigo
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Apaga todas as transações, veículos, estoque e histórico
+                        da família. Categorias e orçamentos são mantidos.
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => setResetOpen(true)}
+                      >
+                        🗑️ Resetar dados da família
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -619,6 +628,10 @@ function ConfigPage() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="openfinance" className="mt-6">
+            {familyId && <OpenFinancePanel familyId={familyId} />}
           </TabsContent>
 
           {/* NOTIFICAÇÕES */}

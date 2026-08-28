@@ -24,7 +24,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 
@@ -64,7 +63,7 @@ const fmtBRL = (n: number | null | undefined) =>
 function ComprasPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { familyId } = useFamily();
+  const { familyId, loading: familyLoading } = useFamily();
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [itemsByList, setItemsByList] = useState<Record<string, ShoppingItem[]>>({});
   const [pendingByList, setPendingByList] = useState<Record<string, { total: number; pendentes: number }>>({});
@@ -111,7 +110,10 @@ function ComprasPage() {
   }, [user, authLoading, navigate]);
 
   const reload = async () => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
 
     const [{ data }, { data: prods }, { data: accs }, { data: cats }] = await Promise.all([
@@ -142,7 +144,7 @@ function ComprasPage() {
     }
     setLoading(false);
   };
-  useEffect(() => { reload(); }, [familyId]);
+  useEffect(() => { reload(); }, [familyId, familyLoading]);
 
   const loadItems = async (listId: string) => {
     const { data, error } = await supabase
@@ -296,6 +298,7 @@ function ComprasPage() {
     const l = finalizarDialog.list;
     if (!l || !familyId || !user) return;
     if (!finalizarAccount) { toast.error("Selecione a conta"); return; }
+    if (!finalizarCategory) { toast.error("Selecione uma categoria"); return; }
 
     setFinalizarLoading(true);
     try {
@@ -304,7 +307,7 @@ function ComprasPage() {
         p_family_id: familyId,
         p_user_id: user.id,
         p_account_id: finalizarAccount,
-        p_category_id: finalizarCategory || null,
+        p_category_id: finalizarCategory,
         p_data: new Date().toISOString().slice(0, 10),
       });
       if (error) { toast.error(error.message); return; }
@@ -584,6 +587,7 @@ Deseja continuar mesmo assim?`);
     }
 
     // 3. Dar entrada no estoque dos vinculados
+    const paisAfetados = new Set<string>();
     for (const item of importItens) {
       if (!item.sub_produto_id) continue;
       const novaQtd = item.qtd * item.qtd_emb;
@@ -592,13 +596,21 @@ Deseja continuar mesmo assim?`);
       if (prod) {
         const novo = Number((prod as any).estoque_atual) + novaQtd;
         await supabase.from("products" as any).update({ estoque_atual: novo }).eq("id", item.sub_produto_id);
+        if ((prod as any).parent_id) paisAfetados.add((prod as any).parent_id);
         // Salvar regra de categorização pelo nome
         await supabase.rpc("save_transaction_rule" as any, {
           p_family_id: familyId, p_description: item.nome_original,
           p_category_id: "c931bce9-bb3e-4335-8891-dea9488b0b90", // Alimentação — Supermercado
           p_account_id: importConta || null, p_tipo: "expense", p_origem: "importacao",
-        }).then(() => {}).catch(() => {});
+        }).then(() => {}, () => {});
       }
+    }
+    // Recalcular o total de cada mãe afetada como soma (fresca) dos filhos
+    for (const paiId of paisAfetados) {
+      const { data: filhos } = await supabase.from("products" as any)
+        .select("estoque_atual").eq("parent_id", paiId);
+      const totalMae = ((filhos ?? []) as any[]).reduce((s, f) => s + Number(f.estoque_atual ?? 0), 0);
+      await supabase.from("products" as any).update({ estoque_atual: totalMae }).eq("id", paiId);
     }
 
     // 3. Criar transação financeira
@@ -607,6 +619,9 @@ Deseja continuar mesmo assim?`);
         family_id: familyId, user_id: user.id,
         description: importNome || "Compras Supermercado",
         amount: -total, type: "expense",
+        descricao: importNome || "Compras Supermercado",
+        valor: -total, tipo: "despesa",
+        data: dataCompra,
         category_id: "c931bce9-bb3e-4335-8891-dea9488b0b90",
         account_id: importConta, date: dataCompra,
         tipo_especial: "normal",
@@ -703,7 +718,7 @@ Deseja continuar mesmo assim?`);
                           <Badge className={cn("border-0", STATUS_VARIANT[l.status])}>{STATUS_LABEL[l.status]}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {counts.total} itens · {comprados} comprados · {fmtBRL(l.status === "concluida" ? l.total_real : l.total_estimado)}
+                          {counts.total} itens · {comprados} comprados · {fmtBRL((l.status === "concluida" ? l.total_real : l.total_estimado) ?? l.total_estimado ?? 0)}
                         </p>
                         {(l.data_prevista || l.local_preferido) && (
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -829,6 +844,11 @@ Deseja continuar mesmo assim?`);
                   <p>📦 Estoque atualizado: <strong>{finalizarResult.estoque} produtos</strong></p>
                   <p>🛒 Itens comprados: <strong>{finalizarResult.itens}</strong></p>
                 </div>
+                {finalizarResult.estoque === 0 && finalizarResult.itens > 0 && (
+                  <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 pt-1 border-t border-emerald-200/60">
+                    Nenhum item desta lista está vinculado a um produto do estoque, por isso nada foi atualizado — use "Importar" ou vincule o produto ao adicionar o item.
+                  </p>
+                )}
               </div>
               <Button className="w-full" onClick={() => setFinalizarDialog({ open: false, list: null })}>
                 Fechar

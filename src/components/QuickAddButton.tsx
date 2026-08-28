@@ -147,7 +147,7 @@ export function QuickAddButton() {
       const first = (data ?? [])[0];
       if (first) {
         setSuggestion(first as typeof suggestion);
-        if (first.auto_apply) setCategoryId(first.category_id);
+        if (first.nivel === 1) setCategoryId(first.category_id);
       } else {
         setSuggestion(null);
       }
@@ -162,6 +162,29 @@ export function QuickAddButton() {
       toast.error("Selecione uma categoria");
       return;
     }
+
+    const dataHoje = new Date().toISOString().slice(0, 10);
+    const { data: dup } = await supabase.rpc("find_possible_duplicate_transaction" as any, {
+      p_family_id: familyId,
+      p_account_id: accountId || null,
+      p_data: dataHoje,
+      p_valor: amt,
+      p_tipo: type === "income" ? "receita" : "despesa",
+      p_descricao: description.trim(),
+    });
+    if (dup && dup.length > 0) {
+      toast.warning(`Já existe um lançamento igual a este hoje (${description.trim()}, ${fmt(amt)})`, {
+        action: { label: "Lançar mesmo assim", onClick: () => doInsert(amt) },
+        duration: 8000,
+      });
+      return;
+    }
+
+    await doInsert(amt);
+  };
+
+  const doInsert = async (amt: number) => {
+    if (!familyId || !user) return;
     setSubmitting(true);
     const cat = categories.find((c) => c.id === categoryId);
     const { data: inserted, error } = await supabase
@@ -173,6 +196,10 @@ export function QuickAddButton() {
         amount: amt,
         description: description.trim(),
         date: new Date().toISOString().slice(0, 10),
+        tipo: type === "income" ? "receita" : "despesa",
+        valor: amt,
+        descricao: description.trim(),
+        data: new Date().toISOString().slice(0, 10),
         account_id: accountId || null,
         category_id: categoryId || null,
         category: cat?.nome ?? null,
@@ -192,18 +219,31 @@ export function QuickAddButton() {
     // Aprende regra
     if (categoryId && description.trim()) {
       await supabase.rpc("learn_categorization_rule", {
-        _family_id: familyId,
-        _termo: description.trim(),
-        _category_id: categoryId,
-        _origem: "manual",
+        p_family_id: familyId,
+        p_termo: description.trim(),
+        p_category_id: categoryId,
+        p_origem: "manual",
       });
     }
     // Recalcula saldo da conta
     if (accountId) {
-      await supabase.rpc("recalc_account_balance", { _account_id: accountId });
+      await supabase.rpc("recalc_account_balance", { p_account_id: accountId });
     }
     // Alertas
     await supabase.rpc("check_transaction_alerts", { _transaction_id: inserted.id });
+    // Baixa automática se este lançamento bate com uma conta pendente
+    if (type === "expense") {
+      const { data: matchedBillId } = await supabase.rpc("match_transaction_to_bill" as any, {
+        p_transaction_id: inserted.id,
+      });
+      if (matchedBillId) {
+        toast.success(`✅ ${fmt(amt)} salvo — baixou uma conta pendente automaticamente`);
+        setSubmitting(false);
+        reset();
+        setOpen(false);
+        return;
+      }
+    }
 
     setSubmitting(false);
     toast.success(`✅ ${fmt(amt)} salvo`);

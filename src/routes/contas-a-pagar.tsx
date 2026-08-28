@@ -57,7 +57,10 @@ function ContasAPagarPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
   useEffect(() => {
-    if (!user || !familyId) return;
+    if (!user || !familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       setLoading(true);
       // Gerar lembretes do mês a partir dos recorrentes
@@ -72,7 +75,7 @@ function ContasAPagarPage() {
       setAccounts((a.data ?? []) as Acc[]);
       setLoading(false);
     })();
-  }, [user, familyId]);
+  }, [user, familyId, authLoading, familyLoading]);
 
   const reload = async () => {
     if (!familyId) return;
@@ -102,7 +105,11 @@ function ContasAPagarPage() {
   }), [rows]);
 
   const totalPendente = rows
-    .filter((r) => new Date(r.data_vencimento).getMonth() === new Date().getMonth() && new Date(r.data_vencimento).getFullYear() === new Date().getFullYear())
+    .filter((r) => {
+      const d = new Date(r.data_vencimento + "T00:00:00");
+      const hoje = new Date();
+      return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
+    })
     .reduce((acc, r) => acc + Number(r.valor), 0);
 
   const submitNovo = async () => {
@@ -110,7 +117,7 @@ function ContasAPagarPage() {
     const v = Number(valor.replace(",", "."));
     if (!descricao || !v || v <= 0) return toast.error("Preencha descrição e valor");
     const { error } = await supabase.from("bills_reminders").insert({
-      family_id: familyId, user_id: user.id, descricao, valor: v, data_vencimento: data, status: "pendente",
+      family_id: familyId, descricao, valor_estimado: v, data_vencimento: data, status: "pendente",
     });
     if (error) return toast.error(error.message);
     toast.success("Lembrete criado");
@@ -123,40 +130,45 @@ function ContasAPagarPage() {
     if (!payAccount) return toast.error("Selecione a conta");
 
     try {
-      // 1. Criar transação de saída
-      const { error: txErr } = await supabase.from("transactions").insert({
-        family_id: familyId,
-        user_id: user.id,
-        account_id: payAccount,
-        category_id: payOpen.category_id,
-        type: "expense",
-        amount: payOpen.valor,
-        description: payOpen.descricao,
-        date: new Date().toISOString().slice(0, 10),
-        source: "manual",
-        tipo_especial: "normal",
-        conciliado: true,
-      });
-      if (txErr) return toast.error(txErr.message);
-
-      // 2. Marcar como pago conforme a origem
       if (payOpen.origem === "lembrete") {
+        // Lembrete não tem transação própria ainda — cria agora e marca pago.
+        const dataPagamento = new Date().toISOString().slice(0, 10);
+        const { error: txErr } = await supabase.from("transactions").insert({
+          family_id: familyId,
+          user_id: user.id,
+          account_id: payAccount,
+          category_id: payOpen.category_id,
+          type: "expense",
+          amount: payOpen.valor,
+          description: payOpen.descricao,
+          date: dataPagamento,
+          tipo: "despesa",
+          valor: payOpen.valor,
+          descricao: payOpen.descricao,
+          data: dataPagamento,
+          source: "manual",
+          tipo_especial: "normal",
+          conciliado: true,
+        });
+        if (txErr) return toast.error(txErr.message);
         await supabase.from("bills_reminders")
           .update({ status: "pago" }).eq("id", payOpen.id);
+        await supabase.rpc("recalc_account_balance", { p_account_id: payAccount });
       } else if (payOpen.origem === "fatura_cartao") {
-        await supabase.rpc("pay_credit_card_bill" as any, {
+        // pay_credit_card_bill já cria as duas transações (débito na conta
+        // que paga, crédito no cartão) e recalcula os saldos — inserir uma
+        // transação manual aqui duplicaria o débito.
+        const { error } = await supabase.rpc("pay_credit_card_bill" as any, {
           p_bill_id: payOpen.id,
-          p_account_id: payAccount,
-          p_family_id: familyId,
-          p_user_id: user.id,
+          p_account_pagamento_id: payAccount,
         });
+        if (error) return toast.error(error.message);
       } else if (payOpen.origem === "parcela") {
+        // A transação da parcela já foi criada na hora da compra
+        // (create_installment_plan) — aqui é só baixa de status.
         await (supabase.from("installments") as any)
           .update({ status: "pago" }).eq("id", payOpen.id);
       }
-
-      // 3. Recalcular saldo da conta
-      await supabase.rpc("recalc_account_balance", { _account_id: payAccount });
 
       toast.success("✅ Pago com sucesso!");
     } catch (e) {

@@ -49,6 +49,7 @@ interface Props {
 export function ReconciliationPanel({ familyId, categories, accounts, onChanged }: Props) {
   const [items, setItems] = useState<PendingTx[]>([]);
   const [totalImported, setTotalImported] = useState(0);
+  const [totalPending, setTotalPending] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterMode>("todos");
   const [search, setSearch] = useState("");
@@ -68,14 +69,23 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
       .order("date", { ascending: false })
       .limit(500);
 
-    const { count } = await supabase
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
-      .eq("family_id", familyId)
-      .eq("source", "importado");
+    const [{ count }, { count: pendingCountExact }] = await Promise.all([
+      supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("family_id", familyId)
+        .eq("source", "importado"),
+      supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("family_id", familyId)
+        .eq("source", "importado")
+        .or("category_id.is.null,account_id.is.null"),
+    ]);
 
     setItems((pending as PendingTx[]) ?? []);
     setTotalImported(count ?? 0);
+    setTotalPending(pendingCountExact ?? (pending as PendingTx[] ?? []).length);
     setSelected(new Set());
     setLoading(false);
   };
@@ -94,7 +104,7 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
     });
   }, [items, filter, search]);
 
-  const pendingCount = items.length;
+  const pendingCount = totalPending;
   const reconciledCount = Math.max(0, totalImported - pendingCount);
   const progressPct = totalImported > 0 ? Math.round((reconciledCount / totalImported) * 100) : 0;
 
@@ -109,9 +119,9 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
       const tx = items.find(t => t.id === id);
       if (tx?.description && familyId) {
         void supabase.rpc("learn_categorization_rule" as any, {
-          _family_id: familyId,
-          _termo: tx.description.toLowerCase().slice(0, 60),
-          _category_id: patch.category_id,
+          p_family_id: familyId,
+          p_termo: tx.description.toLowerCase().slice(0, 60),
+          p_category_id: patch.category_id,
         });
       }
     }
@@ -121,7 +131,7 @@ export function ReconciliationPanel({ familyId, categories, accounts, onChanged 
         .filter((t) => !t.category_id || !t.account_id),
     );
     if (patch.account_id) {
-      void supabase.rpc("recalc_account_balance", { _account_id: patch.account_id });
+      void supabase.rpc("recalc_account_balance", { p_account_id: patch.account_id });
     }
     onChanged?.();
   };

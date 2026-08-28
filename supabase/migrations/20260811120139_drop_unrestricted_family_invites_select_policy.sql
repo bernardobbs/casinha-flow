@@ -1,0 +1,11 @@
+-- The "invites_by_token" policy allowed unrestricted SELECT (qual: true) on
+-- family_invites to anyone - no filtering by token, family, or auth state.
+-- It leaked every pending invite (email, token, family_id, invited_by)
+-- across all families to anyone able to query the table directly.
+--
+-- It was also unnecessary: the invite-acceptance flow goes through the
+-- accept_invite() RPC, which is SECURITY DEFINER and validates the token
+-- itself, bypassing RLS entirely. No client code ever selects from
+-- family_invites directly (only inserts, which use the properly-scoped
+-- invites_family policy).
+DROP POLICY IF EXISTS invites_by_token ON public.family_invites;

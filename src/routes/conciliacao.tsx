@@ -117,7 +117,7 @@ function ConciliacaoPage() {
                   p_family_id: familyId, p_description: tx.description,
                   p_category_id: r.category_id, p_account_id: r.account_id ?? null,
                   p_tipo: tx.type, p_origem: 'ia',
-                }).then(() => {}).catch(() => {});
+                }).then(() => {}, () => {});
               }
             }
           }
@@ -146,9 +146,12 @@ function ConciliacaoPage() {
   }, [user, authLoading, navigate]);
 
   const load = async () => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
-    const [{ data: pend }, { data: cs }, { data: as }, { count: semCat }, { count: cConc }] = await Promise.all([
+    const [{ data: pend }, { data: cs }, { data: as }, { count: semCat }, { count: cConc }, { count: cPend }] = await Promise.all([
       supabase.from("transactions").select("*")
         .eq("family_id", familyId).eq("conciliado", false)
         .order("date", { ascending: false })
@@ -160,17 +163,22 @@ function ConciliacaoPage() {
         .eq("family_id", familyId).is("category_id", null),
       supabase.from("transactions").select("id", { count: "exact", head: true })
         .eq("family_id", familyId).eq("conciliado", true),
+      supabase.from("transactions").select("id", { count: "exact", head: true })
+        .eq("family_id", familyId).eq("conciliado", false),
     ]);
     const list = ((pend ?? []) as unknown as Tx[]).map((t) => ({ ...t, amount: Number(t.amount) }));
     setTxs(list);
     setCats((cs ?? []) as Cat[]);
     setAccs((as ?? []) as Acc[]);
-    setCounts({ semCat: semCat ?? 0, pend: list.length, conc: cConc ?? 0 });
+    setCounts({ semCat: semCat ?? 0, pend: cPend ?? list.length, conc: cConc ?? 0 });
     setLoading(false);
   };
 
   useEffect(() => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!familyLoading) setLoading(false);
+      return;
+    }
     (async () => {
       await load();
       // Auto-aplicar regras conhecidas ao abrir
@@ -178,7 +186,7 @@ function ConciliacaoPage() {
       await load();
     })();
     /* eslint-disable-next-line */
-  }, [familyId]);
+  }, [familyId, familyLoading]);
 
   const updateTx = async (id: string, patch: Partial<Tx>) => {
     const { error } = await supabase.from("transactions").update(patch).eq("id", id);
@@ -196,7 +204,7 @@ function ConciliacaoPage() {
           p_account_id: updated.account_id ?? null,
           p_tipo: tx.type,
           p_origem: 'manual',
-        }).then(() => {}).catch(() => {});
+        }).then(() => {}, () => {});
       }
     }
   };

@@ -74,7 +74,10 @@ function ManutencaoPage() {
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [user, authLoading, navigate]);
 
   const load = async () => {
-    if (!familyId) return;
+    if (!familyId) {
+      if (!authLoading && !familyLoading) setLoading(false);
+      return;
+    }
     setLoading(true);
     let q = supabase.from("maintenance_tasks" as any)
       .select("id, titulo, categoria, descricao, prioridade, status, responsavel, custo_estimado, data_prevista, created_at")
@@ -92,7 +95,7 @@ function ManutencaoPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [familyId, statusFiltro]);
+  useEffect(() => { load(); }, [familyId, statusFiltro, authLoading, familyLoading]);
 
   const openNew = () => { setEditing(null); setForm(EMPTY); setDialogOpen(true); };
   const openEdit = (t: Task) => {

@@ -157,10 +157,11 @@ function CrisisPage() {
       const startISO = start.toISOString().slice(0, 10);
       const { count } = await supabase
         .from("transactions")
-        .select("id", { count: "exact", head: true })
+        .select("id, categories!inner(is_essencial)", { count: "exact", head: true })
         .eq("family_id", fid)
         .eq("type", "expense")
-        .eq("is_essencial", false)
+        .or("tipo_especial.is.null,tipo_especial.eq.normal")
+        .eq("categories.is_essencial", false)
         .gte("date", startISO);
       setNonEssentialAlert(count ?? 0);
     } else {
@@ -178,9 +179,8 @@ function CrisisPage() {
     if (!familyId) return;
     setActing(true);
     const { error } = await supabase.rpc("activate_crisis", {
-      _family_id: familyId,
-      _motivo: "manual",
-      _criterio: "Declarada manualmente pelo usuário",
+      p_family_id: familyId,
+      p_motivo: "Declarada manualmente pelo usuário",
     });
     setActing(false);
     setShowDeclare(false);
@@ -196,7 +196,7 @@ function CrisisPage() {
     if (!active) return;
     setActing(true);
     const { error } = await supabase.rpc("advance_crisis_stage", {
-      _crisis_id: active.id,
+      p_crisis_id: active.id,
     });
     setActing(false);
     if (error) {
@@ -211,7 +211,7 @@ function CrisisPage() {
     if (!active) return;
     setActing(true);
     const { error } = await supabase.rpc("resolve_crisis", {
-      _crisis_id: active.id,
+      p_crisis_id: active.id,
     });
     setActing(false);
     setShowResolve(false);
@@ -322,7 +322,7 @@ function CrisisPage() {
                   </div>
                 </div>
                 <Badge variant="outline" className="font-normal">
-                  {active.motivo_ativacao === "manual"
+                  {active.motivo_ativacao?.toLowerCase().includes("manual")
                     ? "Ativação manual"
                     : "Ativação automática"}
                 </Badge>
@@ -618,7 +618,7 @@ function CrisisPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Motivo:{" "}
-                        {c.motivo_ativacao === "manual"
+                        {c.motivo_ativacao?.toLowerCase().includes("manual")
                           ? "manual"
                           : "automático"}
                       </p>

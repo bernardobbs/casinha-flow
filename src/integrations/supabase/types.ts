@@ -17,225 +17,348 @@ export type Database = {
       accounts: {
         Row: {
           agencia: string | null
-          ativo: boolean
+          ativo: boolean | null
           banco: string | null
           bandeira: string | null
-          cor: string
-          created_at: string
+          cor: string | null
+          created_at: string | null
           dia_fechamento: number | null
           dia_vencimento: number | null
           digito: string | null
           family_id: string
-          icone: string
+          icone: string | null
           id: string
           limite_cheque_especial: number | null
           limite_credito: number | null
           nome: string
           numero_conta: string | null
-          saldo_atual: number
-          saldo_inicial: number
-          tipo: Database["public"]["Enums"]["account_type"]
-          updated_at: string
+          saldo_atual: number | null
+          saldo_inicial: number | null
+          tipo: string
         }
         Insert: {
           agencia?: string | null
-          ativo?: boolean
+          ativo?: boolean | null
           banco?: string | null
           bandeira?: string | null
-          cor?: string
-          created_at?: string
+          cor?: string | null
+          created_at?: string | null
           dia_fechamento?: number | null
           dia_vencimento?: number | null
           digito?: string | null
           family_id: string
-          icone?: string
+          icone?: string | null
           id?: string
           limite_cheque_especial?: number | null
           limite_credito?: number | null
           nome: string
           numero_conta?: string | null
-          saldo_atual?: number
-          saldo_inicial?: number
-          tipo?: Database["public"]["Enums"]["account_type"]
-          updated_at?: string
+          saldo_atual?: number | null
+          saldo_inicial?: number | null
+          tipo: string
         }
         Update: {
           agencia?: string | null
-          ativo?: boolean
+          ativo?: boolean | null
           banco?: string | null
           bandeira?: string | null
-          cor?: string
-          created_at?: string
+          cor?: string | null
+          created_at?: string | null
           dia_fechamento?: number | null
           dia_vencimento?: number | null
           digito?: string | null
           family_id?: string
-          icone?: string
+          icone?: string | null
           id?: string
           limite_cheque_especial?: number | null
           limite_credito?: number | null
           nome?: string
           numero_conta?: string | null
-          saldo_atual?: number
-          saldo_inicial?: number
-          tipo?: Database["public"]["Enums"]["account_type"]
-          updated_at?: string
+          saldo_atual?: number | null
+          saldo_inicial?: number | null
+          tipo?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounts_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_logs: {
+        Row: {
+          created_at: string | null
+          error_msg: string | null
+          estimated_cost: number | null
+          family_id: string | null
+          feature: string
+          id: string
+          latency_ms: number | null
+          prompt: string | null
+          response: string | null
+          success: boolean | null
+          tokens_input: number | null
+          tokens_output: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_msg?: string | null
+          estimated_cost?: number | null
+          family_id?: string | null
+          feature: string
+          id?: string
+          latency_ms?: number | null
+          prompt?: string | null
+          response?: string | null
+          success?: boolean | null
+          tokens_input?: number | null
+          tokens_output?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_msg?: string | null
+          estimated_cost?: number | null
+          family_id?: string | null
+          feature?: string
+          id?: string
+          latency_ms?: number | null
+          prompt?: string | null
+          response?: string | null
+          success?: boolean | null
+          tokens_input?: number | null
+          tokens_output?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_logs_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       alerts: {
         Row: {
-          created_at: string
+          created_at: string | null
           family_id: string
           id: string
-          lido: boolean
+          lido: boolean | null
           mensagem: string
           referencia_id: string | null
           referencia_tipo: string | null
-          severidade: Database["public"]["Enums"]["alert_severity"]
+          severidade: string | null
           tipo: string
-          updated_at: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           family_id: string
           id?: string
-          lido?: boolean
+          lido?: boolean | null
           mensagem: string
           referencia_id?: string | null
           referencia_tipo?: string | null
-          severidade?: Database["public"]["Enums"]["alert_severity"]
+          severidade?: string | null
           tipo: string
-          updated_at?: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           family_id?: string
           id?: string
-          lido?: boolean
+          lido?: boolean | null
           mensagem?: string
           referencia_id?: string | null
           referencia_tipo?: string | null
-          severidade?: Database["public"]["Enums"]["alert_severity"]
+          severidade?: string | null
           tipo?: string
-          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "alerts_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bills_reminders: {
         Row: {
           account_id: string | null
-          category_id: string | null
-          created_at: string
+          created_at: string | null
+          credit_card_bill_id: string | null
           data_vencimento: string
           descricao: string
+          dias_antecedencia_alerta: number | null
           family_id: string
           id: string
-          observacao: string | null
-          status: string
-          updated_at: string
-          user_id: string | null
-          valor: number
+          mes_referencia: string | null
+          recorrente_id: string | null
+          status: string | null
+          transaction_id: string | null
+          valor: number | null
+          valor_estimado: number | null
         }
         Insert: {
           account_id?: string | null
-          category_id?: string | null
-          created_at?: string
+          created_at?: string | null
+          credit_card_bill_id?: string | null
           data_vencimento: string
           descricao: string
+          dias_antecedencia_alerta?: number | null
           family_id: string
           id?: string
-          observacao?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string | null
-          valor: number
+          mes_referencia?: string | null
+          recorrente_id?: string | null
+          status?: string | null
+          transaction_id?: string | null
+          valor?: number | null
+          valor_estimado?: number | null
         }
         Update: {
           account_id?: string | null
-          category_id?: string | null
-          created_at?: string
+          created_at?: string | null
+          credit_card_bill_id?: string | null
           data_vencimento?: string
           descricao?: string
+          dias_antecedencia_alerta?: number | null
           family_id?: string
           id?: string
-          observacao?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string | null
-          valor?: number
+          mes_referencia?: string | null
+          recorrente_id?: string | null
+          status?: string | null
+          transaction_id?: string | null
+          valor?: number | null
+          valor_estimado?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bills_reminders_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_reminders_credit_card_bill_id_fkey"
+            columns: ["credit_card_bill_id"]
+            isOneToOne: true
+            referencedRelation: "credit_card_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_reminders_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_reminders_recorrente_id_fkey"
+            columns: ["recorrente_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_reminders_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       budgets: {
         Row: {
           category_id: string
-          created_at: string
+          conta_origem: string | null
+          created_at: string | null
           family_id: string
           id: string
           mes: string
-          updated_at: string
+          responsavel: string | null
           valor_planejado: number
         }
         Insert: {
           category_id: string
-          created_at?: string
+          conta_origem?: string | null
+          created_at?: string | null
           family_id: string
           id?: string
           mes: string
-          updated_at?: string
-          valor_planejado?: number
+          responsavel?: string | null
+          valor_planejado: number
         }
         Update: {
           category_id?: string
-          created_at?: string
+          conta_origem?: string | null
+          created_at?: string | null
           family_id?: string
           id?: string
           mes?: string
-          updated_at?: string
+          responsavel?: string | null
           valor_planejado?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
-          cor: string
-          created_at: string
-          family_id: string
-          icone: string
+          cor: string | null
+          created_at: string | null
+          family_id: string | null
+          icone: string | null
           id: string
-          is_default: boolean
-          is_essencial: boolean
+          is_essencial: boolean | null
           nome: string
           parent_id: string | null
-          tipo: Database["public"]["Enums"]["category_type"]
-          updated_at: string
+          responsavel_padrao: string | null
+          tipo: string
         }
         Insert: {
-          cor?: string
-          created_at?: string
-          family_id: string
-          icone?: string
+          cor?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          icone?: string | null
           id?: string
-          is_default?: boolean
-          is_essencial?: boolean
+          is_essencial?: boolean | null
           nome: string
           parent_id?: string | null
-          tipo: Database["public"]["Enums"]["category_type"]
-          updated_at?: string
+          responsavel_padrao?: string | null
+          tipo: string
         }
         Update: {
-          cor?: string
-          created_at?: string
-          family_id?: string
-          icone?: string
+          cor?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          icone?: string | null
           id?: string
-          is_default?: boolean
-          is_essencial?: boolean
+          is_essencial?: boolean | null
           nome?: string
           parent_id?: string | null
-          tipo?: Database["public"]["Enums"]["category_type"]
-          updated_at?: string
+          responsavel_padrao?: string | null
+          tipo?: string
         }
         Relationships: [
           {
@@ -256,42 +379,52 @@ export type Database = {
       }
       categorization_rules: {
         Row: {
+          account_id: string | null
           category_id: string
-          confianca: number
-          created_at: string
+          confianca: number | null
+          created_at: string | null
           family_id: string
           id: string
-          origem: Database["public"]["Enums"]["categorization_origin"]
+          origem: string | null
           termo: string
           termo_normalizado: string
-          updated_at: string
-          usos: number
+          updated_at: string | null
+          usos: number | null
         }
         Insert: {
+          account_id?: string | null
           category_id: string
-          confianca?: number
-          created_at?: string
+          confianca?: number | null
+          created_at?: string | null
           family_id: string
           id?: string
-          origem?: Database["public"]["Enums"]["categorization_origin"]
+          origem?: string | null
           termo: string
           termo_normalizado: string
-          updated_at?: string
-          usos?: number
+          updated_at?: string | null
+          usos?: number | null
         }
         Update: {
+          account_id?: string | null
           category_id?: string
-          confianca?: number
-          created_at?: string
+          confianca?: number | null
+          created_at?: string | null
           family_id?: string
           id?: string
-          origem?: Database["public"]["Enums"]["categorization_origin"]
+          origem?: string | null
           termo?: string
           termo_normalizado?: string
-          updated_at?: string
-          usos?: number
+          updated_at?: string | null
+          usos?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "categorization_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "categorization_rules_category_id_fkey"
             columns: ["category_id"]
@@ -299,34 +432,60 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "categorization_rules_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
         ]
       }
       consumption_history: {
         Row: {
-          created_at: string
+          confirmado_pelo_usuario: boolean | null
+          consumo_calculado: number
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
           family_id: string
           id: string
-          mes: string
+          origem: string | null
+          periodo_dias: number
           product_id: string
-          quantidade_consumida: number
         }
         Insert: {
-          created_at?: string
+          confirmado_pelo_usuario?: boolean | null
+          consumo_calculado: number
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
           family_id: string
           id?: string
-          mes: string
+          origem?: string | null
+          periodo_dias: number
           product_id: string
-          quantidade_consumida?: number
         }
         Update: {
-          created_at?: string
+          confirmado_pelo_usuario?: boolean | null
+          consumo_calculado?: number
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
           family_id?: string
           id?: string
-          mes?: string
+          origem?: string | null
+          periodo_dias?: number
           product_id?: string
-          quantidade_consumida?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "consumption_history_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "consumption_history_product_id_fkey"
             columns: ["product_id"]
@@ -346,46 +505,46 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_stock_status"
-            referencedColumns: ["product_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
       credit_card_bills: {
         Row: {
           account_id: string
-          created_at: string
+          created_at: string | null
+          data_fechamento: string | null
           data_vencimento: string | null
           family_id: string
           id: string
           mes_referencia: string
-          status: Database["public"]["Enums"]["credit_card_bill_status"]
-          updated_at: string
-          valor_pago: number
-          valor_total: number
+          status: string | null
+          valor_pago: number | null
+          valor_total: number | null
         }
         Insert: {
           account_id: string
-          created_at?: string
+          created_at?: string | null
+          data_fechamento?: string | null
           data_vencimento?: string | null
           family_id: string
           id?: string
           mes_referencia: string
-          status?: Database["public"]["Enums"]["credit_card_bill_status"]
-          updated_at?: string
-          valor_pago?: number
-          valor_total?: number
+          status?: string | null
+          valor_pago?: number | null
+          valor_total?: number | null
         }
         Update: {
           account_id?: string
-          created_at?: string
+          created_at?: string | null
+          data_fechamento?: string | null
           data_vencimento?: string | null
           family_id?: string
           id?: string
           mes_referencia?: string
-          status?: Database["public"]["Enums"]["credit_card_bill_status"]
-          updated_at?: string
-          valor_pago?: number
-          valor_total?: number
+          status?: string | null
+          valor_pago?: number | null
+          valor_total?: number | null
         }
         Relationships: [
           {
@@ -395,53 +554,65 @@ export type Database = {
             referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_card_bills_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
         ]
       }
       crisis_events: {
         Row: {
-          ativo: boolean
-          created_at: string
+          ativo: boolean | null
+          created_at: string | null
           criterio_disparado: string | null
           data_fim: string | null
           data_inicio: string
-          estagio_atual: number
+          estagio_atual: number | null
           family_id: string
           id: string
           motivo_ativacao: string
           plano_saida: Json | null
-          updated_at: string
         }
         Insert: {
-          ativo?: boolean
-          created_at?: string
+          ativo?: boolean | null
+          created_at?: string | null
           criterio_disparado?: string | null
           data_fim?: string | null
-          data_inicio?: string
-          estagio_atual?: number
+          data_inicio: string
+          estagio_atual?: number | null
           family_id: string
           id?: string
           motivo_ativacao: string
           plano_saida?: Json | null
-          updated_at?: string
         }
         Update: {
-          ativo?: boolean
-          created_at?: string
+          ativo?: boolean | null
+          created_at?: string | null
           criterio_disparado?: string | null
           data_fim?: string | null
           data_inicio?: string
-          estagio_atual?: number
+          estagio_atual?: number | null
           family_id?: string
           id?: string
           motivo_ativacao?: string
           plano_saida?: Json | null
-          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crisis_events_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crisis_stage_history: {
         Row: {
-          created_at: string
+          created_at: string | null
           crisis_id: string
           criterio_avanco: string | null
           data_entrada: string
@@ -450,16 +621,16 @@ export type Database = {
           id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           crisis_id: string
           criterio_avanco?: string | null
-          data_entrada?: string
+          data_entrada: string
           data_saida?: string | null
           estagio: number
           id?: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           crisis_id?: string
           criterio_avanco?: string | null
           data_entrada?: string
@@ -479,109 +650,175 @@ export type Database = {
       }
       cycle_config: {
         Row: {
-          created_at: string
+          created_at: string | null
+          data_inicio: string
+          data_proxima_compra: string
           family_id: string
-          frequencia_dias: number
+          frequencia_dias: number | null
           id: string
-          updated_at: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
+          data_inicio: string
+          data_proxima_compra: string
           family_id: string
-          frequencia_dias?: number
+          frequencia_dias?: number | null
           id?: string
-          updated_at?: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
+          data_inicio?: string
+          data_proxima_compra?: string
           family_id?: string
-          frequencia_dias?: number
+          frequencia_dias?: number | null
           id?: string
-          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cycle_config_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_ai_runs: {
         Row: {
-          created_at: string
-          custo_credito: number
-          data: string
-          family_id: string
+          created_at: string | null
+          custo_credito: number | null
+          data: string | null
+          family_id: string | null
           id: string
-          modulo: string
-          prompt_usado: string
-          resposta_ia: Json
-          user_id: string
+          modulo: string | null
+          prompt_usado: string | null
+          resposta_ia: Json | null
         }
         Insert: {
-          created_at?: string
-          custo_credito?: number
-          data?: string
-          family_id: string
+          created_at?: string | null
+          custo_credito?: number | null
+          data?: string | null
+          family_id?: string | null
           id?: string
-          modulo: string
-          prompt_usado: string
-          resposta_ia?: Json
-          user_id: string
+          modulo?: string | null
+          prompt_usado?: string | null
+          resposta_ia?: Json | null
         }
         Update: {
-          created_at?: string
-          custo_credito?: number
-          data?: string
-          family_id?: string
+          created_at?: string | null
+          custo_credito?: number | null
+          data?: string | null
+          family_id?: string | null
           id?: string
-          modulo?: string
-          prompt_usado?: string
-          resposta_ia?: Json
-          user_id?: string
+          modulo?: string | null
+          prompt_usado?: string | null
+          resposta_ia?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "daily_ai_runs_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       families: {
         Row: {
-          created_at: string
-          created_by: string
+          created_at: string | null
           id: string
-          name: string
-          updated_at: string
+          nome: string
         }
         Insert: {
-          created_at?: string
-          created_by: string
+          created_at?: string | null
           id?: string
-          name: string
-          updated_at?: string
+          nome: string
         }
         Update: {
-          created_at?: string
-          created_by?: string
+          created_at?: string | null
           id?: string
-          name?: string
-          updated_at?: string
+          nome?: string
         }
         Relationships: []
       }
-      family_members: {
+      family_invites: {
         Row: {
-          created_at: string
-          family_id: string
+          accepted_at: string | null
+          created_at: string | null
+          email: string | null
+          expires_at: string | null
+          family_id: string | null
           id: string
-          role: Database["public"]["Enums"]["family_role"]
-          user_id: string
+          invited_by: string | null
+          status: string | null
+          token: string
         }
         Insert: {
-          created_at?: string
-          family_id: string
+          accepted_at?: string | null
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string | null
+          family_id?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["family_role"]
-          user_id: string
+          invited_by?: string | null
+          status?: string | null
+          token?: string
         }
         Update: {
-          created_at?: string
-          family_id?: string
+          accepted_at?: string | null
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string | null
+          family_id?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["family_role"]
-          user_id?: string
+          invited_by?: string | null
+          status?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_invites_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_members: {
+        Row: {
+          cor: string | null
+          created_at: string | null
+          family_id: string | null
+          icone: string | null
+          id: string
+          nome: string | null
+          role: string | null
+          tipo: string | null
+          user_id: string | null
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string | null
+          role?: string | null
+          tipo?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string | null
+          role?: string | null
+          tipo?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -596,81 +833,86 @@ export type Database = {
       family_settings: {
         Row: {
           chave: string
-          created_at: string
+          created_at: string | null
           family_id: string
           id: string
-          updated_at: string
+          updated_at: string | null
           valor: string | null
         }
         Insert: {
           chave: string
-          created_at?: string
+          created_at?: string | null
           family_id: string
           id?: string
-          updated_at?: string
+          updated_at?: string | null
           valor?: string | null
         }
         Update: {
           chave?: string
-          created_at?: string
+          created_at?: string | null
           family_id?: string
           id?: string
-          updated_at?: string
+          updated_at?: string | null
           valor?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "family_settings_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_state: {
         Row: {
-          created_at: string
+          created_at: string | null
           family_id: string
           id: string
           mes: string
-          meta_essenciais: number
-          meta_estilo_vida: number
-          meta_reserva: number
-          modo_crise: boolean
+          meta_essenciais: number | null
+          meta_estilo_vida: number | null
+          meta_reserva: number | null
+          modo_crise: boolean | null
           renda_mensal: number
-          saldo_atual: number
-          total_dividas: number
-          total_essenciais: number
-          total_estilo_vida: number
-          total_reserva: number
-          updated_at: string
+          saldo_atual: number | null
+          total_dividas: number | null
+          total_essenciais: number | null
+          total_estilo_vida: number | null
+          total_reserva: number | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           family_id: string
           id?: string
           mes: string
-          meta_essenciais?: number
-          meta_estilo_vida?: number
-          meta_reserva?: number
-          modo_crise?: boolean
-          renda_mensal?: number
-          saldo_atual?: number
-          total_dividas?: number
-          total_essenciais?: number
-          total_estilo_vida?: number
-          total_reserva?: number
-          updated_at?: string
+          meta_essenciais?: number | null
+          meta_estilo_vida?: number | null
+          meta_reserva?: number | null
+          modo_crise?: boolean | null
+          renda_mensal: number
+          saldo_atual?: number | null
+          total_dividas?: number | null
+          total_essenciais?: number | null
+          total_estilo_vida?: number | null
+          total_reserva?: number | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           family_id?: string
           id?: string
           mes?: string
-          meta_essenciais?: number
-          meta_estilo_vida?: number
-          meta_reserva?: number
-          modo_crise?: boolean
+          meta_essenciais?: number | null
+          meta_estilo_vida?: number | null
+          meta_reserva?: number | null
+          modo_crise?: boolean | null
           renda_mensal?: number
-          saldo_atual?: number
-          total_dividas?: number
-          total_essenciais?: number
-          total_estilo_vida?: number
-          total_reserva?: number
-          updated_at?: string
+          saldo_atual?: number | null
+          total_dividas?: number | null
+          total_essenciais?: number | null
+          total_estilo_vida?: number | null
+          total_reserva?: number | null
         }
         Relationships: [
           {
@@ -684,60 +926,87 @@ export type Database = {
       }
       fuel_fills: {
         Row: {
-          combustivel: Database["public"]["Enums"]["fuel_type"]
-          created_at: string
+          combustivel_usado: string
+          created_at: string | null
           data: string
           family_id: string
-          hodometro: number
+          hodometro: number | null
           id: string
-          litros: number
+          litros: number | null
+          litros_calculado: boolean | null
+          observacao: string | null
+          odometro: number
           posto: string | null
           preco_litro: number
-          tanque_cheio: boolean
+          tanque_cheio: boolean | null
           transaction_id: string | null
-          user_id: string
           valor_pago: number
           vehicle_id: string
         }
         Insert: {
-          combustivel: Database["public"]["Enums"]["fuel_type"]
-          created_at?: string
-          data?: string
+          combustivel_usado: string
+          created_at?: string | null
+          data: string
           family_id: string
-          hodometro: number
+          hodometro?: number | null
           id?: string
-          litros: number
+          litros?: number | null
+          litros_calculado?: boolean | null
+          observacao?: string | null
+          odometro: number
           posto?: string | null
           preco_litro: number
-          tanque_cheio?: boolean
+          tanque_cheio?: boolean | null
           transaction_id?: string | null
-          user_id: string
           valor_pago: number
           vehicle_id: string
         }
         Update: {
-          combustivel?: Database["public"]["Enums"]["fuel_type"]
-          created_at?: string
+          combustivel_usado?: string
+          created_at?: string | null
           data?: string
           family_id?: string
-          hodometro?: number
+          hodometro?: number | null
           id?: string
-          litros?: number
+          litros?: number | null
+          litros_calculado?: boolean | null
+          observacao?: string | null
+          odometro?: number
           posto?: string | null
           preco_litro?: number
-          tanque_cheio?: boolean
+          tanque_cheio?: boolean | null
           transaction_id?: string | null
-          user_id?: string
           valor_pago?: number
           vehicle_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "fuel_fills_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_flex_comparison"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
             foreignKeyName: "fuel_fills_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "v_vehicle_status"
-            referencedColumns: ["vehicle_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "fuel_fills_vehicle_id_fkey"
@@ -750,39 +1019,56 @@ export type Database = {
       }
       fuel_monthly_goals: {
         Row: {
-          created_at: string
+          created_at: string | null
           family_id: string
+          gasto_planejado: number | null
           id: string
+          km_planejado: number | null
           mes: string
-          updated_at: string
-          valor_meta: number
-          vehicle_id: string | null
+          modo_crise: boolean | null
+          vehicle_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           family_id: string
+          gasto_planejado?: number | null
           id?: string
+          km_planejado?: number | null
           mes: string
-          updated_at?: string
-          valor_meta?: number
-          vehicle_id?: string | null
+          modo_crise?: boolean | null
+          vehicle_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           family_id?: string
+          gasto_planejado?: number | null
           id?: string
+          km_planejado?: number | null
           mes?: string
-          updated_at?: string
-          valor_meta?: number
-          vehicle_id?: string | null
+          modo_crise?: boolean | null
+          vehicle_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fuel_monthly_goals_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_monthly_goals_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_flex_comparison"
+            referencedColumns: ["vehicle_id"]
+          },
           {
             foreignKeyName: "fuel_monthly_goals_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "v_vehicle_status"
-            referencedColumns: ["vehicle_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "fuel_monthly_goals_vehicle_id_fkey"
@@ -795,78 +1081,133 @@ export type Database = {
       }
       installment_plans: {
         Row: {
-          account_id: string
+          account_id: string | null
+          ativo: boolean | null
           category_id: string | null
-          created_at: string
-          data_compra: string
-          description: string
+          created_at: string | null
+          data_primeira_parcela: string
+          descricao: string
           family_id: string
           id: string
-          is_essencial: boolean
-          total_parcelas: number
-          updated_at: string
-          user_id: string
+          num_parcelas: number
+          parcelas_pagas: number | null
+          valor_parcela: number
           valor_total: number
         }
         Insert: {
-          account_id: string
+          account_id?: string | null
+          ativo?: boolean | null
           category_id?: string | null
-          created_at?: string
-          data_compra?: string
-          description: string
+          created_at?: string | null
+          data_primeira_parcela: string
+          descricao: string
           family_id: string
           id?: string
-          is_essencial?: boolean
-          total_parcelas: number
-          updated_at?: string
-          user_id: string
+          num_parcelas: number
+          parcelas_pagas?: number | null
+          valor_parcela: number
           valor_total: number
         }
         Update: {
-          account_id?: string
+          account_id?: string | null
+          ativo?: boolean | null
           category_id?: string | null
-          created_at?: string
-          data_compra?: string
-          description?: string
+          created_at?: string | null
+          data_primeira_parcela?: string
+          descricao?: string
           family_id?: string
           id?: string
-          is_essencial?: boolean
-          total_parcelas?: number
-          updated_at?: string
-          user_id?: string
+          num_parcelas?: number
+          parcelas_pagas?: number | null
+          valor_parcela?: number
           valor_total?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "installment_plans_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_plans_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_plans_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       installments: {
         Row: {
-          created_at: string
-          fatura_mes: string
+          account_id: string | null
+          created_at: string | null
+          credit_card_bill_id: string | null
+          family_id: string
           id: string
-          numero: number
+          mes_competencia: string
+          numero_parcela: number
           plan_id: string
+          status: string | null
           transaction_id: string | null
           valor: number
         }
         Insert: {
-          created_at?: string
-          fatura_mes: string
+          account_id?: string | null
+          created_at?: string | null
+          credit_card_bill_id?: string | null
+          family_id: string
           id?: string
-          numero: number
+          mes_competencia: string
+          numero_parcela: number
           plan_id: string
+          status?: string | null
           transaction_id?: string | null
           valor: number
         }
         Update: {
-          created_at?: string
-          fatura_mes?: string
+          account_id?: string | null
+          created_at?: string | null
+          credit_card_bill_id?: string | null
+          family_id?: string
           id?: string
-          numero?: number
+          mes_competencia?: string
+          numero_parcela?: number
           plan_id?: string
+          status?: string | null
           transaction_id?: string | null
           valor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "installments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installments_credit_card_bill_id_fkey"
+            columns: ["credit_card_bill_id"]
+            isOneToOne: false
+            referencedRelation: "credit_card_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "installments_plan_id_fkey"
             columns: ["plan_id"]
@@ -874,34 +1215,140 @@ export type Database = {
             referencedRelation: "installment_plans"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "installments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      keep_alive_log: {
+        Row: {
+          executado_em: string | null
+          id: string
+          status: string | null
+        }
+        Insert: {
+          executado_em?: string | null
+          id?: string
+          status?: string | null
+        }
+        Update: {
+          executado_em?: string | null
+          id?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
+      maintenance_tasks: {
+        Row: {
+          categoria: string | null
+          created_at: string | null
+          custo_estimado: number | null
+          custo_real: number | null
+          data_conclusao: string | null
+          data_prevista: string | null
+          descricao: string | null
+          family_id: string | null
+          fotos: string[] | null
+          id: string
+          intervalo_dias: number | null
+          prioridade: string | null
+          proxima_data: string | null
+          recorrente: boolean | null
+          responsavel: string | null
+          status: string | null
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string | null
+          custo_estimado?: number | null
+          custo_real?: number | null
+          data_conclusao?: string | null
+          data_prevista?: string | null
+          descricao?: string | null
+          family_id?: string | null
+          fotos?: string[] | null
+          id?: string
+          intervalo_dias?: number | null
+          prioridade?: string | null
+          proxima_data?: string | null
+          recorrente?: boolean | null
+          responsavel?: string | null
+          status?: string | null
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string | null
+          custo_estimado?: number | null
+          custo_real?: number | null
+          data_conclusao?: string | null
+          data_prevista?: string | null
+          descricao?: string | null
+          family_id?: string | null
+          fotos?: string[] | null
+          id?: string
+          intervalo_dias?: number | null
+          prioridade?: string | null
+          proxima_data?: string | null
+          recorrente?: boolean | null
+          responsavel?: string | null
+          status?: string | null
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_tasks_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
         ]
       }
       price_history: {
         Row: {
-          created_at: string
+          created_at: string | null
           data: string
           family_id: string
           id: string
+          local_compra: string | null
           preco: number
           product_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           data?: string
           family_id: string
           id?: string
+          local_compra?: string | null
           preco: number
           product_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           data?: string
           family_id?: string
           id?: string
+          local_compra?: string | null
           preco?: number
           product_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "price_history_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "price_history_product_id_fkey"
             columns: ["product_id"]
@@ -921,94 +1368,303 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_stock_status"
-            referencedColumns: ["product_id"]
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_category_rules: {
+        Row: {
+          categoria_financeira_id: string | null
+          categoria_financeira_nome: string | null
+          confianca: number | null
+          created_at: string | null
+          family_id: string | null
+          id: string
+          origem: string | null
+          termo: string
+          usos: number | null
+        }
+        Insert: {
+          categoria_financeira_id?: string | null
+          categoria_financeira_nome?: string | null
+          confianca?: number | null
+          created_at?: string | null
+          family_id?: string | null
+          id?: string
+          origem?: string | null
+          termo: string
+          usos?: number | null
+        }
+        Update: {
+          categoria_financeira_id?: string | null
+          categoria_financeira_nome?: string | null
+          confianca?: number | null
+          created_at?: string | null
+          family_id?: string | null
+          id?: string
+          origem?: string | null
+          termo?: string
+          usos?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_category_rules_categoria_financeira_id_fkey"
+            columns: ["categoria_financeira_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_category_rules_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_price_history: {
+        Row: {
+          created_at: string | null
+          data: string
+          family_id: string | null
+          id: string
+          location_id: string | null
+          preco_unitario: number
+          product_id: string | null
+          quantidade: number | null
+          shopping_list_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          family_id?: string | null
+          id?: string
+          location_id?: string | null
+          preco_unitario: number
+          product_id?: string | null
+          quantidade?: number | null
+          shopping_list_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          family_id?: string | null
+          id?: string
+          location_id?: string | null
+          preco_unitario?: number
+          product_id?: string | null
+          quantidade?: number | null
+          shopping_list_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_price_history_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_price_history_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_status"
+            referencedColumns: ["id"]
           },
         ]
       }
       products: {
         Row: {
-          ativo: boolean
+          ativo: boolean | null
           categoria: string | null
           codigo_barras: string | null
-          created_at: string
+          consumo_diario_medio: number | null
+          consumo_medio_diario: number | null
+          created_at: string | null
+          custo_medio: number | null
+          data_ultima_compra: string | null
+          data_ultima_compra_preco: string | null
           data_validade: string | null
+          dias_restantes: number | null
+          duracao_estimativa_dias: number | null
+          estoque_atual: number | null
+          estoque_minimo: number | null
+          estoque_minimo_auto: boolean | null
           family_id: string
           id: string
-          localizacao: Database["public"]["Enums"]["stock_location"]
+          is_variant: boolean | null
+          localizacao: string | null
           marca: string | null
           nome: string
+          parent_id: string | null
+          preco_anterior: number | null
           preco_atual: number | null
-          quantidade_atual: number
-          quantidade_minima: number
+          preco_ultima_compra: number | null
+          previsao_reposicao: string | null
+          produto_base: string | null
+          quantidade_atual: number | null
+          quantidade_minima: number | null
+          quantidade_por_embalagem: number | null
+          revisao_status: string | null
+          softlist_id: string | null
           ultima_revisao: string | null
-          unidade: Database["public"]["Enums"]["stock_unit"]
-          updated_at: string
-          user_id: string
+          unidade: string | null
+          unidade_embalagem: string | null
+          user_id: string | null
+          validade: string | null
+          volume_embalagem: number | null
         }
         Insert: {
-          ativo?: boolean
+          ativo?: boolean | null
           categoria?: string | null
           codigo_barras?: string | null
-          created_at?: string
+          consumo_diario_medio?: number | null
+          consumo_medio_diario?: number | null
+          created_at?: string | null
+          custo_medio?: number | null
+          data_ultima_compra?: string | null
+          data_ultima_compra_preco?: string | null
           data_validade?: string | null
+          dias_restantes?: number | null
+          duracao_estimativa_dias?: number | null
+          estoque_atual?: number | null
+          estoque_minimo?: number | null
+          estoque_minimo_auto?: boolean | null
           family_id: string
           id?: string
-          localizacao?: Database["public"]["Enums"]["stock_location"]
+          is_variant?: boolean | null
+          localizacao?: string | null
           marca?: string | null
           nome: string
+          parent_id?: string | null
+          preco_anterior?: number | null
           preco_atual?: number | null
-          quantidade_atual?: number
-          quantidade_minima?: number
+          preco_ultima_compra?: number | null
+          previsao_reposicao?: string | null
+          produto_base?: string | null
+          quantidade_atual?: number | null
+          quantidade_minima?: number | null
+          quantidade_por_embalagem?: number | null
+          revisao_status?: string | null
+          softlist_id?: string | null
           ultima_revisao?: string | null
-          unidade?: Database["public"]["Enums"]["stock_unit"]
-          updated_at?: string
-          user_id: string
+          unidade?: string | null
+          unidade_embalagem?: string | null
+          user_id?: string | null
+          validade?: string | null
+          volume_embalagem?: number | null
         }
         Update: {
-          ativo?: boolean
+          ativo?: boolean | null
           categoria?: string | null
           codigo_barras?: string | null
-          created_at?: string
+          consumo_diario_medio?: number | null
+          consumo_medio_diario?: number | null
+          created_at?: string | null
+          custo_medio?: number | null
+          data_ultima_compra?: string | null
+          data_ultima_compra_preco?: string | null
           data_validade?: string | null
+          dias_restantes?: number | null
+          duracao_estimativa_dias?: number | null
+          estoque_atual?: number | null
+          estoque_minimo?: number | null
+          estoque_minimo_auto?: boolean | null
           family_id?: string
           id?: string
-          localizacao?: Database["public"]["Enums"]["stock_location"]
+          is_variant?: boolean | null
+          localizacao?: string | null
           marca?: string | null
           nome?: string
+          parent_id?: string | null
+          preco_anterior?: number | null
           preco_atual?: number | null
-          quantidade_atual?: number
-          quantidade_minima?: number
+          preco_ultima_compra?: number | null
+          previsao_reposicao?: string | null
+          produto_base?: string | null
+          quantidade_atual?: number | null
+          quantidade_minima?: number | null
+          quantidade_por_embalagem?: number | null
+          revisao_status?: string | null
+          softlist_id?: string | null
           ultima_revisao?: string | null
-          unidade?: Database["public"]["Enums"]["stock_unit"]
-          updated_at?: string
-          user_id?: string
+          unidade?: string | null
+          unidade_embalagem?: string | null
+          user_id?: string | null
+          validade?: string | null
+          volume_embalagem?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_status"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
-          created_at: string
-          email: string | null
+          created_at: string | null
           family_id: string | null
-          full_name: string | null
           id: string
-          updated_at: string
+          nome: string | null
         }
         Insert: {
-          created_at?: string
-          email?: string | null
+          created_at?: string | null
           family_id?: string | null
-          full_name?: string | null
           id: string
-          updated_at?: string
+          nome?: string | null
         }
         Update: {
-          created_at?: string
-          email?: string | null
+          created_at?: string | null
           family_id?: string | null
-          full_name?: string | null
           id?: string
-          updated_at?: string
+          nome?: string | null
         }
         Relationships: [
           {
@@ -1023,98 +1679,456 @@ export type Database = {
       recurring_transactions: {
         Row: {
           account_id: string | null
-          amount: number
-          ativo: boolean
+          amount: number | null
+          antecedencia_dias: number | null
+          ativo: boolean | null
           category_id: string | null
-          created_at: string
-          description: string
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
+          description: string | null
           dia_do_mes: number | null
+          dia_vencimento: number | null
           family_id: string
-          frequencia: Database["public"]["Enums"]["recurring_frequency"]
+          frequencia: string | null
+          gerar_lembrete: boolean | null
           id: string
-          is_essencial: boolean
-          proxima_data: string
-          type: Database["public"]["Enums"]["transaction_type"]
+          proxima_data: string | null
+          tipo: string
+          type: string | null
           ultima_geracao: string | null
-          updated_at: string
-          user_id: string
+          user_id: string | null
+          valor: number
         }
         Insert: {
           account_id?: string | null
-          amount: number
-          ativo?: boolean
+          amount?: number | null
+          antecedencia_dias?: number | null
+          ativo?: boolean | null
           category_id?: string | null
-          created_at?: string
-          description: string
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          description?: string | null
           dia_do_mes?: number | null
+          dia_vencimento?: number | null
           family_id: string
-          frequencia?: Database["public"]["Enums"]["recurring_frequency"]
+          frequencia?: string | null
+          gerar_lembrete?: boolean | null
           id?: string
-          is_essencial?: boolean
-          proxima_data?: string
-          type: Database["public"]["Enums"]["transaction_type"]
+          proxima_data?: string | null
+          tipo: string
+          type?: string | null
           ultima_geracao?: string | null
-          updated_at?: string
-          user_id: string
+          user_id?: string | null
+          valor: number
         }
         Update: {
           account_id?: string | null
-          amount?: number
-          ativo?: boolean
+          amount?: number | null
+          antecedencia_dias?: number | null
+          ativo?: boolean | null
           category_id?: string | null
-          created_at?: string
-          description?: string
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          description?: string | null
           dia_do_mes?: number | null
+          dia_vencimento?: number | null
           family_id?: string
-          frequencia?: Database["public"]["Enums"]["recurring_frequency"]
+          frequencia?: string | null
+          gerar_lembrete?: boolean | null
           id?: string
-          is_essencial?: boolean
-          proxima_data?: string
-          type?: Database["public"]["Enums"]["transaction_type"]
+          proxima_data?: string | null
+          tipo?: string
+          type?: string | null
           ultima_geracao?: string | null
-          updated_at?: string
-          user_id?: string
+          user_id?: string | null
+          valor?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopping_items: {
+        Row: {
+          category_id: string | null
+          comprado: boolean | null
+          comprado_em: string | null
+          created_at: string | null
+          estoque_atualizado: boolean | null
+          family_id: string | null
+          id: string
+          list_id: string | null
+          nome: string
+          observacao: string | null
+          preco_estimado: number | null
+          preco_real: number | null
+          product_id: string | null
+          produto_base: string | null
+          quantidade: number | null
+          unidade: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          comprado?: boolean | null
+          comprado_em?: string | null
+          created_at?: string | null
+          estoque_atualizado?: boolean | null
+          family_id?: string | null
+          id?: string
+          list_id?: string | null
+          nome: string
+          observacao?: string | null
+          preco_estimado?: number | null
+          preco_real?: number | null
+          product_id?: string | null
+          produto_base?: string | null
+          quantidade?: number | null
+          unidade?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          comprado?: boolean | null
+          comprado_em?: string | null
+          created_at?: string | null
+          estoque_atualizado?: boolean | null
+          family_id?: string | null
+          id?: string
+          list_id?: string | null
+          nome?: string
+          observacao?: string | null
+          preco_estimado?: number | null
+          preco_real?: number | null
+          product_id?: string | null
+          produto_base?: string | null
+          quantidade?: number | null
+          unidade?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_items_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_items_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopping_lists: {
+        Row: {
+          account_id: string | null
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          data_prevista: string | null
+          family_id: string | null
+          id: string
+          local_preferido: string | null
+          location_id: string | null
+          nome: string
+          observacao: string | null
+          status: string | null
+          total_estimado: number | null
+          total_real: number | null
+          transaction_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_prevista?: string | null
+          family_id?: string | null
+          id?: string
+          local_preferido?: string | null
+          location_id?: string | null
+          nome?: string
+          observacao?: string | null
+          status?: string | null
+          total_estimado?: number | null
+          total_real?: number | null
+          transaction_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_prevista?: string | null
+          family_id?: string | null
+          id?: string
+          local_preferido?: string | null
+          location_id?: string | null
+          nome?: string
+          observacao?: string | null
+          status?: string | null
+          total_estimado?: number | null
+          total_real?: number | null
+          transaction_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_lists_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_lists_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_lists_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_lists_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopping_lists_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopping_locations: {
+        Row: {
+          ativo: boolean | null
+          cnpj: string | null
+          created_at: string | null
+          endereco: string | null
+          family_id: string | null
+          id: string
+          nome: string
+          tipo: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cnpj?: string | null
+          created_at?: string | null
+          endereco?: string | null
+          family_id?: string | null
+          id?: string
+          nome: string
+          tipo?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cnpj?: string | null
+          created_at?: string | null
+          endereco?: string | null
+          family_id?: string | null
+          id?: string
+          nome?: string
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_locations_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_consumption_log: {
+        Row: {
+          created_at: string | null
+          custo_total: number | null
+          family_id: string | null
+          id: string
+          mes: string
+          product_id: string | null
+          quantidade_comprada: number | null
+          quantidade_consumida: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          custo_total?: number | null
+          family_id?: string | null
+          id?: string
+          mes: string
+          product_id?: string | null
+          quantidade_comprada?: number | null
+          quantidade_consumida?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          custo_total?: number | null
+          family_id?: string | null
+          id?: string
+          mes?: string
+          product_id?: string | null
+          quantidade_comprada?: number | null
+          quantidade_consumida?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_consumption_log_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_consumption_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_consumption_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_consumption_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_status"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_movements: {
         Row: {
-          created_at: string
-          data: string
-          family_id: string
+          created_at: string | null
+          data: string | null
+          family_id: string | null
           id: string
           motivo: string | null
+          origem: string | null
+          preco_pago: number | null
           preco_unitario: number | null
           product_id: string
           quantidade: number
-          tipo: Database["public"]["Enums"]["stock_movement_type"]
-          user_id: string
+          shopping_item_id: string | null
+          shopping_list_id: string | null
+          tipo: string
+          transaction_id: string | null
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
-          data?: string
-          family_id: string
+          created_at?: string | null
+          data?: string | null
+          family_id?: string | null
           id?: string
           motivo?: string | null
+          origem?: string | null
+          preco_pago?: number | null
           preco_unitario?: number | null
           product_id: string
           quantidade: number
-          tipo: Database["public"]["Enums"]["stock_movement_type"]
-          user_id: string
+          shopping_item_id?: string | null
+          shopping_list_id?: string | null
+          tipo: string
+          transaction_id?: string | null
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
-          data?: string
-          family_id?: string
+          created_at?: string | null
+          data?: string | null
+          family_id?: string | null
           id?: string
           motivo?: string | null
+          origem?: string | null
+          preco_pago?: number | null
           preco_unitario?: number | null
           product_id?: string
           quantidade?: number
-          tipo?: Database["public"]["Enums"]["stock_movement_type"]
-          user_id?: string
+          shopping_item_id?: string | null
+          shopping_list_id?: string | null
+          tipo?: string
+          transaction_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_movements_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_movements_product_id_fkey"
             columns: ["product_id"]
@@ -1134,76 +2148,176 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_stock_status"
-            referencedColumns: ["product_id"]
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_shopping_item_id_fkey"
+            columns: ["shopping_item_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_shopping_list_id_fkey"
+            columns: ["shopping_list_id"]
+            isOneToOne: false
+            referencedRelation: "shopping_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_rules: {
+        Row: {
+          account_id: string | null
+          category_id: string | null
+          created_at: string | null
+          family_id: string | null
+          id: string
+          origem: string | null
+          pattern: string
+          tipo: string | null
+          updated_at: string | null
+          usos: number | null
+        }
+        Insert: {
+          account_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          id?: string
+          origem?: string | null
+          pattern: string
+          tipo?: string | null
+          updated_at?: string | null
+          usos?: number | null
+        }
+        Update: {
+          account_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          family_id?: string | null
+          id?: string
+          origem?: string | null
+          pattern?: string
+          tipo?: string | null
+          updated_at?: string | null
+          usos?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_rules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_rules_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
           },
         ]
       }
       transactions: {
         Row: {
           account_id: string | null
-          amount: number
+          amount: number | null
           category: string | null
           category_id: string | null
-          conciliado: boolean
+          competencia: string | null
+          conciliado: boolean | null
           conciliado_em: string | null
-          created_at: string
-          date: string
-          description: string
+          created_at: string | null
+          data: string
+          date: string | null
+          descricao: string
+          descricao_normalizada: string | null
+          description: string | null
           external_id: string | null
           family_id: string
           id: string
-          is_essencial: boolean
+          is_essencial: boolean | null
+          observacao: string | null
           recorrente_id: string | null
-          scope: Database["public"]["Enums"]["transaction_scope"]
-          source: Database["public"]["Enums"]["transaction_source"]
-          tipo_especial: Database["public"]["Enums"]["transaction_special_type"]
-          type: Database["public"]["Enums"]["transaction_type"]
-          updated_at: string
-          user_id: string
+          scope: string | null
+          source: string | null
+          tipo: string
+          tipo_especial: string | null
+          type: string | null
+          user_id: string | null
+          valor: number
         }
         Insert: {
           account_id?: string | null
-          amount: number
+          amount?: number | null
           category?: string | null
           category_id?: string | null
-          conciliado?: boolean
+          competencia?: string | null
+          conciliado?: boolean | null
           conciliado_em?: string | null
-          created_at?: string
-          date?: string
-          description: string
+          created_at?: string | null
+          data: string
+          date?: string | null
+          descricao: string
+          descricao_normalizada?: string | null
+          description?: string | null
           external_id?: string | null
           family_id: string
           id?: string
-          is_essencial?: boolean
+          is_essencial?: boolean | null
+          observacao?: string | null
           recorrente_id?: string | null
-          scope?: Database["public"]["Enums"]["transaction_scope"]
-          source?: Database["public"]["Enums"]["transaction_source"]
-          tipo_especial?: Database["public"]["Enums"]["transaction_special_type"]
-          type: Database["public"]["Enums"]["transaction_type"]
-          updated_at?: string
-          user_id: string
+          scope?: string | null
+          source?: string | null
+          tipo: string
+          tipo_especial?: string | null
+          type?: string | null
+          user_id?: string | null
+          valor: number
         }
         Update: {
           account_id?: string | null
-          amount?: number
+          amount?: number | null
           category?: string | null
           category_id?: string | null
-          conciliado?: boolean
+          competencia?: string | null
+          conciliado?: boolean | null
           conciliado_em?: string | null
-          created_at?: string
-          date?: string
-          description?: string
+          created_at?: string | null
+          data?: string
+          date?: string | null
+          descricao?: string
+          descricao_normalizada?: string | null
+          description?: string | null
           external_id?: string | null
           family_id?: string
           id?: string
-          is_essencial?: boolean
+          is_essencial?: boolean | null
+          observacao?: string | null
           recorrente_id?: string | null
-          scope?: Database["public"]["Enums"]["transaction_scope"]
-          source?: Database["public"]["Enums"]["transaction_source"]
-          tipo_especial?: Database["public"]["Enums"]["transaction_special_type"]
-          type?: Database["public"]["Enums"]["transaction_type"]
-          updated_at?: string
-          user_id?: string
+          scope?: string | null
+          source?: string | null
+          tipo?: string
+          tipo_especial?: string | null
+          type?: string | null
+          user_id?: string | null
+          valor?: number
         }
         Relationships: [
           {
@@ -1221,6 +2335,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_recorrente_id_fkey"
             columns: ["recorrente_id"]
             isOneToOne: false
@@ -1231,57 +2352,71 @@ export type Database = {
       }
       vehicle_maintenance_log: {
         Row: {
-          created_at: string
-          data: string
-          family_id: string
-          hodometro: number
+          created_at: string | null
+          custo: number | null
+          data_realizado: string | null
+          descricao: string | null
+          family_id: string | null
           id: string
-          local: string | null
-          maintenance_type_id: string | null
-          nome: string
+          km_realizado: number | null
           observacao: string | null
-          tipo_oleo: string | null
-          transaction_id: string | null
-          user_id: string
-          valor: number
-          vehicle_id: string
+          oficina: string | null
+          proxima_data: string | null
+          proximo_km: number | null
+          tipo_id: string | null
+          user_id: string | null
+          vehicle_id: string | null
         }
         Insert: {
-          created_at?: string
-          data?: string
-          family_id: string
-          hodometro: number
+          created_at?: string | null
+          custo?: number | null
+          data_realizado?: string | null
+          descricao?: string | null
+          family_id?: string | null
           id?: string
-          local?: string | null
-          maintenance_type_id?: string | null
-          nome: string
+          km_realizado?: number | null
           observacao?: string | null
-          tipo_oleo?: string | null
-          transaction_id?: string | null
-          user_id: string
-          valor?: number
-          vehicle_id: string
+          oficina?: string | null
+          proxima_data?: string | null
+          proximo_km?: number | null
+          tipo_id?: string | null
+          user_id?: string | null
+          vehicle_id?: string | null
         }
         Update: {
-          created_at?: string
-          data?: string
-          family_id?: string
-          hodometro?: number
+          created_at?: string | null
+          custo?: number | null
+          data_realizado?: string | null
+          descricao?: string | null
+          family_id?: string | null
           id?: string
-          local?: string | null
-          maintenance_type_id?: string | null
-          nome?: string
+          km_realizado?: number | null
           observacao?: string | null
-          tipo_oleo?: string | null
-          transaction_id?: string | null
-          user_id?: string
-          valor?: number
-          vehicle_id?: string
+          oficina?: string | null
+          proxima_data?: string | null
+          proximo_km?: number | null
+          tipo_id?: string | null
+          user_id?: string | null
+          vehicle_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "vehicle_maintenance_log_maintenance_type_id_fkey"
-            columns: ["maintenance_type_id"]
+            foreignKeyName: "vehicle_maintenance_log_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_log_tipo_id_fkey"
+            columns: ["tipo_id"]
+            isOneToOne: false
+            referencedRelation: "v_maintenance_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_log_tipo_id_fkey"
+            columns: ["tipo_id"]
             isOneToOne: false
             referencedRelation: "vehicle_maintenance_types"
             referencedColumns: ["id"]
@@ -1290,8 +2425,15 @@ export type Database = {
             foreignKeyName: "vehicle_maintenance_log_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
-            referencedRelation: "v_vehicle_status"
+            referencedRelation: "v_flex_comparison"
             referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_log_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_vehicle_status"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "vehicle_maintenance_log_vehicle_id_fkey"
@@ -1304,45 +2446,65 @@ export type Database = {
       }
       vehicle_maintenance_types: {
         Row: {
-          ativo: boolean
-          created_at: string
-          family_id: string
-          icone: string
+          ativo: boolean | null
+          created_at: string | null
+          family_id: string | null
           id: string
           intervalo_km: number | null
           intervalo_meses: number | null
+          is_global: boolean | null
           nome: string
+          ultima_data: string | null
+          ultimo_km: number | null
           vehicle_id: string | null
         }
         Insert: {
-          ativo?: boolean
-          created_at?: string
-          family_id: string
-          icone?: string
+          ativo?: boolean | null
+          created_at?: string | null
+          family_id?: string | null
           id?: string
           intervalo_km?: number | null
           intervalo_meses?: number | null
+          is_global?: boolean | null
           nome: string
+          ultima_data?: string | null
+          ultimo_km?: number | null
           vehicle_id?: string | null
         }
         Update: {
-          ativo?: boolean
-          created_at?: string
-          family_id?: string
-          icone?: string
+          ativo?: boolean | null
+          created_at?: string | null
+          family_id?: string | null
           id?: string
           intervalo_km?: number | null
           intervalo_meses?: number | null
+          is_global?: boolean | null
           nome?: string
+          ultima_data?: string | null
+          ultimo_km?: number | null
           vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_types_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_types_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_flex_comparison"
+            referencedColumns: ["vehicle_id"]
+          },
           {
             foreignKeyName: "vehicle_maintenance_types_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "v_vehicle_status"
-            referencedColumns: ["vehicle_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "vehicle_maintenance_types_vehicle_id_fkey"
@@ -1355,84 +2517,362 @@ export type Database = {
       }
       vehicles: {
         Row: {
-          ativo: boolean
-          capacidade_tanque: number
-          combustivel_principal: Database["public"]["Enums"]["fuel_type"]
-          consumo_medio_kml: number
-          cor: string
-          created_at: string
+          ano: number | null
+          apelido: string
+          ativo: boolean | null
+          combustivel: string | null
+          consumo_medio_km_l: number | null
+          created_at: string | null
           family_id: string
-          flex: boolean
           id: string
-          nome: string
-          odometro_atual: number
-          tipo: Database["public"]["Enums"]["vehicle_type"]
-          updated_at: string
-          user_id: string
+          marca: string | null
+          modelo: string | null
+          nome: string | null
+          odometro_atual: number | null
+          tanque_capacidade: number | null
+          tipo: string | null
         }
         Insert: {
-          ativo?: boolean
-          capacidade_tanque?: number
-          combustivel_principal?: Database["public"]["Enums"]["fuel_type"]
-          consumo_medio_kml?: number
-          cor?: string
-          created_at?: string
+          ano?: number | null
+          apelido: string
+          ativo?: boolean | null
+          combustivel?: string | null
+          consumo_medio_km_l?: number | null
+          created_at?: string | null
           family_id: string
-          flex?: boolean
           id?: string
-          nome: string
-          odometro_atual?: number
-          tipo?: Database["public"]["Enums"]["vehicle_type"]
-          updated_at?: string
-          user_id: string
+          marca?: string | null
+          modelo?: string | null
+          nome?: string | null
+          odometro_atual?: number | null
+          tanque_capacidade?: number | null
+          tipo?: string | null
         }
         Update: {
-          ativo?: boolean
-          capacidade_tanque?: number
-          combustivel_principal?: Database["public"]["Enums"]["fuel_type"]
-          consumo_medio_kml?: number
-          cor?: string
-          created_at?: string
+          ano?: number | null
+          apelido?: string
+          ativo?: boolean | null
+          combustivel?: string | null
+          consumo_medio_km_l?: number | null
+          created_at?: string | null
           family_id?: string
-          flex?: boolean
           id?: string
-          nome?: string
-          odometro_atual?: number
-          tipo?: Database["public"]["Enums"]["vehicle_type"]
-          updated_at?: string
-          user_id?: string
+          marca?: string | null
+          modelo?: string | null
+          nome?: string | null
+          odometro_atual?: number | null
+          tanque_capacidade?: number | null
+          tipo?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_reviews: {
         Row: {
-          checklist: Json
-          created_at: string
+          checklist: Json | null
+          created_at: string | null
           family_id: string
-          fechado_em: string
           id: string
-          user_id: string
+          semana_inicio: string | null
+          user_id: string | null
         }
         Insert: {
-          checklist?: Json
-          created_at?: string
+          checklist?: Json | null
+          created_at?: string | null
           family_id: string
-          fechado_em?: string
           id?: string
-          user_id: string
+          semana_inicio?: string | null
+          user_id?: string | null
         }
         Update: {
-          checklist?: Json
-          created_at?: string
+          checklist?: Json | null
+          created_at?: string | null
           family_id?: string
-          fechado_em?: string
           id?: string
-          user_id?: string
+          semana_inicio?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "weekly_reviews_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
+      v_budget_status: {
+        Row: {
+          categoria_nome: string | null
+          category_id: string | null
+          family_id: string | null
+          is_essencial: boolean | null
+          mes: string | null
+          pct_atingido: number | null
+          status_cor: string | null
+          valor_gasto: number | null
+          valor_planejado: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_contas_pendentes_mes: {
+        Row: {
+          family_id: string | null
+          faturas_cartao: number | null
+          recorrentes: number | null
+          total_pendentes: number | null
+          total_valor: number | null
+          valor_faturas_cartao: number | null
+          valor_recorrentes: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_reminders_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_flex_comparison: {
+        Row: {
+          apelido: string | null
+          consumo_medio_etanol: number | null
+          consumo_medio_gasolina: number | null
+          data_etanol: string | null
+          data_gasolina: string | null
+          etanol_vale: boolean | null
+          family_id: string | null
+          posto_etanol: string | null
+          posto_gasolina: string | null
+          razao_etanol_gasolina: number | null
+          ultimo_preco_etanol: number | null
+          ultimo_preco_gasolina: number | null
+          vehicle_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_fuel_consumption: {
+        Row: {
+          combustivel_usado: string | null
+          consumo_real_km_l: number | null
+          custo_por_km: number | null
+          data: string | null
+          family_id: string | null
+          id: string | null
+          km_rodados: number | null
+          litros: number | null
+          odometro: number | null
+          posto: string | null
+          preco_litro: number | null
+          valor_pago: number | null
+          vehicle_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_fills_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_flex_comparison"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_vehicle_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_fuel_monthly_summary: {
+        Row: {
+          consumo_esperado: number | null
+          consumo_real_medio: number | null
+          custo_medio_por_km: number | null
+          family_id: string | null
+          mes: string | null
+          preco_medio_litro: number | null
+          qtd_abastecimentos: number | null
+          total_gasto: number | null
+          total_km_mes: number | null
+          total_litros: number | null
+          vehicle_id: string | null
+          veiculo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_fills_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_flex_comparison"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_vehicle_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_fills_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_gastos_categoria_mes: {
+        Row: {
+          categoria_nome: string | null
+          category_id: string | null
+          family_id: string | null
+          is_essencial: boolean | null
+          mes: string | null
+          qtd_transacoes: number | null
+          total_gasto: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_maintenance_status: {
+        Row: {
+          ativo: boolean | null
+          id: string | null
+          intervalo_km: number | null
+          intervalo_meses: number | null
+          km_faltando: number | null
+          nome: string | null
+          odometro_atual: number | null
+          proxima_data: string | null
+          proximo_km: number | null
+          status_manut: string | null
+          ultima_data: string | null
+          ultimo_km: number | null
+          vehicle_id: string | null
+          veiculo_apelido: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_types_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_flex_comparison"
+            referencedColumns: ["vehicle_id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_types_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "v_vehicle_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_types_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_stock_consolidated: {
+        Row: {
+          categoria: string | null
+          consumo_total_diario: number | null
+          dias_restantes_total: number | null
+          estoque_minimo: number | null
+          estoque_total: number | null
+          family_id: string | null
+          maior_preco: number | null
+          menor_preco: number | null
+          num_marcas: number | null
+          produto_base: string | null
+          status: string | null
+          unidade: string | null
+          variacao_preco_pct: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_stock_review: {
         Row: {
           categoria: string | null
@@ -1446,7 +2886,7 @@ export type Database = {
           quantidade_atual: number | null
           quantidade_minima: number | null
           ultima_revisao: string | null
-          unidade: Database["public"]["Enums"]["stock_unit"] | null
+          unidade: string | null
           urgencia: string | null
         }
         Insert: {
@@ -1458,10 +2898,10 @@ export type Database = {
           family_id?: string | null
           id?: string | null
           nome?: string | null
-          quantidade_atual?: number | null
-          quantidade_minima?: number | null
+          quantidade_atual?: never
+          quantidade_minima?: never
           ultima_revisao?: string | null
-          unidade?: Database["public"]["Enums"]["stock_unit"] | null
+          unidade?: string | null
           urgencia?: never
         }
         Update: {
@@ -1473,87 +2913,182 @@ export type Database = {
           family_id?: string | null
           id?: string | null
           nome?: string | null
-          quantidade_atual?: number | null
-          quantidade_minima?: number | null
+          quantidade_atual?: never
+          quantidade_minima?: never
           ultima_revisao?: string | null
-          unidade?: Database["public"]["Enums"]["stock_unit"] | null
+          unidade?: string | null
           urgencia?: never
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_stock_status: {
         Row: {
           ativo: boolean | null
           categoria: string | null
-          consumo_diario: number | null
+          consumo_diario_medio: number | null
           data_validade: string | null
           dias_para_vencer: number | null
           dias_restantes: number | null
+          estoque_atual: number | null
+          estoque_minimo: number | null
           family_id: string | null
-          localizacao: Database["public"]["Enums"]["stock_location"] | null
-          marca: string | null
+          id: string | null
+          localizacao: string | null
           nome: string | null
-          preco_anterior: number | null
-          preco_atual: number | null
-          product_id: string | null
-          quantidade_atual: number | null
-          quantidade_minima: number | null
+          parent_id: string | null
+          preco_ultima_compra: number | null
+          qtd_subprodutos: number | null
+          quantidade_por_embalagem: number | null
           risco_ruptura: boolean | null
           status: string | null
-          unidade: Database["public"]["Enums"]["stock_unit"] | null
-          variacao_preco_pct: number | null
+          sugestao_compra: number | null
+          unidade: string | null
+          unidade_embalagem: string | null
         }
-        Relationships: []
+        Insert: {
+          ativo?: boolean | null
+          categoria?: string | null
+          consumo_diario_medio?: number | null
+          data_validade?: string | null
+          dias_para_vencer?: never
+          dias_restantes?: never
+          estoque_atual?: number | null
+          estoque_minimo?: number | null
+          family_id?: string | null
+          id?: string | null
+          localizacao?: string | null
+          nome?: string | null
+          parent_id?: string | null
+          preco_ultima_compra?: never
+          qtd_subprodutos?: never
+          quantidade_por_embalagem?: number | null
+          risco_ruptura?: never
+          status?: never
+          sugestao_compra?: never
+          unidade?: string | null
+          unidade_embalagem?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria?: string | null
+          consumo_diario_medio?: number | null
+          data_validade?: string | null
+          dias_para_vencer?: never
+          dias_restantes?: never
+          estoque_atual?: number | null
+          estoque_minimo?: number | null
+          family_id?: string | null
+          id?: string | null
+          localizacao?: string | null
+          nome?: string | null
+          parent_id?: string | null
+          preco_ultima_compra?: never
+          qtd_subprodutos?: never
+          quantidade_por_embalagem?: number | null
+          risco_ruptura?: never
+          status?: never
+          sugestao_compra?: never
+          unidade?: string | null
+          unidade_embalagem?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_review"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_status"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_vehicle_status: {
         Row: {
-          ativo: boolean | null
-          capacidade_tanque: number | null
-          consumo_medio_kml: number | null
-          cor: string | null
+          apelido: string | null
+          combustivel: string | null
+          consumo_medio_km_l: number | null
+          data_ultimo_abastecimento: string | null
           family_id: string | null
-          flex: boolean | null
           gasto_mes: number | null
-          km_restantes: number | null
-          nome: string | null
+          id: string | null
+          km_estimados_restantes: number | null
+          litros_estimados_restantes: number | null
           odometro_atual: number | null
-          tanque_pct: number | null
-          tipo: Database["public"]["Enums"]["vehicle_type"] | null
-          ultimo_abastec_combustivel:
-            | Database["public"]["Enums"]["fuel_type"]
-            | null
-          ultimo_abastec_data: string | null
-          ultimo_abastec_hodometro: number | null
-          ultimo_abastec_litros: number | null
-          ultimo_abastec_preco_litro: number | null
-          ultimo_abastec_tanque_cheio: boolean | null
-          vehicle_id: string | null
+          pct_tanque_estimado: number | null
+          tanque_capacidade: number | null
+          tipo: string | null
+          ultimo_combustivel: string | null
+          ultimo_litros: number | null
+          ultimo_posto: string | null
+          ultimo_preco_litro: number | null
+          ultimo_tanque_cheio: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
+      _filho: {
+        Args: {
+          cat: string
+          estq?: number
+          fid: string
+          nome: string
+          pid: string
+          qtd_emb: number
+          und_emb: string
+        }
+        Returns: string
+      }
+      _mae: {
+        Args: {
+          cat: string
+          emin?: number
+          fid: string
+          nome: string
+          und: string
+        }
+        Returns: string
+      }
+      accept_invite: { Args: { p_token: string }; Returns: Json }
       activate_crisis: {
-        Args: { _criterio: string; _family_id: string; _motivo: string }
-        Returns: {
-          ativo: boolean
-          created_at: string
-          criterio_disparado: string | null
-          data_fim: string | null
-          data_inicio: string
-          estagio_atual: number
-          family_id: string
-          id: string
-          motivo_ativacao: string
-          plano_saida: Json | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "crisis_events"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Args: { p_family_id: string; p_motivo?: string }
+        Returns: string
       }
       adjust_account_balance: {
         Args: {
@@ -1563,51 +3098,50 @@ export type Database = {
           p_saldo_real: number
           p_user_id: string
         }
-        Returns: undefined
+        Returns: string
       }
-      advance_crisis_stage: {
-        Args: { _crisis_id: string }
-        Returns: {
-          ativo: boolean
-          created_at: string
-          criterio_disparado: string | null
-          data_fim: string | null
-          data_inicio: string
-          estagio_atual: number
-          family_id: string
-          id: string
-          motivo_ativacao: string
-          plano_saida: Json | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "crisis_events"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+      advance_crisis_stage: { Args: { p_crisis_id: string }; Returns: number }
+      apply_transaction_rules: {
+        Args: { p_family_id: string }
+        Returns: number
       }
-      categorize_transaction: {
-        Args: { _description: string; _family_id: string }
+      categorizar_produto: {
+        Args: { p_family_id: string; p_nome: string }
         Returns: {
-          auto_apply: boolean
-          category_id: string
+          categoria_id: string
+          categoria_nome: string
           confianca: number
-          nivel: number
-          origem: Database["public"]["Enums"]["categorization_origin"]
+          origem: string
         }[]
       }
+      categorize_transaction:
+        | {
+            Args: { _description: string; _dummy?: boolean; _family_id: string }
+            Returns: {
+              category_id: string
+              confianca: number
+              nivel: number
+              origem: string
+            }[]
+          }
+        | {
+            Args: { p_descricao: string; p_family_id: string }
+            Returns: string
+          }
+      check_ai_credits: { Args: { p_family_id: string }; Returns: Json }
       check_bills_alerts: { Args: { p_family_id: string }; Returns: undefined }
       check_credit_card_bill_alerts: {
-        Args: { _family_id: string }
+        Args: { p_family_id: string }
         Returns: undefined
       }
       check_crisis_activation: {
-        Args: { _family_id: string; _mes: string }
-        Returns: {
-          criterio: string
-          should_activate: boolean
-        }[]
+        Args: { p_family_id: string; p_mes: string }
+        Returns: boolean
+      }
+      check_crisis_stage: { Args: { p_family_id: string }; Returns: number }
+      check_crisis_trigger: {
+        Args: { p_family_id: string; p_mes: string }
+        Returns: Json
       }
       check_duplicate_transaction: {
         Args: {
@@ -1618,6 +3152,7 @@ export type Database = {
           p_family_id: string
         }
         Returns: {
+          account_id: string
           amount: number
           date: string
           description: string
@@ -1625,68 +3160,65 @@ export type Database = {
           similarity_score: number
         }[]
       }
+      check_fuel_alerts: { Args: { p_family_id: string }; Returns: undefined }
+      check_stock_alerts: { Args: { p_family_id: string }; Returns: undefined }
       check_transaction_alerts: {
         Args: { _transaction_id: string }
         Returns: undefined
       }
+      copy_budget_from_previous_month: {
+        Args: { p_family_id: string; p_mes_destino: string }
+        Returns: number
+      }
       count_ai_runs_today: { Args: { _family_id: string }; Returns: number }
-      create_alert: {
+      create_installment_plan: {
         Args: {
-          _family_id: string
-          _mensagem: string
-          _ref_id: string
-          _ref_tipo: string
-          _severidade: Database["public"]["Enums"]["alert_severity"]
-          _tipo: string
+          p_account_id: string
+          p_category_id: string
+          p_data_compra?: string
+          p_descricao: string
+          p_family_id: string
+          p_num_parcelas: number
+          p_valor_total: number
         }
         Returns: string
       }
-      create_installment_plan: {
+      finalizar_compra: {
         Args: {
-          _account_id: string
-          _category_id?: string
-          _data_compra: string
-          _description: string
-          _family_id: string
-          _is_essencial?: boolean
-          _total_parcelas: number
-          _valor_total: number
+          p_account_id: string
+          p_category_id: string
+          p_data?: string
+          p_family_id: string
+          p_list_id: string
+          p_user_id: string
         }
-        Returns: {
-          account_id: string
-          category_id: string | null
-          created_at: string
-          data_compra: string
-          description: string
-          family_id: string
-          id: string
-          is_essencial: boolean
-          total_parcelas: number
-          updated_at: string
-          user_id: string
-          valor_total: number
-        }
-        SetofOptions: {
-          from: "*"
-          to: "installment_plans"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: Json
       }
-      create_transfer: {
-        Args: {
-          _amount: number
-          _date?: string
-          _description?: string
-          _family_id: string
-          _from_account: string
-          _to_account: string
-        }
-        Returns: undefined
+      generate_bills_reminders: {
+        Args: { p_family_id: string }
+        Returns: number
       }
       generate_recurring_transactions: {
         Args: { p_family_id: string }
         Returns: number
+      }
+      gerar_lembretes_recorrentes: {
+        Args: { p_family_id: string; p_mes?: string }
+        Returns: number
+      }
+      gerar_lista_reposicao: {
+        Args: { p_family_id: string }
+        Returns: {
+          custo_estimado: number
+          dias_restantes: number
+          estoque_atual: number
+          estoque_minimo: number
+          nome: string
+          product_id: string
+          quantidade_sugerida: number
+          unidade: string
+          urgencia: string
+        }[]
       }
       get_budget_status: {
         Args: { _family_id: string; _mes: string }
@@ -1698,11 +3230,28 @@ export type Database = {
           category_nome: string
           is_essencial: boolean
           pct_atingido: number
+          responsavel: string
           status_cor: string
           valor_gasto: number
           valor_planejado: number
         }[]
       }
+      get_comparativo_marcas: {
+        Args: { p_family_id: string; p_produto_base: string }
+        Returns: {
+          custo_medio: number
+          dias_restantes: number
+          eh_mais_barata: boolean
+          id: string
+          marca: string
+          nome: string
+          preco_por_unidade: number
+          quantidade_atual: number
+          ultima_revisao: string
+          unidade: string
+        }[]
+      }
+      get_dashboard_domestico: { Args: { p_family_id: string }; Returns: Json }
       get_dashboard_summary: {
         Args: { p_family_id: string }
         Returns: {
@@ -1727,39 +3276,95 @@ export type Database = {
       get_fuel_history: {
         Args: { p_vehicle_id: string }
         Returns: {
-          combustivel: Database["public"]["Enums"]["fuel_type"]
+          combustivel_usado: string
+          consumo_kml: number
           data: string
-          hodometro: number
           id: string
-          kml: number
+          km_rodado: number
           litros: number
           posto: string
           preco_litro: number
           tanque_cheio: boolean
+          transaction_id: string
           valor_pago: number
         }[]
       }
       get_maintenance_status: {
         Args: { p_vehicle_id: string }
         Returns: {
-          icone: string
+          id: string
           intervalo_km: number
           intervalo_meses: number
-          motivo: string
+          km_atual: number
+          km_restante: number
+          meses_restante: number
           nome: string
           status: string
-          type_id: string
           ultima_data: string
-          ultimo_hodometro: number
+          ultimo_km: number
         }[]
       }
-      get_monthly_summary: {
+      get_manutencao_pendente: {
         Args: { p_family_id: string }
         Returns: {
-          mes: string
-          qtd: number
-          total_despesa: number
-          total_receita: number
+          categoria: string
+          custo_estimado: number
+          data_prevista: string
+          dias_atraso: number
+          id: string
+          prioridade: string
+          titulo: string
+        }[]
+      }
+      get_monthly_summary:
+        | {
+            Args: { p_family_id: string }
+            Returns: {
+              mes: string
+              saldo: number
+              total_despesas: number
+              total_receitas: number
+              total_transacoes: number
+            }[]
+          }
+        | {
+            Args: { p_family_id: string; p_months?: number }
+            Returns: {
+              despesa: number
+              mes: string
+              receita: number
+              saldo: number
+            }[]
+          }
+      get_previsao_estoque: {
+        Args: { p_family_id: string }
+        Returns: {
+          categoria: string
+          consumo_medio_diario: number
+          custo_medio: number
+          dias_restantes: number
+          estoque_minimo: number
+          nome: string
+          previsao_reposicao: string
+          product_id: string
+          quantidade_atual: number
+          status_estoque: string
+          unidade: string
+        }[]
+      }
+      get_previsao_mes: {
+        Args: { p_family_id: string }
+        Returns: {
+          account_id: string
+          account_nome: string
+          category_id: string
+          data_vencimento: string
+          descricao: string
+          id: string
+          origem: string
+          status: string
+          tipo: string
+          valor: number
         }[]
       }
       get_projecao_categorias: {
@@ -1785,158 +3390,173 @@ export type Database = {
           saldo_total: number
         }[]
       }
+      get_situacao_atual: { Args: { p_family_id: string }; Returns: Json }
+      get_stock_review_summary: {
+        Args: { p_family_id: string }
+        Returns: {
+          categoria: string
+          consumo_diario: number
+          dias_restantes: number
+          estoque_atual: number
+          estoque_minimo: number
+          produto_id: string
+          produto_nome: string
+          status: string
+          sugestao_compra: number
+          unidade: string
+        }[]
+      }
+      get_sugestoes_compras: {
+        Args: { p_family_id: string }
+        Returns: {
+          custo_medio: number
+          nome: string
+          product_id: string
+          quantidade_sugerida: number
+          unidade: string
+          urgencia: string
+        }[]
+      }
       get_transactions_by_month: {
         Args: { p_family_id: string; p_mes: string }
         Returns: {
-          account_id: string | null
+          account_id: string
+          account_nome: string
           amount: number
-          category: string | null
-          category_id: string | null
-          conciliado: boolean
-          conciliado_em: string | null
-          created_at: string
+          category_icone: string
+          category_id: string
+          category_nome: string
           date: string
           description: string
-          external_id: string | null
-          family_id: string
+          external_id: string
           id: string
           is_essencial: boolean
-          recorrente_id: string | null
-          scope: Database["public"]["Enums"]["transaction_scope"]
-          source: Database["public"]["Enums"]["transaction_source"]
-          tipo_especial: Database["public"]["Enums"]["transaction_special_type"]
-          type: Database["public"]["Enums"]["transaction_type"]
-          updated_at: string
-          user_id: string
+          recorrente_id: string
+          source: string
+          tipo_especial: string
+          type: string
         }[]
-        SetofOptions: {
-          from: "*"
-          to: "transactions"
-          isOneToOne: false
-          isSetofReturn: true
+      }
+      get_user_family_id: { Args: { p_user_id: string }; Returns: string }
+      insert_produto_mae: {
+        Args: {
+          p_categoria: string
+          p_estoque_minimo?: number
+          p_family_id: string
+          p_nome: string
+          p_unidade: string
         }
+        Returns: string
       }
-      get_user_family_id: { Args: { _user_id: string }; Returns: string }
-      is_family_admin: {
-        Args: { _family_id: string; _user_id: string }
-        Returns: boolean
+      insert_subproduto: {
+        Args: {
+          p_categoria: string
+          p_estoque_atual?: number
+          p_family_id: string
+          p_nome: string
+          p_parent_id: string
+          p_qtd_embalagem: number
+          p_unidade_embalagem: string
+        }
+        Returns: string
       }
+      keep_alive: { Args: never; Returns: string }
       learn_categorization_rule: {
         Args: {
-          _category_id: string
-          _family_id: string
-          _origem?: Database["public"]["Enums"]["categorization_origin"]
-          _termo: string
-        }
-        Returns: {
-          category_id: string
-          confianca: number
-          created_at: string
-          family_id: string
-          id: string
-          origem: Database["public"]["Enums"]["categorization_origin"]
-          termo: string
-          termo_normalizado: string
-          updated_at: string
-          usos: number
-        }
-        SetofOptions: {
-          from: "*"
-          to: "categorization_rules"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      normalize_text: { Args: { _t: string }; Returns: string }
-      pay_credit_card_bill: {
-        Args: {
-          _amount: number
-          _bill_id: string
-          _date?: string
-          _from_account: string
+          p_category_id: string
+          p_family_id: string
+          p_origem?: string
+          p_termo: string
         }
         Returns: undefined
       }
-      recalc_account_balance: { Args: { _account_id: string }; Returns: number }
+      normalize_description: { Args: { p_text: string }; Returns: string }
+      normalize_text: { Args: { p_text: string }; Returns: string }
+      pay_credit_card_bill: {
+        Args: {
+          p_account_pagamento_id: string
+          p_bill_id: string
+          p_valor?: number
+        }
+        Returns: string
+      }
+      recalc_account_balance: {
+        Args: { p_account_id: string }
+        Returns: undefined
+      }
+      recalc_consumo_medio: {
+        Args: { p_product_id: string }
+        Returns: undefined
+      }
       recalc_financial_state: {
-        Args: { _family_id: string; _mes: string; _renda?: number }
-        Returns: {
-          created_at: string
-          family_id: string
-          id: string
-          mes: string
-          meta_essenciais: number
-          meta_estilo_vida: number
-          meta_reserva: number
-          modo_crise: boolean
-          renda_mensal: number
-          saldo_atual: number
-          total_dividas: number
-          total_essenciais: number
-          total_estilo_vida: number
-          total_reserva: number
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "financial_state"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Args: { p_family_id: string; p_mes: string }
+        Returns: undefined
       }
-      resolve_crisis: {
-        Args: { _crisis_id: string }
-        Returns: {
-          ativo: boolean
-          created_at: string
-          criterio_disparado: string | null
-          data_fim: string | null
-          data_inicio: string
-          estagio_atual: number
-          family_id: string
-          id: string
-          motivo_ativacao: string
-          plano_saida: Json | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "crisis_events"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+      recalc_financial_state_safe: {
+        Args: { p_family_id: string; p_mes: string }
+        Returns: undefined
       }
-      seed_default_categories: {
-        Args: { _family_id: string }
+      recalcular_consumo_estoque: {
+        Args: { p_product_id: string }
+        Returns: undefined
+      }
+      register_stock_entry: {
+        Args: {
+          p_family_id: string
+          p_local_compra?: string
+          p_preco_pago?: number
+          p_product_id: string
+          p_quantidade: number
+          p_transaction_id?: string
+        }
+        Returns: undefined
+      }
+      registrar_abastecimento: {
+        Args: {
+          p_account_id: string
+          p_category_id: string
+          p_combustivel_usado: string
+          p_data: string
+          p_family_id: string
+          p_hodometro: number
+          p_litros: number
+          p_posto?: string
+          p_preco_litro: number
+          p_tanque_cheio?: boolean
+          p_user_id: string
+          p_valor_pago: number
+          p_vehicle_id: string
+        }
+        Returns: Json
+      }
+      reset_family_data: {
+        Args: { p_family_id: string; p_keep_config?: boolean }
+        Returns: Json
+      }
+      resolve_crisis: { Args: { p_crisis_id: string }; Returns: undefined }
+      save_transaction_rule: {
+        Args: {
+          p_account_id: string
+          p_category_id: string
+          p_description: string
+          p_family_id: string
+          p_origem?: string
+          p_tipo: string
+        }
         Returns: undefined
       }
       seed_default_categorization_keywords: {
-        Args: { _family_id: string }
+        Args: { p_family_id: string }
         Returns: undefined
       }
+      seed_default_products: {
+        Args: { p_family_id: string }
+        Returns: undefined
+      }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
-      account_type:
-        | "corrente"
-        | "poupanca"
-        | "carteira"
-        | "cartao"
-        | "investimento"
-      alert_severity: "info" | "warning" | "critical"
-      categorization_origin: "manual" | "ia" | "keyword"
-      category_type: "despesa" | "receita"
-      credit_card_bill_status: "aberta" | "fechada" | "paga"
-      family_role: "admin" | "member"
-      fuel_type: "gasolina" | "aditivada" | "etanol" | "diesel" | "gnv"
-      recurring_frequency: "mensal" | "semanal" | "quinzenal" | "anual"
-      stock_location: "geladeira" | "freezer" | "despensa" | "armario" | "outro"
-      stock_movement_type: "entrada" | "saida" | "ajuste" | "perda"
-      stock_unit: "un" | "kg" | "g" | "L" | "ml" | "pct"
-      transaction_scope: "family" | "personal"
-      transaction_source: "manual" | "importado" | "cartao"
-      transaction_special_type: "normal" | "transferencia" | "pagamento_fatura"
-      transaction_type: "income" | "expense"
-      vehicle_type: "carro" | "moto" | "caminhao" | "outro"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2063,29 +3683,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      account_type: [
-        "corrente",
-        "poupanca",
-        "carteira",
-        "cartao",
-        "investimento",
-      ],
-      alert_severity: ["info", "warning", "critical"],
-      categorization_origin: ["manual", "ia", "keyword"],
-      category_type: ["despesa", "receita"],
-      credit_card_bill_status: ["aberta", "fechada", "paga"],
-      family_role: ["admin", "member"],
-      fuel_type: ["gasolina", "aditivada", "etanol", "diesel", "gnv"],
-      recurring_frequency: ["mensal", "semanal", "quinzenal", "anual"],
-      stock_location: ["geladeira", "freezer", "despensa", "armario", "outro"],
-      stock_movement_type: ["entrada", "saida", "ajuste", "perda"],
-      stock_unit: ["un", "kg", "g", "L", "ml", "pct"],
-      transaction_scope: ["family", "personal"],
-      transaction_source: ["manual", "importado", "cartao"],
-      transaction_special_type: ["normal", "transferencia", "pagamento_fatura"],
-      transaction_type: ["income", "expense"],
-      vehicle_type: ["carro", "moto", "caminhao", "outro"],
-    },
+    Enums: {},
   },
 } as const
