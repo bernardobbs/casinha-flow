@@ -79,9 +79,14 @@ export function OpenFinancePanel({ familyId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [familyId]);
 
+  const extractItemId = (raw: string) => {
+    const match = raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    return match ? match[0] : raw.trim();
+  };
+
   const handleAddManualItem = async () => {
-    const itemId = manualItemId.trim();
-    if (!itemId) { toast.error("Cole o Item ID da conexão"); return; }
+    const itemId = extractItemId(manualItemId);
+    if (!itemId) { toast.error("Cole o Item ID (ou o link) da conexão"); return; }
     setBusy("add_item");
     try {
       const check = await callPluggy("check_item", { item_id: itemId });
@@ -203,7 +208,7 @@ export function OpenFinancePanel({ familyId }: Props) {
             </p>
             <div className="flex gap-2">
               <Input
-                placeholder="Item ID (ex: 5a4d...)"
+                placeholder="Item ID ou link da conexão (ex: https://meu.pluggy.ai/connections/5a4d...)"
                 value={manualItemId}
                 onChange={(e) => setManualItemId(e.target.value)}
                 className="h-9"
