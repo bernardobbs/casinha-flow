@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { PluggyConnect } from "react-pluggy-connect";
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Landmark, RefreshCw, Link2, Plus } from "lucide-react";
+import { Loader2, Landmark, RefreshCw, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface PluggyItemRow {
@@ -61,7 +60,6 @@ export function OpenFinancePanel({ familyId }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [connectToken, setConnectToken] = useState<string | null>(null);
-  const [manualItemId, setManualItemId] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -78,29 +76,6 @@ export function OpenFinancePanel({ familyId }: Props) {
     if (familyId) void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [familyId]);
-
-  const extractItemId = (raw: string) => {
-    const match = raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-    return match ? match[0] : raw.trim();
-  };
-
-  const handleAddManualItem = async () => {
-    const itemId = extractItemId(manualItemId);
-    if (!itemId) { toast.error("Cole o Item ID (ou o link) da conexão"); return; }
-    setBusy("add_item");
-    try {
-      const check = await callPluggy("check_item", { item_id: itemId });
-      await callPluggy("register_item", { item_id: check.item_id, connector_name: check.connector_name });
-      toast.success(`${check.connector_name ?? "Banco"} conectado! Buscando contas...`);
-      setManualItemId("");
-      await load();
-      await handleListAccounts();
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const handleListAccounts = async () => {
     setBusy("list_accounts");
@@ -192,34 +167,16 @@ export function OpenFinancePanel({ familyId }: Props) {
             <div>
               <CardTitle className="flex items-center gap-2"><Landmark className="h-5 w-5" /> Open Finance (Pluggy)</CardTitle>
               <CardDescription>
-                Sincronize extratos direto dos seus bancos, conectados via Meu Pluggy.
+                Sincronize extratos direto dos seus bancos. Conecte por aqui — conexões feitas direto no site do Meu Pluggy não ficam acessíveis para o app (a Pluggy isola por aplicação, por segurança).
               </CardDescription>
             </div>
             <Button size="sm" onClick={handleOpenWidget} disabled={busy !== null} className="gap-2">
               {busy === "connect_token" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-              Conectar novo banco por aqui
+              Conectar novo banco
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-md border border-border/60 p-3 space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Já conectou um banco direto pelo <a href="https://meu.pluggy.ai" target="_blank" rel="noreferrer" className="underline">Meu Pluggy</a>? A Pluggy não permite listar conexões automaticamente por segurança — copie o <strong>Item ID</strong> da conexão no site deles e cole aqui:
-            </p>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Item ID ou link da conexão (ex: https://meu.pluggy.ai/connections/5a4d...)"
-                value={manualItemId}
-                onChange={(e) => setManualItemId(e.target.value)}
-                className="h-9"
-              />
-              <Button size="sm" onClick={handleAddManualItem} disabled={busy !== null} className="gap-2 shrink-0">
-                {busy === "add_item" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Adicionar
-              </Button>
-            </div>
-          </div>
-
           {items.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
               Nenhum banco conectado ainda.

@@ -131,18 +131,6 @@ Deno.serve(async (req) => {
       return json({ sucesso: true });
     }
 
-    // ---- check_item: valida um item_id (colado manualmente pelo usuario, pego no
-    //      dashboard do Meu Pluggy) contra a API antes de registrar — a Pluggy nao
-    //      expoe endpoint pra listar todos os items do cliente (por seguranca), entao
-    //      nao da pra "descobrir" automaticamente items conectados fora do nosso widget ----
-    if (action === 'check_item') {
-      const { item_id } = body;
-      if (!item_id) return json({ error: 'item_id obrigatorio' }, 400);
-      const apiKey = await getApiKey();
-      const it = await pluggyGet(apiKey, `/items/${item_id}`);
-      return json({ item_id: it.id, connector_name: it.connector?.name ?? null, status: it.status ?? null });
-    }
-
     // ---- list_accounts: lista contas da Pluggy pros items da familia, marcando vinculadas ----
     if (action === 'list_accounts') {
       const apiKey = await getApiKey();
