@@ -131,6 +131,16 @@ Deno.serve(async (req) => {
       return json({ sucesso: true });
     }
 
+    // ---- client_error_log: repassa erro que so aconteceu no widget do navegador
+    //      pros logs da function, ja que onError da PluggyConnect nunca chega
+    //      no servidor por conta propria — sem isso, o unico jeito de ver a causa
+    //      seria abrir o devtools do navegador do usuario. ----
+    if (action === 'client_error_log') {
+      const { context, error, raw } = body;
+      console.error('[pluggy-sync][client]', context, error, raw);
+      return json({ logged: true });
+    }
+
     // ---- list_accounts: lista contas da Pluggy pros items da familia, marcando vinculadas ----
     if (action === 'list_accounts') {
       const apiKey = await getApiKey();

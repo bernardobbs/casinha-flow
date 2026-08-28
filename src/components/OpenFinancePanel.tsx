@@ -257,7 +257,13 @@ export function OpenFinancePanel({ familyId }: Props) {
           connectToken={connectToken}
           includeSandbox={false}
           onSuccess={handleConnectSuccess}
-          onError={(err: any) => { toast.error("Falha ao conectar banco"); console.error(err); setConnectToken(null); }}
+          onError={(err: any) => {
+            const msg = err?.message ?? err?.data?.message ?? JSON.stringify(err ?? {});
+            toast.error(`Falha ao conectar banco: ${msg}`);
+            console.error(err);
+            void callPluggy("client_error_log", { context: "pluggy_connect_widget", error: msg, raw: JSON.stringify(err ?? {}).slice(0, 1000) }).catch(() => {});
+            setConnectToken(null);
+          }}
           onClose={() => setConnectToken(null)}
         />
       )}
