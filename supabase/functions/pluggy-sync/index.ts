@@ -131,20 +131,16 @@ Deno.serve(async (req) => {
       return json({ sucesso: true });
     }
 
-    // ---- discover_items: descobre items da Pluggy que ainda nao estao em pluggy_items
-    //      (ex: banco conectado direto pelo portal do Meu Pluggy, sem passar pelo widget daqui) ----
-    if (action === 'discover_items') {
+    // ---- check_item: valida um item_id (colado manualmente pelo usuario, pego no
+    //      dashboard do Meu Pluggy) contra a API antes de registrar — a Pluggy nao
+    //      expoe endpoint pra listar todos os items do cliente (por seguranca), entao
+    //      nao da pra "descobrir" automaticamente items conectados fora do nosso widget ----
+    if (action === 'check_item') {
+      const { item_id } = body;
+      if (!item_id) return json({ error: 'item_id obrigatorio' }, 400);
       const apiKey = await getApiKey();
-      const data = await pluggyGet(apiKey, `/items`);
-      const items = data.results ?? data ?? [];
-      for (const it of Array.isArray(items) ? items : []) {
-        await supabase.from('pluggy_items').upsert(
-          { family_id: familyId, item_id: it.id, connector_name: it.connector?.name ?? null, status: it.status ?? null },
-          { onConflict: 'family_id,item_id' },
-        );
-      }
-      const { data: allItems } = await supabase.from('pluggy_items').select('item_id, connector_name, status, last_synced_at, last_error').eq('family_id', familyId);
-      return json({ encontrados: (Array.isArray(items) ? items.length : 0), items: allItems ?? [] });
+      const it = await pluggyGet(apiKey, `/items/${item_id}`);
+      return json({ item_id: it.id, connector_name: it.connector?.name ?? null, status: it.status ?? null });
     }
 
     // ---- list_accounts: lista contas da Pluggy pros items da familia, marcando vinculadas ----

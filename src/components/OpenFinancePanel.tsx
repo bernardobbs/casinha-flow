@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { PluggyConnect } from "react-pluggy-connect";
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Landmark, RefreshCw, Link2 } from "lucide-react";
+import { Loader2, Landmark, RefreshCw, Link2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface PluggyItemRow {
@@ -60,6 +61,7 @@ export function OpenFinancePanel({ familyId }: Props) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [connectToken, setConnectToken] = useState<string | null>(null);
+  const [manualItemId, setManualItemId] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -77,12 +79,16 @@ export function OpenFinancePanel({ familyId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [familyId]);
 
-  const handleDiscover = async () => {
-    setBusy("discover");
+  const handleAddManualItem = async () => {
+    const itemId = manualItemId.trim();
+    if (!itemId) { toast.error("Cole o Item ID da conexão"); return; }
+    setBusy("add_item");
     try {
-      const data = await callPluggy("discover_items");
-      setItems(data.items ?? []);
-      toast.success(`${data.encontrados ?? 0} banco(s) encontrados no Meu Pluggy`);
+      const check = await callPluggy("check_item", { item_id: itemId });
+      await callPluggy("register_item", { item_id: check.item_id, connector_name: check.connector_name });
+      toast.success(`${check.connector_name ?? "Banco"} conectado! Buscando contas...`);
+      setManualItemId("");
+      await load();
       await handleListAccounts();
     } catch (e: any) {
       toast.error(e.message);
@@ -184,22 +190,34 @@ export function OpenFinancePanel({ familyId }: Props) {
                 Sincronize extratos direto dos seus bancos, conectados via Meu Pluggy.
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleDiscover} disabled={busy !== null} className="gap-2">
-                {busy === "discover" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                Buscar bancos conectados
-              </Button>
-              <Button size="sm" onClick={handleOpenWidget} disabled={busy !== null} className="gap-2">
-                {busy === "connect_token" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                Conectar novo banco
-              </Button>
-            </div>
+            <Button size="sm" onClick={handleOpenWidget} disabled={busy !== null} className="gap-2">
+              {busy === "connect_token" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+              Conectar novo banco por aqui
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-md border border-border/60 p-3 space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Já conectou um banco direto pelo <a href="https://meu.pluggy.ai" target="_blank" rel="noreferrer" className="underline">Meu Pluggy</a>? A Pluggy não permite listar conexões automaticamente por segurança — copie o <strong>Item ID</strong> da conexão no site deles e cole aqui:
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Item ID (ex: 5a4d...)"
+                value={manualItemId}
+                onChange={(e) => setManualItemId(e.target.value)}
+                className="h-9"
+              />
+              <Button size="sm" onClick={handleAddManualItem} disabled={busy !== null} className="gap-2 shrink-0">
+                {busy === "add_item" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Adicionar
+              </Button>
+            </div>
+          </div>
+
           {items.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              Nenhum banco encontrado ainda. Conecte pelo <a href="https://meupluggy.com.br" target="_blank" rel="noreferrer" className="underline">Meu Pluggy</a> e clique em "Buscar bancos conectados".
+              Nenhum banco conectado ainda.
             </p>
           ) : (
             <ul className="space-y-2">
