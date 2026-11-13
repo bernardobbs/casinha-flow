@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useFamily } from "@/hooks/use-family";
 import { importLog, clearImportLogs, getImportLogs } from "@/lib/import-logger";
+import { parseFaturaBB, isFaturaBB, type FaturaParsed } from "@/lib/fatura-bb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -220,6 +221,9 @@ interface ParsedRow {
   // Dedup status
   dup_status?: "novo" | "possivel" | "existe";
   dup_match?: { id: string; description: string; date: string; amount: number } | null;
+  // Parcelamento identificado na fatura (ex.: PARC 08/10)
+  parcela_numero?: number | null;
+  parcela_total?: number | null;
 }
 
 function parseBBExtrato(text: string): ParsedRow[] {
@@ -496,7 +500,37 @@ function parseCartaoCsv(text: string): ParsedRow[] {
   return rows;
 }
 
-type ImportFormat = 'bb' | 'bb_csv' | 'nubank' | 'inter' | 'caixa' | 'csv' | 'cartao_csv';
+// Converte os lançamentos de uma fatura BB (PDF) em linhas de importação.
+// Pagamentos/créditos são descartados: eles já aparecem como saída no extrato
+// da conta corrente, e importá-los aqui contaria a mesma quantia duas vezes.
+function faturaToRows(parsed: FaturaParsed): ParsedRow[] {
+  const rows: ParsedRow[] = [];
+  for (const l of parsed.rows) {
+    if (l.valor <= 0) continue;
+
+    const description = l.parcela
+      ? `${l.description} (${l.parcela.numero}/${l.parcela.total})`
+      : l.description;
+
+    rows.push({
+      date: l.date,
+      description: description.slice(0, 120),
+      amount: -Math.abs(l.valor),
+      type: 'expense',
+      tipo_especial: 'normal',
+      // A própria fatura já agrupa por categoria; serve de palpite inicial até
+      // o categorize_transaction opinar.
+      category: l.secao ?? classifyCategory(description),
+      external_id: `fatura|${l.date}|${description.toLowerCase().slice(0, 40)}|${l.valor.toFixed(2)}|${rows.length}`,
+      selected: true,
+      parcela_numero: l.parcela?.numero ?? null,
+      parcela_total: l.parcela?.total ?? null,
+    });
+  }
+  return rows;
+}
+
+type ImportFormat = 'bb' | 'bb_csv' | 'nubank' | 'inter' | 'caixa' | 'csv' | 'cartao_csv' | 'fatura_pdf';
 
 function detectFormat(text: string, filename: string): ImportFormat {
   const lower = text.toLowerCase().slice(0, 500);
@@ -989,6 +1023,116 @@ function TransactionsPage() {
 
   const handleFilePick = () => fileInputRef.current?.click();
 
+  // Enriquece as linhas lidas (categoria + duplicatas), escolhe a conta provável
+  // e abre a pré-visualização. Compartilhado entre os importadores de CSV e de PDF.
+  const enriquecerEAbrirPreview = async (
+    rows: ParsedRow[],
+    fid: string | null,
+    accsLocal: AccountLite[],
+    fileName: string,
+  ) => {
+    const validas = rows.filter((r) => !r.error);
+    // Categorização automática
+    if (fid) {
+      importLog('info', `Categorizando ${validas.length} transações...`);
+      const enriched = await Promise.all(
+        rows.map(async (r) => {
+          if (r.error) return r;
+          try {
+            const { data, error: catErr } = await supabase.rpc("categorize_transaction", {
+              _family_id: fid,
+              _description: r.description,
+              _dummy: false,
+            });
+            if (catErr) importLog('warn', `Erro ao categorizar "${r.description}"`, catErr.message);
+            const sug = Array.isArray(data) && data.length > 0 ? data[0] : null;
+            if (sug) {
+              const cat = categories.find((c) => c.id === sug.category_id);
+              return {
+                ...r,
+                category: cat?.nome ?? r.category,
+                suggested_category_id: sug.category_id,
+                suggested_origem: sug.origem,
+                suggested_nivel: sug.nivel,
+                suggested_confianca: Number(sug.confianca),
+              };
+            }
+            return { ...r, suggested_category_id: null };
+          } catch (e) {
+            importLog('warn', `Exceção ao categorizar "${r.description}"`, e);
+            return r;
+          }
+        })
+      );
+      const categorizadas = enriched.filter(r => r.suggested_category_id);
+      importLog('info', `${categorizadas.length}/${validas.length} categorizadas`);
+
+      // Detecção de duplicatas
+      const withDup: ParsedRow[] = await Promise.all(
+        enriched.map(async (r) => {
+          if (r.error) return r;
+          const { data: matches } = await supabase
+            .from("transactions")
+            .select("id, description, date, amount, external_id")
+            .eq("family_id", fid)
+            .eq("date", r.date)
+            .gte("amount", Math.abs(r.amount) - 0.01)
+            .lte("amount", Math.abs(r.amount) + 0.01)
+            .limit(3);
+          const list = matches ?? [];
+          if (list.some((m: any) => m.external_id === r.external_id)) {
+            return { ...r, dup_status: "existe", selected: false, dup_match: list[0] as any };
+          }
+          const word = r.description.split(/\s+/).find((w) => w.length >= 4)?.toLowerCase();
+          const partial = word ? list.find((m: any) => (m.description ?? "").toLowerCase().includes(word)) : null;
+          if (partial) return { ...r, dup_status: "possivel", dup_match: { ...(partial as any), amount: Number((partial as any).amount) } };
+          return { ...r, dup_status: "novo" };
+        })
+      );
+      const duplicatas = withDup.filter(r => r.dup_status === 'existe');
+      importLog('info', `${duplicatas.length} duplicatas encontradas`);
+      setParsedRows(withDup);
+    } else {
+      importLog('warn', 'familyId não disponível — sem categorização');
+      setParsedRows(rows);
+    }
+
+    // Auto-sugestão de conta pelo nome do arquivo
+    const fname = fileName.toLowerCase();
+    const detectKeywords: { match: RegExp; hints: string[] }[] = [
+      { match: /(^|[^a-z])bb([^a-z]|$)|banco do brasil|extrato_conta/, hints: ["bb", "brasil"] },
+      { match: /nubank|nu_bank|nu-/, hints: ["nubank", "nu"] },
+      { match: /inter/, hints: ["inter"] },
+      { match: /ita[uú]/, hints: ["itau", "itaú"] },
+      { match: /caixa/, hints: ["caixa"] },
+      { match: /santander/, hints: ["santander"] },
+    ];
+    let detectedId = "";
+    let detectedName: string | null = null;
+    for (const rule of detectKeywords) {
+      if (rule.match.test(fname)) {
+        const acc = accsLocal.find((a) =>
+          rule.hints.some((h) => a.nome.toLowerCase().includes(h))
+        );
+        if (acc) {
+          detectedId = acc.id;
+          detectedName = acc.nome;
+        }
+        break;
+      }
+    }
+    // Se só tem uma conta, selecionar automaticamente
+    if (!detectedId && accsLocal.length === 1) {
+      detectedId = accsLocal[0].id;
+      detectedName = accsLocal[0].nome;
+    }
+    importLog(detectedId ? 'info' : 'warn', detectedId ? `Conta detectada: ${detectedName}` : `Conta não detectada — ${accsLocal.length} disponíveis`);
+    setImportAccountId(detectedId);
+    setImportAutoDetected(detectedName);
+    setImportLogs(getImportLogs());
+    setImportOpen(true);
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -1032,6 +1176,50 @@ function TransactionsPage() {
       return;
     }
     try {
+      // Fatura em PDF segue um caminho próprio: o texto vem do pdf.js, não de
+      // um CSV, e o parser devolve também vencimento, total e parcelas.
+      const ehPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+      if (ehPdf) {
+        importLog('info', 'PDF detectado — extraindo texto com pdf.js...');
+        const { extractPdfText } = await import("@/lib/pdf-text");
+        const textoPdf = await extractPdfText(file);
+        importLog('info', `PDF lido: ${textoPdf.length} chars, ${textoPdf.split('\n').length} linhas`);
+
+        if (!isFaturaBB(textoPdf)) {
+          importLog('error', 'PDF não reconhecido como fatura do BB');
+          toast.error('PDF não reconhecido. Por ora só faturas do Banco do Brasil.');
+          setImportLogs(getImportLogs());
+          return;
+        }
+
+        const fatura = parseFaturaBB(textoPdf);
+        const rowsPdf = faturaToRows(fatura);
+        importLog('info', `Fatura: venc ${fatura.meta.vencimento ?? '?'}, total ${fatura.meta.total ?? '?'}`);
+        importLog('info', `${rowsPdf.length} compras (${rowsPdf.filter(r => r.parcela_total).length} parceladas)`);
+
+        // Conferência: a soma das compras tem de bater com o total impresso.
+        if (fatura.meta.total != null) {
+          const soma = rowsPdf.reduce((acc, r) => acc + Math.abs(r.amount), 0);
+          const dif = soma - fatura.meta.total;
+          if (Math.abs(dif) > 0.01) {
+            importLog('warn', `Soma das compras (${soma.toFixed(2)}) difere do total da fatura (${fatura.meta.total.toFixed(2)}) em ${dif.toFixed(2)}`);
+            toast.warning(`Atenção: soma das compras difere do total da fatura em R$ ${Math.abs(dif).toFixed(2)}`);
+          } else {
+            importLog('success', `Soma confere com o total da fatura (R$ ${fatura.meta.total.toFixed(2)})`);
+          }
+        }
+
+        if (rowsPdf.length === 0) {
+          toast.error('Nenhuma compra encontrada na fatura');
+          setImportLogs(getImportLogs());
+          return;
+        }
+
+        toast.info(`📄 Fatura BB — ${rowsPdf.length} compras`);
+        await enriquecerEAbrirPreview(rowsPdf, fid, accsLocal, file.name);
+        return;
+      }
+
       // BB exporta em Windows-1252. Tentar decodificar corretamente.
       const buffer = await file.arrayBuffer();
       let text = '';
@@ -1079,105 +1267,7 @@ function TransactionsPage() {
 
       importLog(fid ? 'info' : 'warn', `familyId no parse: ${fid ?? 'ausente'}`);
 
-      // Categorização automática
-      if (fid) {
-        importLog('info', `Categorizando ${validas.length} transações...`);
-        const enriched = await Promise.all(
-          rows.map(async (r) => {
-            if (r.error) return r;
-            try {
-              const { data, error: catErr } = await supabase.rpc("categorize_transaction", {
-                _family_id: fid,
-                _description: r.description,
-                _dummy: false,
-              });
-              if (catErr) importLog('warn', `Erro ao categorizar "${r.description}"`, catErr.message);
-              const sug = Array.isArray(data) && data.length > 0 ? data[0] : null;
-              if (sug) {
-                const cat = categories.find((c) => c.id === sug.category_id);
-                return {
-                  ...r,
-                  category: cat?.nome ?? r.category,
-                  suggested_category_id: sug.category_id,
-                  suggested_origem: sug.origem,
-                  suggested_nivel: sug.nivel,
-                  suggested_confianca: Number(sug.confianca),
-                };
-              }
-              return { ...r, suggested_category_id: null };
-            } catch (e) {
-              importLog('warn', `Exceção ao categorizar "${r.description}"`, e);
-              return r;
-            }
-          })
-        );
-        const categorizadas = enriched.filter(r => r.suggested_category_id);
-        importLog('info', `${categorizadas.length}/${validas.length} categorizadas`);
-
-        // Detecção de duplicatas
-        const withDup: ParsedRow[] = await Promise.all(
-          enriched.map(async (r) => {
-            if (r.error) return r;
-            const { data: matches } = await supabase
-              .from("transactions")
-              .select("id, description, date, amount, external_id")
-              .eq("family_id", fid)
-              .eq("date", r.date)
-              .gte("amount", Math.abs(r.amount) - 0.01)
-              .lte("amount", Math.abs(r.amount) + 0.01)
-              .limit(3);
-            const list = matches ?? [];
-            if (list.some((m: any) => m.external_id === r.external_id)) {
-              return { ...r, dup_status: "existe", selected: false, dup_match: list[0] as any };
-            }
-            const word = r.description.split(/\s+/).find((w) => w.length >= 4)?.toLowerCase();
-            const partial = word ? list.find((m: any) => (m.description ?? "").toLowerCase().includes(word)) : null;
-            if (partial) return { ...r, dup_status: "possivel", dup_match: { ...(partial as any), amount: Number((partial as any).amount) } };
-            return { ...r, dup_status: "novo" };
-          })
-        );
-        const duplicatas = withDup.filter(r => r.dup_status === 'existe');
-        importLog('info', `${duplicatas.length} duplicatas encontradas`);
-        setParsedRows(withDup);
-      } else {
-        importLog('warn', 'familyId não disponível — sem categorização');
-        setParsedRows(rows);
-      }
-
-      // Auto-sugestão de conta pelo nome do arquivo
-      const fname = file.name.toLowerCase();
-      const detectKeywords: { match: RegExp; hints: string[] }[] = [
-        { match: /(^|[^a-z])bb([^a-z]|$)|banco do brasil|extrato_conta/, hints: ["bb", "brasil"] },
-        { match: /nubank|nu_bank|nu-/, hints: ["nubank", "nu"] },
-        { match: /inter/, hints: ["inter"] },
-        { match: /ita[uú]/, hints: ["itau", "itaú"] },
-        { match: /caixa/, hints: ["caixa"] },
-        { match: /santander/, hints: ["santander"] },
-      ];
-      let detectedId = "";
-      let detectedName: string | null = null;
-      for (const rule of detectKeywords) {
-        if (rule.match.test(fname)) {
-          const acc = accsLocal.find((a) =>
-            rule.hints.some((h) => a.nome.toLowerCase().includes(h))
-          );
-          if (acc) {
-            detectedId = acc.id;
-            detectedName = acc.nome;
-          }
-          break;
-        }
-      }
-      // Se só tem uma conta, selecionar automaticamente
-      if (!detectedId && accsLocal.length === 1) {
-        detectedId = accsLocal[0].id;
-        detectedName = accsLocal[0].nome;
-      }
-      importLog(detectedId ? 'info' : 'warn', detectedId ? `Conta detectada: ${detectedName}` : `Conta não detectada — ${accsLocal.length} disponíveis`);
-      setImportAccountId(detectedId);
-      setImportAutoDetected(detectedName);
-      setImportLogs(getImportLogs());
-      setImportOpen(true);
+      await enriquecerEAbrirPreview(rows, fid, accsLocal, file.name);
     } catch {
       toast.error("Não foi possível ler o arquivo");
     }
@@ -1370,7 +1460,7 @@ function TransactionsPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.txt,text/csv,text/plain"
+              accept=".csv,.txt,.pdf,text/csv,text/plain,application/pdf"
               className="hidden"
               onChange={handleFileChange}
             />

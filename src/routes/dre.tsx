@@ -49,6 +49,10 @@ function DrePage() {
         .from("transactions" as any)
         .select("date, amount, type, categories(nome, tipo)")
         .eq("family_id", familyId)
+        // Transferência, pagamento de fatura e ajuste de saldo são dinheiro que
+        // entra e sai sem ser receita nem despesa — contá-los inflava o DRE em
+        // várias vezes (out/2026: 112.821,42 em vez dos 15.380,71 reais).
+        .eq("tipo_especial", "normal")
         .gte("date", `${anoAtual}-01-01`)
         .lte("date", `${anoAtual}-12-31`)
         .order("date"),
